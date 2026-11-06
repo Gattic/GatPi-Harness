@@ -1,0 +1,192 @@
+diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
+index 433d1da..12c91c2 100644
+--- a/dist/modes/interactive/interactive-mode.js
++++ b/dist/modes/interactive/interactive-mode.js
+@@ -1239,7 +1239,7 @@ export class InteractiveMode {
+                         return { cancelled: true };
+                     }
+                     this.chatContainer.clear();
+-                    this.renderInitialMessages();
++                    this.renderInitialMessages({ preservePromptHistory: true });
+                     if (result.editorText && !this.editor.getText().trim()) {
+                         this.editor.setText(result.editorText);
+                     }
+@@ -1378,7 +1378,7 @@ export class InteractiveMode {
+         this.streamingComponent = undefined;
+         this.streamingMessage = undefined;
+         this.pendingTools.clear();
+-        this.renderInitialMessages();
++        this.renderInitialMessages({ preservePromptHistory: true });
+     }
+     /**
+      * Get a registered tool definition by name (for custom rendering).
+@@ -2604,7 +2604,11 @@ export class InteractiveMode {
+         return "";
+     }
+     getBranchEntriesFromLoadedEntries(entries) {
+-        const sessionEntries = entries.filter((entry) => entry && entry.type !== "session" && entry.id);
++        const allEntries = entries.filter((entry) => entry && entry.type !== "session");
++        const sessionEntries = allEntries.filter((entry) => entry.id);
++        if (sessionEntries.length === 0) {
++            return allEntries;
++        }
+         const byId = new Map(sessionEntries.map((entry) => [entry.id, entry]));
+         const branchEntries = [];
+         let current = sessionEntries[sessionEntries.length - 1];
+@@ -2614,26 +2618,64 @@ export class InteractiveMode {
+         }
+         return branchEntries;
+     }
++    getPromptHistorySessionFiles() {
++        const currentSessionFile = this.sessionManager.getSessionFile();
++        try {
++            return fs
++                .readdirSync(this.sessionManager.getSessionDir())
++                .filter((file) => file.endsWith(".jsonl"))
++                .map((file) => path.join(this.sessionManager.getSessionDir(), file))
++                .filter((file) => !currentSessionFile || path.resolve(file) !== path.resolve(currentSessionFile))
++                .map((file) => ({ file, mtime: fs.statSync(file).mtimeMs }))
++                .sort((a, b) => a.mtime - b.mtime)
++                .map(({ file }) => file);
++        }
++        catch {
++            return [];
++        }
++    }
++    rememberPromptHistoryText(historyTexts, text) {
++        const trimmed = String(text ?? "").trim();
++        if (!trimmed) {
++            return;
++        }
++        const existingIndex = historyTexts.indexOf(trimmed);
++        if (existingIndex >= 0) {
++            historyTexts.splice(existingIndex, 1);
++        }
++        historyTexts.push(trimmed);
++        if (historyTexts.length > 100) {
++            historyTexts.splice(0, historyTexts.length - 100);
++        }
++    }
++    addPromptHistoryTextsFromBranch(historyTexts, branchEntries) {
++        for (const entry of branchEntries) {
++            this.rememberPromptHistoryText(historyTexts, this.getPromptHistoryTextFromEntry(entry));
++        }
++    }
++    addPromptHistoryTextsFromRepoSessions(historyTexts) {
++        for (const file of this.getPromptHistorySessionFiles()) {
++            const entries = loadEntriesFromFile(file);
++            if (entries.length === 0) {
++                continue;
++            }
++            this.addPromptHistoryTextsFromBranch(historyTexts, this.getBranchEntriesFromLoadedEntries(entries));
++        }
++    }
+     rebuildEditorPromptHistoryFromBranch(branchEntries = this.sessionManager.getBranch(), options = {}) {
+         if (!Array.isArray(this.editor.history)) {
+             return;
+         }
+         const previousHistory = options.preserveCurrent ? [...this.editor.history] : [];
+-        this.resetEditorPromptHistory();
+-        for (const entry of branchEntries) {
+-            const textContent = this.getPromptHistoryTextFromEntry(entry);
+-            if (textContent) {
+-                this.editor.addToHistory?.(textContent);
+-            }
++        const historyTexts = [];
++        this.addPromptHistoryTextsFromRepoSessions(historyTexts);
++        this.addPromptHistoryTextsFromBranch(historyTexts, branchEntries);
++        for (const textContent of previousHistory.slice().reverse()) {
++            this.rememberPromptHistoryText(historyTexts, textContent);
+         }
+-        if (previousHistory.length > 0) {
+-            const restored = new Set(this.editor.history);
+-            for (const textContent of previousHistory.slice().reverse()) {
+-                if (textContent && !restored.has(textContent)) {
+-                    this.editor.addToHistory?.(textContent);
+-                    restored.add(textContent);
+-                }
+-            }
++        this.resetEditorPromptHistory();
++        for (const textContent of historyTexts) {
++            this.editor.addToHistory?.(textContent);
+         }
+     }
+     /**
+@@ -2872,13 +2914,13 @@ export class InteractiveMode {
+         this.chatContainer.addChild(new Spacer(1));
+         this.chatContainer.addChild(new Text(text, 1, 0));
+     }
+-    renderInitialMessages() {
+-        const entries = this.sessionManager.buildContextEntries();
+-        this.renderSessionEntries(entries, {
++    renderInitialMessages(options = {}) {
++        // Render the full active branch for visible chat history. The session
++        // manager still builds compacted context separately for the model.
++        this.renderSessionEntries(this.sessionManager.getBranch(), {
+             updateFooter: true,
+         });
+-        this.rebuildEditorPromptHistoryFromBranch();
+-        this.seedEditorPromptHistoryFromRepoSessions();
++        this.rebuildEditorPromptHistoryFromBranch(undefined, { preserveCurrent: Boolean(options.preservePromptHistory) });
+         this.renderProjectTrustWarningIfNeeded();
+         // Show compaction info if session was compacted
+         const allEntries = this.sessionManager.getEntries();
+@@ -2894,40 +2936,6 @@ export class InteractiveMode {
+             this.editor.historyIndex = -1;
+         }
+     }
+-    seedEditorPromptHistoryFromRepoSessions(currentContext = this.sessionManager.buildSessionContext()) {
+-        if (!Array.isArray(this.editor.history) || this.editor.history.length > 0) {
+-            return;
+-        }
+-        const currentHasUserMessages = currentContext.messages.some((message) => message.role === "user" && this.getUserMessageText(message));
+-        if (currentHasUserMessages) {
+-            return;
+-        }
+-        let files;
+-        try {
+-            files = fs
+-                .readdirSync(this.sessionManager.getSessionDir())
+-                .filter((file) => file.endsWith(".jsonl"))
+-                .map((file) => path.join(this.sessionManager.getSessionDir(), file))
+-                .filter((file) => path.resolve(file) !== path.resolve(this.sessionManager.getSessionFile() ?? ""))
+-                .map((file) => ({ file, mtime: fs.statSync(file).mtimeMs }))
+-                .sort((a, b) => b.mtime - a.mtime);
+-        }
+-        catch {
+-            return;
+-        }
+-        for (const { file } of files.reverse()) {
+-            const entries = loadEntriesFromFile(file);
+-            if (entries.length === 0) {
+-                continue;
+-            }
+-            for (const entry of this.getBranchEntriesFromLoadedEntries(entries)) {
+-                const textContent = this.getPromptHistoryTextFromEntry(entry);
+-                if (textContent) {
+-                    this.editor.addToHistory?.(textContent);
+-                }
+-            }
+-        }
+-    }
+     renderProjectTrustWarningIfNeeded() {
+         if (this.settingsManager.isProjectTrusted() || !hasTrustRequiringProjectResources(this.sessionManager.getCwd())) {
+             return;
+@@ -2951,7 +2959,7 @@ export class InteractiveMode {
+     }
+     rebuildChatFromMessages() {
+         this.chatContainer.clear();
+-        this.renderSessionEntries(this.sessionManager.buildContextEntries());
++        this.renderSessionEntries(this.sessionManager.getBranch());
+         this.rebuildEditorPromptHistoryFromBranch(undefined, { preserveCurrent: true });
+     }
+     // =========================================================================
+@@ -4034,7 +4042,7 @@ export class InteractiveMode {
+                     }
+                     // Update UI
+                     this.chatContainer.clear();
+-                    this.renderInitialMessages();
++                    this.renderInitialMessages({ preservePromptHistory: true });
+                     if (result.editorText && !this.editor.getText().trim()) {
+                         this.editor.setText(result.editorText);
+                     }

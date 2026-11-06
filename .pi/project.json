@@ -1,0 +1,35 @@
+{
+  "visualVerification": {
+    "schemaVersion": 1,
+    "baselineManifest": "tests/visual-baselines/manifest.json",
+    "cases": [
+      {
+        "caseId": "rollout-center-compact",
+        "kind": "tui-frame",
+        "profiles": ["changed", "full"],
+        "sources": ["src/rollout-center-view.js", "tests/visual-fixtures/rollout-center.js"],
+        "capture": { "module": "tests/visual-fixtures/rollout-center.js", "export": "capture", "input": { "width": 40, "mode": "detail" } },
+        "baselineId": "rollout-center-compact-v1",
+        "thresholds": { "maxChangedLines": 0 }
+      },
+      {
+        "caseId": "rollout-center-stacked",
+        "kind": "tui-frame",
+        "profiles": ["changed", "full"],
+        "sources": ["src/rollout-center-view.js", "tests/visual-fixtures/rollout-center.js"],
+        "capture": { "module": "tests/visual-fixtures/rollout-center.js", "export": "capture", "input": { "width": 72, "mode": "detail" } },
+        "baselineId": "rollout-center-stacked-v1",
+        "thresholds": { "maxChangedLines": 0 }
+      },
+      {
+        "caseId": "rollout-center-split",
+        "kind": "tui-frame",
+        "profiles": ["changed", "full"],
+        "sources": ["src/rollout-center-view.js", "tests/visual-fixtures/rollout-center.js"],
+        "capture": { "module": "tests/visual-fixtures/rollout-center.js", "export": "capture", "input": { "width": 120, "mode": "provenance" } },
+        "baselineId": "rollout-center-split-v1",
+        "thresholds": { "maxChangedLines": 0 }
+      }
+    ]
+  }
+}

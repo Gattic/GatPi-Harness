@@ -1,0 +1,16 @@
+"use strict";
+const assert = require("node:assert/strict");
+const path = require("node:path");
+const { execFileSync } = require("node:child_process");
+const root = path.resolve(__dirname, "..");
+const report = JSON.parse(execFileSync(process.execPath, [path.join(root, "scripts", "benchmark-project-memory.js")], { cwd: root, encoding: "utf8", timeout: 120000 }));
+assert.equal(report.schemaVersion, 2);
+assert.equal(report.recall.scope, "full-prompt-path-cache-read-git-ranking-format");
+assert.equal(report.recall.samples, 50);
+assert.equal(report.recall.priorAuditTop3, true);
+assert(report.recall.p95Ms <= report.bars.localRecallP95Ms, `full prompt-path p95 exceeded ${report.bars.localRecallP95Ms} ms: ${report.recall.p95Ms}`);
+assert.equal(report.scaleRanking.scope, "10k-entry-deterministic-ranking");
+assert.equal(report.scaleRanking.priorAuditTop3, true);
+assert.equal(report.injection.unchangedFollowupChars, 0);
+assert.equal(report.pass, true);
+console.log("project memory benchmark tests passed");

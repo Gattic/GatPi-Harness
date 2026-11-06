@@ -1,0 +1,17 @@
+{
+  "configurations": [
+    {
+      "name": "Debug",
+      "targets": [
+        { "id": "app::@1", "name": "app", "jsonFile": "target-app-debug.json" },
+        { "id": "lib::@1", "name": "lib", "jsonFile": "target-lib-debug.json" }
+      ]
+    },
+    {
+      "name": "Release",
+      "targets": [
+        { "id": "app::@2", "name": "app", "jsonFile": "target-app-release.json" }
+      ]
+    }
+  ]
+}

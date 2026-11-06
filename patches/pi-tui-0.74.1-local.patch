@@ -1,0 +1,260 @@
+diff --git a/dist/components/editor.js b/dist/components/editor.js
+index 50f9225..6df3414 100644
+--- a/dist/components/editor.js
++++ b/dist/components/editor.js
+@@ -301,6 +301,20 @@ export class Editor {
+         else {
+             this.setTextInternal(this.history[this.historyIndex] || "");
+         }
++        this.positionCursorForHistoryNavigation(direction);
++    }
++    positionCursorForHistoryNavigation(direction) {
++        if (direction < 0) {
++            this.state.cursorLine = 0;
++            this.setCursorCol(0);
++            this.scrollOffset = 0;
++            return;
++        }
++        this.state.cursorLine = Math.max(0, this.state.lines.length - 1);
++        const currentLine = this.state.lines[this.state.cursorLine] || "";
++        this.setCursorCol(currentLine.length);
++        // Keep the default scroll reset from setTextInternal; render() will
++        // advance the visible editor viewport far enough to show this cursor.
+     }
+     /** Internal setText that doesn't reset history state - used by navigateHistory */
+     setTextInternal(text) {
+diff --git a/dist/components/markdown.js b/dist/components/markdown.js
+index 1f73455..ac0f762 100644
+--- a/dist/components/markdown.js
++++ b/dist/components/markdown.js
+@@ -237,22 +237,22 @@ export class Markdown {
+                 lines.push(this.renderInlineTokens([token], styleContext));
+                 break;
+             case "code": {
+-                const indent = this.theme.codeBlockIndent ?? "  ";
+-                lines.push(this.theme.codeBlockBorder(`\`\`\`${token.lang || ""}`));
+-                if (this.theme.highlightCode) {
+-                    const highlightedLines = this.theme.highlightCode(token.text, token.lang);
+-                    for (const hlLine of highlightedLines) {
+-                        lines.push(`${indent}${hlLine}`);
++                const borderWidth = Math.max(4, Math.min(width, 100));
++                const label = token.lang ? ` ${token.lang} ` : "";
++                const topRuleWidth = Math.max(1, borderWidth - 2 - visibleWidth(label));
++                lines.push(this.theme.codeBlockBorder(`╭${label}${"─".repeat(topRuleWidth)}╮`));
++                const highlightedLines = this.theme.highlightCode
++                    ? this.theme.highlightCode(token.text, token.lang)
++                    : token.text.split("\n").map((codeLine) => this.theme.codeBlock(codeLine));
++                const codeWidth = Math.max(1, borderWidth - 4);
++                for (const hlLine of highlightedLines) {
++                    const wrappedCodeLines = wrapTextWithAnsi(hlLine || " ", codeWidth);
++                    for (const wrappedCodeLine of wrappedCodeLines.length ? wrappedCodeLines : [""]) {
++                        const padding = " ".repeat(Math.max(0, codeWidth - visibleWidth(wrappedCodeLine)));
++                        lines.push(this.theme.codeBlockBorder("│ ") + wrappedCodeLine + padding + this.theme.codeBlockBorder(" │"));
+                     }
+                 }
+-                else {
+-                    // Split code by newlines and style each line
+-                    const codeLines = token.text.split("\n");
+-                    for (const codeLine of codeLines) {
+-                        lines.push(`${indent}${this.theme.codeBlock(codeLine)}`);
+-                    }
+-                }
+-                lines.push(this.theme.codeBlockBorder("```"));
++                lines.push(this.theme.codeBlockBorder(`╰${"─".repeat(Math.max(1, borderWidth - 2))}╯`));
+                 if (nextTokenType && nextTokenType !== "space") {
+                     lines.push(""); // Add spacing after code blocks (unless space token follows)
+                 }
+diff --git a/dist/terminal.js b/dist/terminal.js
+index 3545b28..1e2ea67 100644
+--- a/dist/terminal.js
++++ b/dist/terminal.js
+@@ -284,9 +284,8 @@ export class ProcessTerminal {
+     clearScreen() {
+         process.stdout.write("\x1b[2J\x1b[H"); // Clear screen and move to home (1,1)
+     }
+-    setTitle(title) {
+-        // OSC 0;title BEL - set terminal window title
+-        process.stdout.write(`\x1b]0;${title}\x07`);
++    setTitle(_title) {
++        // Disabled locally: terminal title OSC sequences can break rendering in some terminals.
+     }
+     setProgress(active) {
+         if (active) {
+diff --git a/dist/tui.d.ts b/dist/tui.d.ts
+index 8394d46..3d1f1bd 100644
+--- a/dist/tui.d.ts
++++ b/dist/tui.d.ts
+@@ -33,6 +33,16 @@ type InputListenerResult = {
+     data?: string;
+ } | undefined;
+ type InputListener = (data: string) => InputListenerResult;
++export interface ResizeRedrawContext {
++    lines: readonly string[];
++    width: number;
++    height: number;
++    widthChanged: boolean;
++    heightChanged: boolean;
++    viewportTop: number;
++    hasOverlays: boolean;
++}
++export type ResizeRedrawProvider = (context: ResizeRedrawContext) => number | undefined;
+ /**
+  * Interface for components that can receive focus and display a hardware cursor.
+  * When focused, the component should emit CURSOR_MARKER at the cursor position
+@@ -152,6 +162,7 @@ export declare class TUI extends Container {
+     private maxLinesRendered;
+     private previousViewportTop;
+     private fullRedrawCount;
++    private resizeRedrawProvider;
+     private stopped;
+     private focusOrderCounter;
+     private overlayStack;
+@@ -166,6 +177,7 @@ export declare class TUI extends Container {
+      * When false, empty rows remain (reduces redraws on slower terminals).
+      */
+     setClearOnShrink(enabled: boolean): void;
++    setResizeRedrawProvider(provider: ResizeRedrawProvider | undefined): void;
+     setFocus(component: Component | null): void;
+     /**
+      * Show an overlay component with configurable positioning and sizing.
+diff --git a/dist/tui.js b/dist/tui.js
+index b521ceb..0272ad0 100644
+--- a/dist/tui.js
++++ b/dist/tui.js
+@@ -114,6 +114,9 @@ export class TUI extends Container {
+     maxLinesRendered = 0; // Track terminal's working area (max lines ever rendered)
+     previousViewportTop = 0; // Track previous viewport top for resize-aware cursor moves
+     fullRedrawCount = 0;
++    // Optional embedding hook: return a logical line index before the viewport
++    // to replay a longer suffix on terminal resize while preserving the final viewport.
++    resizeRedrawProvider = undefined;
+     stopped = false;
+     // Overlay stack for modal components rendered on top of base content
+     focusOrderCounter = 0;
+@@ -151,6 +154,9 @@ export class TUI extends Container {
+     setClearOnShrink(enabled) {
+         this.clearOnShrink = enabled;
+     }
++    setResizeRedrawProvider(provider) {
++        this.resizeRedrawProvider = provider;
++    }
+     setFocus(component) {
+         // Clear focused flag on old component
+         if (isFocusable(this.focusedComponent)) {
+@@ -755,6 +761,24 @@ export class TUI extends Container {
+         // Extract cursor position before applying line resets (marker must be found first)
+         const cursorPos = this.extractCursorPosition(newLines, height);
+         newLines = this.applyLineResets(newLines);
++        const commitRedrawState = (clear) => {
++            this.cursorRow = Math.max(0, newLines.length - 1);
++            this.hardwareCursorRow = this.cursorRow;
++            // Reset max lines when clearing, otherwise track growth
++            if (clear) {
++                this.maxLinesRendered = newLines.length;
++            }
++            else {
++                this.maxLinesRendered = Math.max(this.maxLinesRendered, newLines.length);
++            }
++            const bufferLength = Math.max(height, newLines.length);
++            this.previousViewportTop = Math.max(0, bufferLength - height);
++            this.positionHardwareCursor(cursorPos, newLines.length);
++            this.previousLines = newLines;
++            this.previousKittyImageIds = this.collectKittyImageIds(newLines);
++            this.previousWidth = width;
++            this.previousHeight = height;
++        };
+         // Helper to clear scrollback and viewport and render all new lines
+         const fullRender = (clear) => {
+             this.fullRedrawCount += 1;
+@@ -770,22 +794,50 @@ export class TUI extends Container {
+             }
+             buffer += "\x1b[?2026l"; // End synchronized output
+             this.terminal.write(buffer);
+-            this.cursorRow = Math.max(0, newLines.length - 1);
+-            this.hardwareCursorRow = this.cursorRow;
+-            // Reset max lines when clearing, otherwise track growth
+-            if (clear) {
+-                this.maxLinesRendered = newLines.length;
++            commitRedrawState(clear);
++        };
++        // Helper for terminal resize: repaint only the visible viewport.
++        // Replaying every logical chat line into the main buffer recreates scrollback
++        // by visibly scrolling through the whole conversation on terminals that do not
++        // honor synchronized output. The TUI still keeps the full logical line buffer.
++        const renderVisibleViewport = () => {
++            this.fullRedrawCount += 1;
++            const bufferLength = Math.max(height, newLines.length);
++            const nextViewportTop = Math.max(0, bufferLength - height);
++            let visibleLines = newLines.slice(nextViewportTop, nextViewportTop + height);
++            if (this.resizeRedrawProvider) {
++                try {
++                    const requestedStart = this.resizeRedrawProvider({
++                        lines: newLines,
++                        width,
++                        height,
++                        widthChanged,
++                        heightChanged,
++                        viewportTop: nextViewportTop,
++                        hasOverlays: this.overlayStack.some((entry) => this.isOverlayVisible(entry)),
++                    });
++                    if (Number.isInteger(requestedStart) && requestedStart >= 0 && requestedStart < newLines.length && newLines.length - requestedStart > height) {
++                        // Replay a suffix ending at the same logical bottom. If the suffix is
++                        // taller than the viewport, the terminal scrolls to the same final
++                        // screen while keeping the replayed content contiguous in scrollback.
++                        visibleLines = newLines.slice(requestedStart);
++                    }
++                }
++                catch {
++                    // Resize repaint should never fail because an embedding hook failed.
++                }
+             }
+-            else {
+-                this.maxLinesRendered = Math.max(this.maxLinesRendered, newLines.length);
++            let buffer = "\x1b[?2026h"; // Begin synchronized output
++            buffer += this.deleteKittyImages(this.previousKittyImageIds);
++            buffer += "\x1b[2J\x1b[H"; // Clear visible viewport and move home; keep existing scrollback.
++            for (let i = 0; i < visibleLines.length; i++) {
++                if (i > 0)
++                    buffer += "\r\n";
++                buffer += visibleLines[i];
+             }
+-            const bufferLength = Math.max(height, newLines.length);
+-            this.previousViewportTop = Math.max(0, bufferLength - height);
+-            this.positionHardwareCursor(cursorPos, newLines.length);
+-            this.previousLines = newLines;
+-            this.previousKittyImageIds = this.collectKittyImageIds(newLines);
+-            this.previousWidth = width;
+-            this.previousHeight = height;
++            buffer += "\x1b[?2026l"; // End synchronized output
++            this.terminal.write(buffer);
++            commitRedrawState(true);
+         };
+         const debugRedraw = process.env.PI_DEBUG_REDRAW === "1";
+         const logRedraw = (reason) => {
+@@ -801,18 +853,20 @@ export class TUI extends Container {
+             fullRender(false);
+             return;
+         }
+-        // Width changes always need a full re-render because wrapping changes.
++        // Width changes require re-rendering component lines because wrapping changes,
++        // but only the visible terminal viewport needs to be repainted.
+         if (widthChanged) {
+             logRedraw(`terminal width changed (${this.previousWidth} -> ${width})`);
+-            fullRender(true);
++            renderVisibleViewport();
+             return;
+         }
+-        // Height changes normally need a full re-render to keep the visible viewport aligned,
+-        // but Termux changes height when the software keyboard shows or hides.
+-        // In that environment, a full redraw causes the entire history to replay on every toggle.
++        // Height changes need the visible viewport realigned, but repainting every
++        // logical chat line makes the terminal appear to scroll through history.
++        // Termux changes height when the software keyboard shows or hides; keep its
++        // existing differential path to avoid unnecessary clears on keyboard toggles.
+         if (heightChanged && !isTermuxSession()) {
+             logRedraw(`terminal height changed (${this.previousHeight} -> ${height})`);
+-            fullRender(true);
++            renderVisibleViewport();
+             return;
+         }
+         // Content shrunk below the working area and no overlays - re-render to clear empty rows

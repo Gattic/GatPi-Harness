@@ -1,0 +1,8 @@
+{
+  "name": "lib",
+  "id": "lib::@1",
+  "type": "STATIC_LIBRARY",
+  "sources": [{ "path": "generated/version.cpp", "isGenerated": true, "compileGroupIndex": 0 }],
+  "artifacts": [{ "path": "../../../../../build/lib/libfixture.a" }],
+  "compileGroups": [{ "language": "CXX", "defines": [], "includes": [], "compileCommandFragments": [] }]
+}

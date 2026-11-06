@@ -1,0 +1,12 @@
+[
+  {
+    "directory": ".",
+    "file": "src/main.cpp",
+    "arguments": ["clang++", "-Iinclude", "-DDEBUG=1", "-DAPI_TOKEN=secret-value", "-std=c++20", "-O0", "-o", "build/debug/main.o", "-c", "src/main.cpp"]
+  },
+  {
+    "directory": ".",
+    "file": "src/main.cpp",
+    "command": "clang++ -Iinclude -DNDEBUG=1 -std=c++20 -O2 -o build/release/main.o -c src/main.cpp"
+  }
+]

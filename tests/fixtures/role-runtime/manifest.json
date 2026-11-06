@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "benchmark": "pi-role-runtime-v2",
+  "fixtureVersion": "2026-07-22.1",
+  "description": "Synthetic and redacted deterministic promotion fixtures. No case contains production prompts, transcripts, credentials, or file bodies.",
+  "rpcCases": [
+    {
+      "id": "provider-terminal-error",
+      "roleId": "reviewer",
+      "contractVersion": "role-v2",
+      "file": "children/terminal-error.jsonl",
+      "expectedOk": false,
+      "expectedTermination": "provider_error",
+      "budget": { "maxModelCalls": 2, "maxToolCalls": 4 }
+    },
+    {
+      "id": "model-budget-overrun",
+      "roleId": "researcher",
+      "contractVersion": "role-v2",
+      "file": "children/budget-and-accounting.jsonl",
+      "expectedOk": false,
+      "expectedTermination": "budget_model_calls",
+      "budget": { "maxModelCalls": 2, "maxToolCalls": 4 }
+    },
+    {
+      "id": "timed-out-mutation-accounting",
+      "roleId": "coder",
+      "contractVersion": "role-v2",
+      "file": "children/timed-out-mutation.jsonl",
+      "expectedOk": true,
+      "expectedTermination": "completed",
+      "budget": { "maxModelCalls": 2, "maxToolCalls": 2 }
+    }
+  ],
+  "readOnlyCases": [
+    {
+      "id": "readonly-successes",
+      "roleId": "reviewer",
+      "contractVersion": "role-v2",
+      "weight": 19,
+      "status": "succeeded",
+      "typedOutputValid": true,
+      "evidenceComplete": true,
+      "goldFiles": ["src/role-router.js"],
+      "observedFiles": ["src/role-router.js"],
+      "queueMs": 8,
+      "executionMs": 850,
+      "totalMs": 858,
+      "modelCalls": 1,
+      "toolCalls": 2,
+      "maxModelCalls": 2,
+      "maxToolCalls": 4,
+      "tokens": 420,
+      "cost": 0.01
+    },
+    {
+      "id": "readonly-timeout-control",
+      "roleId": "researcher",
+      "contractVersion": "role-v2",
+      "weight": 1,
+      "status": "timed_out",
+      "typedOutputValid": false,
+      "evidenceComplete": false,
+      "goldFiles": ["src/subagents.js"],
+      "observedFiles": [],
+      "queueMs": 10,
+      "executionMs": 110000,
+      "totalMs": 110010,
+      "modelCalls": 1,
+      "toolCalls": 1,
+      "maxModelCalls": 2,
+      "maxToolCalls": 4,
+      "tokens": 300,
+      "cost": 0.01
+    }
+  ],
+  "mutationCases": [
+    {
+      "id": "isolated-patch-successes",
+      "roleId": "coder",
+      "contractVersion": "role-v2",
+      "weight": 9,
+      "status": "succeeded",
+      "typedOutputValid": true,
+      "evidenceComplete": true,
+      "expectedPatchMatch": true,
+      "verificationPassed": true,
+      "parentFingerprintUnchangedBeforeApply": true,
+      "patchOutcome": "applied",
+      "queueMs": 12,
+      "executionMs": 1400,
+      "totalMs": 1412,
+      "modelCalls": 1,
+      "toolCalls": 3,
+      "maxModelCalls": 2,
+      "maxToolCalls": 6,
+      "tokens": 650,
+      "cost": 0.02
+    },
+    {
+      "id": "isolated-patch-mismatch-control",
+      "roleId": "refactorer",
+      "contractVersion": "role-v2",
+      "weight": 1,
+      "status": "failed",
+      "typedOutputValid": false,
+      "evidenceComplete": true,
+      "expectedPatchMatch": false,
+      "verificationPassed": false,
+      "parentFingerprintUnchangedBeforeApply": true,
+      "patchOutcome": "verification_failed_rolled_back",
+      "queueMs": 10,
+      "executionMs": 1800,
+      "totalMs": 1810,
+      "modelCalls": 1,
+      "toolCalls": 3,
+      "maxModelCalls": 2,
+      "maxToolCalls": 6,
+      "tokens": 600,
+      "cost": 0.02
+    }
+  ],
+  "topologyCases": [
+    { "id": "review-defect-controls", "weight": 4, "kind": "known-defect", "expected": "reject", "observed": "reject", "evidenceComplete": true },
+    { "id": "review-clean-controls", "weight": 2, "kind": "clean-control", "expected": "accept", "observed": "accept", "evidenceComplete": true }
+  ],
+  "routerCorpus": "../role-router-corpus.json",
+  "policy": {
+    "forbiddenToolCalls": 0,
+    "unavailableToolLaunches": 0,
+    "unreportedBudgetOverruns": 0,
+    "boundedParallelOvershoot": 0,
+    "parentMutationsBeforeApply": 0,
+    "humanCorrections": 0,
+    "humanRejections": 0,
+    "diskGrowthBytes": 24576,
+    "retainedRecoveryBytes": 8192,
+    "privacyFindings": 0,
+    "transcriptFindings": 0,
+    "secretFindings": 0,
+    "mutatingP95BarMs": 10000
+  }
+}

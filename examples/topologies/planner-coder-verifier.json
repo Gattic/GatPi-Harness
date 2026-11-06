@@ -1,0 +1,286 @@
+{
+  "topologies": [
+    {
+      "schemaVersion": 2,
+      "roleRuntimeVersion": 2,
+      "contractVersion": "role-v2",
+      "resultSchemaVersion": 2,
+      "executionMode": "sequential",
+      "failurePolicy": "fail-fast",
+      "aggregationPolicy": "last",
+      "topologyId": "config-planner-coder-verifier",
+      "name": "Config Planner Coder Verifier",
+      "description": "Plan, implement in isolation, then verify the proposal.",
+      "nodes": [
+        {
+          "id": "plan",
+          "roleId": "planner",
+          "task": "Plan {{task}}",
+          "contextPolicy": "task-only",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "shared-readonly",
+          "mutationPolicy": "forbidden",
+          "budget": {
+            "maxModelCalls": 4,
+            "maxToolCalls": 24,
+            "wallClockMs": 120000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 120000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "findings",
+              "evidence"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "executionMode": "subagent",
+          "requiresTypedResult": true
+        },
+        {
+          "id": "code",
+          "roleId": "coder",
+          "task": "Implement {{task}} from the validated plan",
+          "contextPolicy": "summarized",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "isolated-worktree",
+          "mutationPolicy": "proposed-patch",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 64,
+            "wallClockMs": 300000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "artifacts",
+              "proposedPatch",
+              "verification"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "executionMode": "subagent",
+          "requiresTypedResult": true
+        },
+        {
+          "id": "verify",
+          "roleId": "verifier",
+          "task": "Verify the isolated proposal for {{task}}",
+          "contextPolicy": "summarized",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "isolated-worktree",
+          "mutationPolicy": "isolated-only",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 64,
+            "wallClockMs": 300000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "evidence",
+              "verification"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "executionMode": "subagent",
+          "requiresTypedResult": true
+        }
+      ],
+      "edges": [
+        {
+          "source": "plan",
+          "target": "code",
+          "condition": "ok"
+        },
+        {
+          "source": "code",
+          "target": "verify",
+          "condition": "no_errors"
+        }
+      ],
+      "terminalNodes": [
+        "verify"
+      ],
+      "tags": [
+        "coding",
+        "verification"
+      ],
+      "metadata": {
+        "requiresTypedResults": true,
+        "provenance": {
+          "source": "example-config",
+          "file": "examples/topologies/planner-coder-verifier.json",
+          "version": 2
+        }
+      }
+    }
+  ]
+}

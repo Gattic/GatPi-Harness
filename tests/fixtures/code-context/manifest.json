@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "fixtureGroups": [
+    "duplicate-symbols-and-shadowing",
+    "polyglot-and-source-kinds",
+    "working-tree-changes",
+    "provider-degradation",
+    "source-to-test-edges",
+    "gold-localization"
+  ],
+  "tasks": [
+    {
+      "id": "locate-public-parse",
+      "taskClass": "interface-change",
+      "prompt": "Locate the exported parse function, not the shadowed local binding.",
+      "gold": {
+        "files": ["workspace/src/parser.js"],
+        "symbols": ["parser.parse"],
+        "spans": [{ "path": "workspace/src/parser.js", "startLine": 1, "endLine": 3 }],
+        "tests": ["workspace/tests/parser.test.js"]
+      }
+    },
+    {
+      "id": "exclude-generated-copy",
+      "taskClass": "generated-code",
+      "prompt": "Find the first-party generatedValue implementation.",
+      "gold": {
+        "files": ["workspace/src/value.js"],
+        "symbols": ["value.generatedValue"],
+        "spans": [{ "path": "workspace/src/value.js", "startLine": 1, "endLine": 1 }],
+        "tests": ["workspace/tests/value.test.js"],
+        "excluded": ["workspace/generated/value.js", "workspace/vendor/value.js"]
+      }
+    },
+    {
+      "id": "multi-file-parser-value-change",
+      "taskClass": "multi-file-bug",
+      "prompt": "Locate both first-party implementations and the tests that constrain a coordinated change.",
+      "gold": {
+        "files": ["workspace/src/parser.js", "workspace/src/value.js"],
+        "symbols": ["parser.parse", "value.generatedValue"],
+        "spans": [{ "path": "workspace/src/parser.js", "startLine": 1, "endLine": 3 }, { "path": "workspace/src/value.js", "startLine": 1, "endLine": 1 }],
+        "tests": ["workspace/tests/parser.test.js", "workspace/tests/value.test.js"]
+      }
+    },
+    {
+      "id": "configuration-specific-generated-value",
+      "taskClass": "configuration-specific-failure",
+      "prompt": "Under the generated configuration, locate the generated value implementation without confusing it with first-party or vendor copies.",
+      "gold": {
+        "files": ["workspace/generated/value.js"],
+        "symbols": ["generated.generatedValue"],
+        "spans": [{ "path": "workspace/generated/value.js", "startLine": 1, "endLine": 1 }],
+        "tests": ["workspace/tests/value.test.js"],
+        "excluded": ["workspace/vendor/value.js"]
+      }
+    },
+    {
+      "id": "select-parser-regression-test",
+      "taskClass": "regression-test-selection",
+      "prompt": "Select the narrow regression test for a parse trimming defect.",
+      "gold": {
+        "files": ["workspace/src/parser.js"],
+        "symbols": ["parser.parse"],
+        "spans": [{ "path": "workspace/src/parser.js", "startLine": 1, "endLine": 3 }],
+        "tests": ["workspace/tests/parser.test.js"]
+      }
+    },
+    {
+      "id": "similar-historical-value-fix",
+      "taskClass": "similar-historical-fix",
+      "prompt": "Use a similar historical value fix only as low-confidence evidence and localize the live first-party implementation.",
+      "gold": {
+        "files": ["workspace/src/value.js"],
+        "symbols": ["value.generatedValue"],
+        "spans": [{ "path": "workspace/src/value.js", "startLine": 1, "endLine": 1 }],
+        "tests": ["workspace/tests/value.test.js"],
+        "excluded": ["workspace/generated/value.js", "workspace/vendor/value.js"]
+      }
+    }
+  ],
+  "providerCases": [
+    { "id": "valid", "shape": "items-array", "expected": "fresh" },
+    { "id": "malformed", "shape": "items-null", "expected": "degraded" },
+    { "id": "truncated", "shape": "items-array-truncated", "expected": "advisory" }
+  ],
+  "changeCases": ["modified", "staged", "untracked", "renamed", "deleted"]
+}

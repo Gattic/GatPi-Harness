@@ -1,0 +1,68 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+const source = fs.readFileSync(".pi/extensions/reasoning-runtime/index.ts", "utf8");
+
+for (const command of ["skill-status", "skill-doctor", "skill-review", "skill-list", "skill-show", "skill-suggest", "skill-synthesize", "skill-capture-topology", "skill-approve", "skill-promote", "skill-deprecate", "skill-evaluate", "skill-rollback", "skill-topology-template", "skill-topology-write", "skill-replay", "skill-compare", "skill-ab-test", "skill-topology-suggest", "skill-export", "skill-import", "skill-prune", "skill-snapshot", "skill-compact", "skill-restore", "skill-metrics"]) {
+  assert(source.includes(`pi.registerCommand("${command}"`), `${command} command should be registered`);
+}
+assert(source.includes('pi.registerTool({ name: "skill_synthesis"'), "skill_synthesis model-callable tool should be registered");
+assert(source.includes("formatSkillAdvisory"), "skill advisory formatter should exist");
+assert(source.includes("boundary.skills?.retrieve"), "relevant skills should be retrieved during context injection");
+assert(source.includes("[L2:skills] Relevant procedural skills"), "skill injection should be clearly labelled as advisory layered context");
+assert(source.includes("captureTopologyRun"), "topology runs should be capturable as skill synthesis input");
+assert(source.includes("maybeCaptureTopologySkill"), "successful topology runs should be auto-captured when enabled");
+assert(source.includes("PI_SKILL_AUTO_CAPTURE"), "automatic capture should be configurable");
+assert(source.includes("PI_SKILL_INJECT_MAX"), "skill injection count should be configurable");
+assert(source.includes("PI_SKILL_INJECT_MIN_SCORE"), "skill injection score should be configurable");
+assert(source.includes("SKILL_META_INJECT_MAX"), "meta prompt skill injection should be separately tunable");
+assert(source.includes("synthesizeTopologyTemplate"), "skills should render topology templates");
+assert(source.includes("runtime.boundary.skills.replay"), "skill replay command should use boundary adapter");
+assert(source.includes("runtime.boundary.skills.compare"), "skill compare command should use boundary adapter");
+assert(source.includes("runtime.boundary.skills.abTest"), "skill A/B command should use boundary adapter");
+assert(source.includes('Type.Literal("registerProvider")'), "skill_synthesis tool should support provider registration");
+assert(source.includes("explicitSkillGovernanceIntent"), "governance mutations require current-user intent tracking");
+assert(source.includes('new Set(["approve", "registerProvider", "import", "topologyWrite"])'), "model-tool governance mutations are explicitly allowlisted and gated");
+assert(source.includes("publishing-approval-command-only"), "publishing approval remains command/human-only");
+assert(source.includes('scope: "advisoryRetrieval", minConfidence: 0.65'), "model approval defaults to advisory scope with the normal threshold");
+assert(!source.includes("minConfidence: 0.1"), "normal commands and model tools do not use low-threshold implicit promotion");
+assert(source.includes('skill?.approvals?.routing !== "approved"'), "topology writes require independent routing approval");
+assert(source.includes('Type.Literal("compare")'), "skill_synthesis tool should support comparison");
+assert(source.includes('Type.Literal("abTest")'), "skill_synthesis tool should support sandbox A/B scoring");
+assert(source.includes('Type.Literal("prune")'), "skill_synthesis tool should support pruning");
+assert(source.includes('Type.Literal("deprecate")'), "skill_synthesis tool should support deprecation");
+assert(source.includes('Type.Literal("doctor")'), "skill_synthesis tool should support doctor checks");
+assert(source.includes('Type.Literal("export")'), "skill_synthesis tool should support export");
+assert(source.includes('Type.Literal("import")'), "skill_synthesis tool should support import");
+assert(source.includes('Type.Literal("topologySuggest")'), "skill_synthesis tool should support skill-aware topology suggestions");
+assert(source.includes('Type.Literal("topologyWrite")'), "skill_synthesis tool should support writing topology configs");
+assert(source.includes('Type.Literal("snapshot")'), "skill_synthesis tool should support snapshots");
+assert(source.includes('Type.Literal("restore")'), "skill_synthesis tool should support restore");
+assert(source.includes('Type.Literal("compact")'), "skill_synthesis tool should support event compaction");
+assert(source.includes("formatFailureAdvisory"), "failure patterns should be injected as advisory context");
+assert(source.includes("assistantTurnHasFailureSignal"), "skill evaluation should use contextual failure detection instead of raw error-word matching");
+assert(source.includes("const withoutBenign"), "benign zero-error summaries should be stripped before failure-signal matching");
+assert(source.includes("test(withoutBenign)"), "failure matching should run on benign-summary-stripped assistant text");
+assert(source.includes('pi.on("agent_settled"'), "automatic skill evaluation should wait for terminal agent settlement");
+assert(source.includes("resolveExplicitInvocation"), "only explicit native skill commands should become evaluation candidates");
+assert(source.includes("runtime.invokedSkillIds"), "explicit skill invocations should be tracked separately from advisory retrievals");
+assert(source.includes("runtime.skillAssistant = event.message"), "settlement should use an assistant response observed during the current invocation rather than a stale branch message");
+assert(source.includes("const assistant = runtime.skillAssistant"), "skill settlement should remain neutral when the current invocation produced no assistant response");
+assert(!source.includes("runtime.activeSkillIds"), "retrieved advisory skills must not be treated as active/invoked skills");
+assert(source.includes("if (event.streamingBehavior)"), "mid-stream steering/follow-ups should preserve explicit skill ownership until final settlement");
+assert(source.includes("if (!ctx.isIdle() || ctx.hasPendingMessages()) return;"), "skill evaluation should defer when another extension owns continuation");
+assert(source.includes("if (!outcome?.eligible) return;"), "provider errors, aborts, and output truncation should remain neutral rather than penalizing skills");
+assert(source.includes("failureSignal: assistantTurnHasFailureSignal(failureText)"), "settled skill evaluation should apply contextual failure detection");
+assert(source.includes('invoked: true,\n          source: "agent_settled"'), "automatic evaluations should carry explicit invocation provenance");
+const messageEnd = source.slice(source.indexOf('pi.on("message_end"'), source.indexOf('pi.on("agent_settled"'));
+assert(!messageEnd.includes("skills.evaluate"), "intermediate assistant message_end events must not evaluate skills");
+assert(source.includes("purgeLocalRequireCache"), "reload should purge local CommonJS module cache before rebuilding boundary adapters");
+assert(source.includes("__sourceHash"), "reload should invalidate cached boundaries when extension source changes");
+assert(source.includes('const coverageGap = result.status === "no-verifiers"'), "automatic verification should identify unmatched verifier coverage explicitly");
+assert(source.includes('classification: coverageGap ? "verification-coverage-gap"'), "coverage gaps should be recorded separately from verifier failures");
+assert(source.includes("if (verificationFailed && evidence"), "coverage gaps should not create failed-verifier feedback or failure analysis");
+assert(!source.includes('title: `Automatic verification ${memoryDisposition}`'), "routine automatic verification evidence must stay out of general cognitive hot memory");
+assert(source.includes("recordVerifierEvidence"), "coverage gaps and verifier outcomes remain in the typed reasoning evidence store");
+
+console.log("skill extension source tests passed");

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "benchmark": "parallel-evidence-synthesis-v1",
+  "cases": [
+    {
+      "id": "architecture-boundary",
+      "task": "Assess an architecture boundary using repository evidence",
+      "expectedCategories": ["research", "compare", "check", "gaps"],
+      "seededContradiction": "The adapter is both mandatory and bypassed by a direct import",
+      "seededGap": "No compatibility test covers the direct-import path"
+    },
+    {
+      "id": "verification-policy",
+      "task": "Assess a verification policy using repository evidence",
+      "expectedCategories": ["research", "compare", "check", "gaps"],
+      "seededContradiction": "A degraded provider is described as advisory but counted as a gate",
+      "seededGap": "No partial-result metric distinguishes blocked from skipped nodes"
+    },
+    {
+      "id": "mutation-safety",
+      "task": "Assess a mutation safety workflow using repository evidence",
+      "expectedCategories": ["research", "compare", "check", "gaps"],
+      "seededContradiction": "A proposed patch is described as applied before explicit acceptance",
+      "seededGap": "The rollback path lacks a failed-post-apply fixture"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "reply": {
+    "codemodel-v2": {
+      "kind": "codemodel",
+      "jsonFile": "codemodel-v2-test.json"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "app",
+  "id": "app::@1",
+  "type": "EXECUTABLE",
+  "sources": [{ "path": "src/main.cpp", "compileGroupIndex": 0 }],
+  "dependencies": [{ "id": "lib" }],
+  "artifacts": [{ "path": "../../../../../build/bin/app-debug" }],
+  "compileGroups": [{ "language": "CXX", "defines": [{ "define": "DEBUG=1" }, { "define": "API_TOKEN=secret" }], "includes": [{ "path": "include" }], "compileCommandFragments": [{ "fragment": "-std=c++20 -g" }] }]
+}

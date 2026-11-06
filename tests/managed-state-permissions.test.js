@@ -1,0 +1,27 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { previewManagedPermissions, applyManagedPermissions } = require("../src/managed-state-permissions");
+const { tmpFixture } = require("./helpers/tmp-fixture");
+const tmp = tmpFixture("managed-state-permissions-"); const cwd = path.join(tmp, "repo"); const vault = path.join(tmp, "vault"); const research = path.join(vault, "Research"); const memory = path.join(vault, "Memory", "Projects", "fixture"); fs.mkdirSync(path.join(cwd, ".pi", "cognitive-automation"), { recursive: true, mode: 0o755 }); fs.mkdirSync(memory, { recursive: true, mode: 0o755 }); fs.mkdirSync(research, { recursive: true });
+const cognitive = path.join(cwd, ".pi", "cognitive-automation", "state.json"); const note = path.join(memory, "Decisions.md"); const unrelated = path.join(research, "User.md");
+const advisory = path.join(cwd, ".pi", "hermes-advisory", "events.jsonl"); const candidate = path.join(cwd, ".pi", "hermes-skill-candidates", "fixture", "SKILL.md"); const obsidian = path.join(cwd, ".pi", "obsidian", "state.json");
+for (const file of [cognitive, advisory, candidate, obsidian]) { fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o755 }); fs.writeFileSync(file, file === candidate ? "# Candidate\n" : "{}\n", { mode: 0o644 }); fs.chmodSync(file, 0o644); }
+fs.writeFileSync(note, "# Managed\n", { mode: 0o644 }); fs.chmodSync(note, 0o644); fs.writeFileSync(unrelated, "# User managed\n", { mode: 0o644 }); fs.chmodSync(unrelated, 0o644);
+const preview = previewManagedPermissions({ cwd, vault, home: path.join(tmp, "home") });
+assert.equal(preview.files.noncompliant, 5);
+assert.equal(preview.boundaries.entireVaultInScope, false);
+assert.equal(JSON.stringify(preview).includes(tmp), false);
+assert.equal(fs.statSync(cognitive).mode & 0o777, 0o644, "preview is non-mutating");
+const unreviewed = applyManagedPermissions({ cwd, vault, home: path.join(tmp, "home"), apply: true });
+assert.equal(unreviewed.reason, "permission-preview-manifest-required");
+assert.equal(fs.statSync(cognitive).mode & 0o777, 0o644, "apply cannot bypass a separately reviewed manifest");
+const applied = applyManagedPermissions({ cwd, vault, home: path.join(tmp, "home"), manifestId: preview.manifestId, apply: true });
+assert.equal(applied.ok, true);
+assert.equal(fs.statSync(cognitive).mode & 0o777, 0o600);
+for (const file of [advisory, candidate, obsidian]) assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+assert.equal(fs.statSync(note).mode & 0o777, 0o600);
+assert.equal(fs.statSync(path.dirname(note)).mode & 0o777, 0o700);
+assert.equal(fs.statSync(unrelated).mode & 0o777, 0o644, "unrelated user-managed Research notes are never chmodded");
+console.log("managed state permission tests passed");

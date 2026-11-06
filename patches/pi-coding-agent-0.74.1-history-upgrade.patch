@@ -1,0 +1,282 @@
+diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
+index b78cbfd..ccdbb83 100644
+--- a/dist/modes/interactive/interactive-mode.js
++++ b/dist/modes/interactive/interactive-mode.js
+@@ -14,7 +14,7 @@ import { parseSkillBlock } from "../../core/agent-session.js";
+ import { SessionImportFileNotFoundError } from "../../core/agent-session-runtime.js";
+ import { FooterDataProvider } from "../../core/footer-data-provider.js";
+ import { KeybindingsManager } from "../../core/keybindings.js";
+-import { createCompactionSummaryMessage } from "../../core/messages.js";
++import { createBranchSummaryMessage, createCompactionSummaryMessage, createCustomMessage } from "../../core/messages.js";
+ import { defaultModelPerProvider, findExactModelReferenceMatch, resolveModelScope } from "../../core/model-resolver.js";
+ import { DefaultPackageManager } from "../../core/package-manager.js";
+ import { BUILT_IN_PROVIDER_DISPLAY_NAMES } from "../../core/provider-display-names.js";
+@@ -1151,7 +1151,7 @@ export class InteractiveMode {
+                         return { cancelled: true };
+                     }
+                     this.chatContainer.clear();
+-                    this.renderInitialMessages();
++                    this.renderInitialMessages({ preservePromptHistory: true });
+                     if (result.editorText && !this.editor.getText().trim()) {
+                         this.editor.setText(result.editorText);
+                     }
+@@ -1278,7 +1278,7 @@ export class InteractiveMode {
+         this.streamingComponent = undefined;
+         this.streamingMessage = undefined;
+         this.pendingTools.clear();
+-        this.renderInitialMessages();
++        this.renderInitialMessages({ preservePromptHistory: true });
+     }
+     /**
+      * Get a registered tool definition by name (for custom rendering).
+@@ -2506,7 +2506,11 @@ export class InteractiveMode {
+         return "";
+     }
+     getBranchEntriesFromLoadedEntries(entries) {
+-        const sessionEntries = entries.filter((entry) => entry && entry.type !== "session" && entry.id);
++        const allEntries = entries.filter((entry) => entry && entry.type !== "session");
++        const sessionEntries = allEntries.filter((entry) => entry.id);
++        if (sessionEntries.length === 0) {
++            return allEntries;
++        }
+         const byId = new Map(sessionEntries.map((entry) => [entry.id, entry]));
+         const branchEntries = [];
+         let current = sessionEntries[sessionEntries.length - 1];
+@@ -2516,26 +2520,82 @@ export class InteractiveMode {
+         }
+         return branchEntries;
+     }
++    getPromptHistorySessionFiles() {
++        const currentSessionFile = this.sessionManager.getSessionFile();
++        try {
++            return fs
++                .readdirSync(this.sessionManager.getSessionDir())
++                .filter((file) => file.endsWith(".jsonl"))
++                .map((file) => path.join(this.sessionManager.getSessionDir(), file))
++                .filter((file) => !currentSessionFile || path.resolve(file) !== path.resolve(currentSessionFile))
++                .map((file) => ({ file, mtime: fs.statSync(file).mtimeMs }))
++                .sort((a, b) => a.mtime - b.mtime)
++                .map(({ file }) => file);
++        }
++        catch {
++            return [];
++        }
++    }
++    getDisplayMessagesFromBranchEntries(branchEntries = this.sessionManager.getBranch()) {
++        const messages = [];
++        for (const entry of branchEntries) {
++            if (entry.type === "message") {
++                messages.push(entry.message);
++            }
++            else if (entry.type === "custom_message") {
++                messages.push(createCustomMessage(entry.customType, entry.content, entry.display, entry.details, entry.timestamp));
++            }
++            else if (entry.type === "branch_summary" && entry.summary) {
++                messages.push(createBranchSummaryMessage(entry.summary, entry.fromId, entry.timestamp));
++            }
++            else if (entry.type === "compaction") {
++                messages.push(createCompactionSummaryMessage(entry.summary, entry.tokensBefore, entry.timestamp));
++            }
++        }
++        return messages;
++    }
++    rememberPromptHistoryText(historyTexts, text) {
++        const trimmed = String(text ?? "").trim();
++        if (!trimmed) {
++            return;
++        }
++        const existingIndex = historyTexts.indexOf(trimmed);
++        if (existingIndex >= 0) {
++            historyTexts.splice(existingIndex, 1);
++        }
++        historyTexts.push(trimmed);
++        if (historyTexts.length > 100) {
++            historyTexts.splice(0, historyTexts.length - 100);
++        }
++    }
++    addPromptHistoryTextsFromBranch(historyTexts, branchEntries) {
++        for (const entry of branchEntries) {
++            this.rememberPromptHistoryText(historyTexts, this.getPromptHistoryTextFromEntry(entry));
++        }
++    }
++    addPromptHistoryTextsFromRepoSessions(historyTexts) {
++        for (const file of this.getPromptHistorySessionFiles()) {
++            const entries = loadEntriesFromFile(file);
++            if (entries.length === 0) {
++                continue;
++            }
++            this.addPromptHistoryTextsFromBranch(historyTexts, this.getBranchEntriesFromLoadedEntries(entries));
++        }
++    }
+     rebuildEditorPromptHistoryFromBranch(branchEntries = this.sessionManager.getBranch(), options = {}) {
+         if (!Array.isArray(this.editor.history)) {
+             return;
+         }
+         const previousHistory = options.preserveCurrent ? [...this.editor.history] : [];
+-        this.resetEditorPromptHistory();
+-        for (const entry of branchEntries) {
+-            const textContent = this.getPromptHistoryTextFromEntry(entry);
+-            if (textContent) {
+-                this.editor.addToHistory?.(textContent);
+-            }
++        const historyTexts = [];
++        this.addPromptHistoryTextsFromRepoSessions(historyTexts);
++        this.addPromptHistoryTextsFromBranch(historyTexts, branchEntries);
++        for (const textContent of previousHistory.slice().reverse()) {
++            this.rememberPromptHistoryText(historyTexts, textContent);
+         }
+-        if (previousHistory.length > 0) {
+-            const restored = new Set(this.editor.history);
+-            for (const textContent of previousHistory.slice().reverse()) {
+-                if (textContent && !restored.has(textContent)) {
+-                    this.editor.addToHistory?.(textContent);
+-                    restored.add(textContent);
+-                }
+-            }
++        this.resetEditorPromptHistory();
++        for (const textContent of historyTexts) {
++            this.editor.addToHistory?.(textContent);
+         }
+     }
+     /**
+@@ -2701,14 +2761,14 @@ export class InteractiveMode {
+         }
+         this.ui.requestRender();
+     }
+-    renderInitialMessages() {
+-        // Get aligned messages and entries from session context
++    renderInitialMessages(options = {}) {
++        // Render the full active branch for visible chat history. The session
++        // manager still builds compacted context separately for the model.
+         const context = this.sessionManager.buildSessionContext();
+-        this.renderSessionContext(context, {
++        this.renderSessionContext({ ...context, messages: this.getDisplayMessagesFromBranchEntries() }, {
+             updateFooter: true,
+         });
+-        this.rebuildEditorPromptHistoryFromBranch();
+-        this.seedEditorPromptHistoryFromRepoSessions(context);
++        this.rebuildEditorPromptHistoryFromBranch(undefined, { preserveCurrent: Boolean(options.preservePromptHistory) });
+         // Show compaction info if session was compacted
+         const allEntries = this.sessionManager.getEntries();
+         const compactionCount = allEntries.filter((e) => e.type === "compaction").length;
+@@ -2731,44 +2791,10 @@ export class InteractiveMode {
+             this.editor.historyIndex = -1;
+         }
+     }
+-    seedEditorPromptHistoryFromRepoSessions(currentContext = this.sessionManager.buildSessionContext()) {
+-        if (!Array.isArray(this.editor.history) || this.editor.history.length > 0) {
+-            return;
+-        }
+-        const currentHasUserMessages = currentContext.messages.some((message) => message.role === "user" && this.getUserMessageText(message));
+-        if (currentHasUserMessages) {
+-            return;
+-        }
+-        let files;
+-        try {
+-            files = fs
+-                .readdirSync(this.sessionManager.getSessionDir())
+-                .filter((file) => file.endsWith(".jsonl"))
+-                .map((file) => path.join(this.sessionManager.getSessionDir(), file))
+-                .filter((file) => path.resolve(file) !== path.resolve(this.sessionManager.getSessionFile() ?? ""))
+-                .map((file) => ({ file, mtime: fs.statSync(file).mtimeMs }))
+-                .sort((a, b) => b.mtime - a.mtime);
+-        }
+-        catch {
+-            return;
+-        }
+-        for (const { file } of files.reverse()) {
+-            const entries = loadEntriesFromFile(file);
+-            if (entries.length === 0) {
+-                continue;
+-            }
+-            for (const entry of this.getBranchEntriesFromLoadedEntries(entries)) {
+-                const textContent = this.getPromptHistoryTextFromEntry(entry);
+-                if (textContent) {
+-                    this.editor.addToHistory?.(textContent);
+-                }
+-            }
+-        }
+-    }
+     rebuildChatFromMessages() {
+         this.chatContainer.clear();
+         const context = this.sessionManager.buildSessionContext();
+-        this.renderSessionContext(context);
++        this.renderSessionContext({ ...context, messages: this.getDisplayMessagesFromBranchEntries() });
+         this.rebuildEditorPromptHistoryFromBranch(undefined, { preserveCurrent: true });
+     }
+     // =========================================================================
+@@ -3742,7 +3768,7 @@ export class InteractiveMode {
+                     }
+                     // Update UI
+                     this.chatContainer.clear();
+-                    this.renderInitialMessages();
++                    this.renderInitialMessages({ preservePromptHistory: true });
+                     if (result.editorText && !this.editor.getText().trim()) {
+                         this.editor.setText(result.editorText);
+                     }
+
+diff --git a/dist/core/agent-session.js b/dist/core/agent-session.js
+index ae9c9a3..c164b60 100644
+--- a/dist/core/agent-session.js
++++ b/dist/core/agent-session.js
+@@ -1444,6 +1444,41 @@ export class AgentSession {
+             await this._runAutoCompaction("threshold", false);
+         }
+     }
++    _scheduleCompactionContinuation(reason) {
++        setTimeout(() => {
++            this.agent.continue().catch((error) => {
++                void this._handleCompactionContinuationFailure(reason, error);
++            });
++        }, 100);
++    }
++    async _handleCompactionContinuationFailure(reason, error) {
++        let message = error instanceof Error ? error.message : String(error);
++        if (/already processing/i.test(message)) {
++            return;
++        }
++        if (reason === "overflow" && /Cannot continue from message role: assistant|No messages to continue from/i.test(message)) {
++            try {
++                await this.agent.prompt({
++                    role: "user",
++                    content: [{ type: "text", text: "Continue the interrupted task from the compacted conversation summary above." }],
++                    timestamp: Date.now(),
++                });
++                return;
++            }
++            catch (fallbackError) {
++                const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
++                message = `${message}; fallback prompt failed: ${fallbackMessage}`;
++            }
++        }
++        this._emit({
++            type: "compaction_end",
++            reason,
++            result: undefined,
++            aborted: false,
++            willRetry: false,
++            errorMessage: `${reason === "overflow" ? "Context overflow recovery" : "Auto-compaction continuation"} failed after compaction: ${message}`,
++        });
++    }
+     /**
+      * Internal: Run auto-compaction with events.
+      */
+@@ -1566,16 +1601,12 @@ export class AgentSession {
+                 if (lastMsg?.role === "assistant" && lastMsg.stopReason === "error") {
+                     this.agent.state.messages = messages.slice(0, -1);
+                 }
+-                setTimeout(() => {
+-                    this.agent.continue().catch(() => { });
+-                }, 100);
++                this._scheduleCompactionContinuation(reason);
+             }
+             else if (this.agent.hasQueuedMessages()) {
+                 // Auto-compaction can complete while follow-up/steering/custom messages are waiting.
+                 // Kick the loop so queued messages are actually delivered.
+-                setTimeout(() => {
+-                    this.agent.continue().catch(() => { });
+-                }, 100);
++                this._scheduleCompactionContinuation(reason);
+             }
+         }
+         catch (error) {

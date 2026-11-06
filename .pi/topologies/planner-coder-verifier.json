@@ -1,0 +1,307 @@
+{
+  "topologies": [
+    {
+      "topologyId": "project-planner-coder-verifier",
+      "name": "Project Planner Coder Verifier",
+      "description": "Default project-local sequential implementation topology.",
+      "executionMode": "sequential",
+      "failurePolicy": "fail-fast",
+      "aggregationPolicy": "last",
+      "nodes": [
+        {
+          "id": "plan",
+          "roleId": "planner",
+          "task": "Plan {{task}} and emit roadmapPlan milestones with nested goals for parent application before implementation",
+          "contextPolicy": "task-only",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "shared-readonly",
+          "mutationPolicy": "forbidden",
+          "budget": {
+            "maxModelCalls": 4,
+            "maxToolCalls": 24,
+            "wallClockMs": 120000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 120000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "findings",
+              "evidence",
+              "roadmapPlan"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "roadmapPlan": {
+                "type": "object",
+                "required": ["title", "milestones"],
+                "properties": {
+                  "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+                  "milestones": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "required": ["title", "goals"],
+                      "properties": {
+                        "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+                        "goals": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 500 } }
+                      }
+                    }
+                  }
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "code",
+          "roleId": "coder",
+          "task": "Implement {{task}}",
+          "contextPolicy": "summarized",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "isolated-worktree",
+          "mutationPolicy": "proposed-patch",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 64,
+            "wallClockMs": 300000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "artifacts",
+              "proposedPatch",
+              "verification"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "verify",
+          "roleId": "verifier",
+          "task": "Verify {{task}}",
+          "contextPolicy": "summarized",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "isolated-worktree",
+          "mutationPolicy": "isolated-only",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 64,
+            "wallClockMs": 300000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "evidence",
+              "verification"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        }
+      ],
+      "edges": [
+        {
+          "source": "plan",
+          "target": "code",
+          "condition": "ok"
+        },
+        {
+          "source": "code",
+          "target": "verify",
+          "condition": "ok"
+        }
+      ],
+      "terminalNodes": [
+        "verify"
+      ],
+      "schemaVersion": 2,
+      "roleRuntimeVersion": 2,
+      "contractVersion": "role-v2",
+      "resultSchemaVersion": 2,
+      "metadata": {
+        "requiresTypedResults": true,
+        "roadmapPlanGate": {
+          "plannerNodeId": "plan",
+          "beforeNodeIds": ["code"]
+        },
+        "provenance": {
+          "source": "project-config",
+          "file": ".pi/topologies/planner-coder-verifier.json",
+          "version": 2
+        }
+      }
+    }
+  ]
+}

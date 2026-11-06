@@ -1,0 +1,792 @@
+{
+  "catalog_version": "1.0.0",
+  "generator": "tools/regenerate.py",
+  "skill_count": 129,
+  "categories": {
+    "media": 23,
+    "delivery": 5,
+    "web-seo": 16,
+    "marketing": 12,
+    "security": 19,
+    "engineering": 29,
+    "design": 8,
+    "research": 9,
+    "meta": 8
+  },
+  "skills": [
+    {
+      "name": "3d-modeling-topology",
+      "category": "media",
+      "path": "skills/3d-modeling-topology/SKILL.md",
+      "eval": "evals/3d-modeling-topology.json"
+    },
+    {
+      "name": "acceptance-quality-release",
+      "category": "delivery",
+      "path": "skills/acceptance-quality-release/SKILL.md",
+      "eval": "evals/acceptance-quality-release.json"
+    },
+    {
+      "name": "accessible-interface-build",
+      "category": "web-seo",
+      "path": "skills/accessible-interface-build/SKILL.md",
+      "eval": "evals/accessible-interface-build.json"
+    },
+    {
+      "name": "ad-creative-testing",
+      "category": "marketing",
+      "path": "skills/ad-creative-testing/SKILL.md",
+      "eval": "evals/ad-creative-testing.json"
+    },
+    {
+      "name": "ai-prompt-injection-defense",
+      "category": "security",
+      "path": "skills/ai-prompt-injection-defense/SKILL.md",
+      "eval": "evals/ai-prompt-injection-defense.json"
+    },
+    {
+      "name": "analytics-conversion-instrumentation",
+      "category": "web-seo",
+      "path": "skills/analytics-conversion-instrumentation/SKILL.md",
+      "eval": "evals/analytics-conversion-instrumentation.json"
+    },
+    {
+      "name": "android-apk-code-audit",
+      "category": "security",
+      "path": "skills/android-apk-code-audit/SKILL.md",
+      "eval": "evals/android-apk-code-audit.json"
+    },
+    {
+      "name": "api-contract-engineering",
+      "category": "engineering",
+      "path": "skills/api-contract-engineering/SKILL.md",
+      "eval": "evals/api-contract-engineering.json"
+    },
+    {
+      "name": "application-fuzz-testing",
+      "category": "security",
+      "path": "skills/application-fuzz-testing/SKILL.md",
+      "eval": "evals/application-fuzz-testing.json"
+    },
+    {
+      "name": "application-privacy-runtime-audit",
+      "category": "security",
+      "path": "skills/application-privacy-runtime-audit/SKILL.md",
+      "eval": "evals/application-privacy-runtime-audit.json"
+    },
+    {
+      "name": "artifact-version-delta-analysis",
+      "category": "engineering",
+      "path": "skills/artifact-version-delta-analysis/SKILL.md",
+      "eval": "evals/artifact-version-delta-analysis.json"
+    },
+    {
+      "name": "asset-rights-content-authenticity",
+      "category": "media",
+      "path": "skills/asset-rights-content-authenticity/SKILL.md",
+      "eval": "evals/asset-rights-content-authenticity.json"
+    },
+    {
+      "name": "audio-design-mix",
+      "category": "media",
+      "path": "skills/audio-design-mix/SKILL.md",
+      "eval": "evals/audio-design-mix.json"
+    },
+    {
+      "name": "binary-mitigation-inventory",
+      "category": "security",
+      "path": "skills/binary-mitigation-inventory/SKILL.md",
+      "eval": "evals/binary-mitigation-inventory.json"
+    },
+    {
+      "name": "brand-identity-system",
+      "category": "design",
+      "path": "skills/brand-identity-system/SKILL.md",
+      "eval": "evals/brand-identity-system.json"
+    },
+    {
+      "name": "brand-safety-compliance",
+      "category": "marketing",
+      "path": "skills/brand-safety-compliance/SKILL.md",
+      "eval": "evals/brand-safety-compliance.json"
+    },
+    {
+      "name": "browser-qa-cross-device",
+      "category": "web-seo",
+      "path": "skills/browser-qa-cross-device/SKILL.md",
+      "eval": "evals/browser-qa-cross-device.json"
+    },
+    {
+      "name": "browser-scenario-evidence",
+      "category": "web-seo",
+      "path": "skills/browser-scenario-evidence/SKILL.md",
+      "eval": "evals/browser-scenario-evidence.json"
+    },
+    {
+      "name": "build",
+      "category": "engineering",
+      "path": "skills/build/SKILL.md",
+      "eval": "evals/build.json"
+    },
+    {
+      "name": "campaign-strategy",
+      "category": "marketing",
+      "path": "skills/campaign-strategy/SKILL.md",
+      "eval": "evals/campaign-strategy.json"
+    },
+    {
+      "name": "captured-web-script-recovery",
+      "category": "web-seo",
+      "path": "skills/captured-web-script-recovery/SKILL.md",
+      "eval": "evals/captured-web-script-recovery.json"
+    },
+    {
+      "name": "change-verify",
+      "category": "engineering",
+      "path": "skills/change-verify/SKILL.md",
+      "eval": "evals/change-verify.json"
+    },
+    {
+      "name": "ci-release-engineering",
+      "category": "engineering",
+      "path": "skills/ci-release-engineering/SKILL.md",
+      "eval": "evals/ci-release-engineering.json"
+    },
+    {
+      "name": "closed-app-feature-reimplementation",
+      "category": "engineering",
+      "path": "skills/closed-app-feature-reimplementation/SKILL.md",
+      "eval": "evals/closed-app-feature-reimplementation.json"
+    },
+    {
+      "name": "cloud-infrastructure-security",
+      "category": "security",
+      "path": "skills/cloud-infrastructure-security/SKILL.md",
+      "eval": "evals/cloud-infrastructure-security.json"
+    },
+    {
+      "name": "code-review-evidence",
+      "category": "engineering",
+      "path": "skills/code-review-evidence/SKILL.md",
+      "eval": "evals/code-review-evidence.json"
+    },
+    {
+      "name": "codebase-onboarding",
+      "category": "engineering",
+      "path": "skills/codebase-onboarding/SKILL.md",
+      "eval": "evals/codebase-onboarding.json"
+    },
+    {
+      "name": "comfyui-graph-engineering",
+      "category": "media",
+      "path": "skills/comfyui-graph-engineering/SKILL.md",
+      "eval": "evals/comfyui-graph-engineering.json"
+    },
+    {
+      "name": "competitive-ad-intelligence",
+      "category": "marketing",
+      "path": "skills/competitive-ad-intelligence/SKILL.md",
+      "eval": "evals/competitive-ad-intelligence.json"
+    },
+    {
+      "name": "competitive-market-intelligence",
+      "category": "research",
+      "path": "skills/competitive-market-intelligence/SKILL.md",
+      "eval": "evals/competitive-market-intelligence.json"
+    },
+    {
+      "name": "copywriting-claims-review",
+      "category": "marketing",
+      "path": "skills/copywriting-claims-review/SKILL.md",
+      "eval": "evals/copywriting-claims-review.json"
+    },
+    {
+      "name": "cpp-modern-systems",
+      "category": "engineering",
+      "path": "skills/cpp-modern-systems/SKILL.md",
+      "eval": "evals/cpp-modern-systems.json"
+    },
+    {
+      "name": "cryptography-protocol-review",
+      "category": "security",
+      "path": "skills/cryptography-protocol-review/SKILL.md",
+      "eval": "evals/cryptography-protocol-review.json"
+    },
+    {
+      "name": "customer-support-knowledge-base",
+      "category": "delivery",
+      "path": "skills/customer-support-knowledge-base/SKILL.md",
+      "eval": "evals/customer-support-knowledge-base.json"
+    },
+    {
+      "name": "data-quality-audit",
+      "category": "research",
+      "path": "skills/data-quality-audit/SKILL.md",
+      "eval": "evals/data-quality-audit.json"
+    },
+    {
+      "name": "data-visualization-design",
+      "category": "design",
+      "path": "skills/data-visualization-design/SKILL.md",
+      "eval": "evals/data-visualization-design.json"
+    },
+    {
+      "name": "dependency-supply-chain-security",
+      "category": "security",
+      "path": "skills/dependency-supply-chain-security/SKILL.md",
+      "eval": "evals/dependency-supply-chain-security.json"
+    },
+    {
+      "name": "design-critique",
+      "category": "design",
+      "path": "skills/design-critique/SKILL.md",
+      "eval": "evals/design-critique.json"
+    },
+    {
+      "name": "design-to-code-handoff",
+      "category": "design",
+      "path": "skills/design-to-code-handoff/SKILL.md",
+      "eval": "evals/design-to-code-handoff.json"
+    },
+    {
+      "name": "domain-driven-architecture",
+      "category": "engineering",
+      "path": "skills/domain-driven-architecture/SKILL.md",
+      "eval": "evals/domain-driven-architecture.json"
+    },
+    {
+      "name": "dotnet-managed-artifact-inspection",
+      "category": "engineering",
+      "path": "skills/dotnet-managed-artifact-inspection/SKILL.md",
+      "eval": "evals/dotnet-managed-artifact-inspection.json"
+    },
+    {
+      "name": "durable-bug-hunt",
+      "category": "engineering",
+      "path": "skills/durable-bug-hunt/SKILL.md",
+      "eval": "evals/durable-bug-hunt.json"
+    },
+    {
+      "name": "email-lifecycle-marketing",
+      "category": "marketing",
+      "path": "skills/email-lifecycle-marketing/SKILL.md",
+      "eval": "evals/email-lifecycle-marketing.json"
+    },
+    {
+      "name": "evidence-led-research",
+      "category": "research",
+      "path": "skills/evidence-led-research/SKILL.md",
+      "eval": "evals/evidence-led-research.json"
+    },
+    {
+      "name": "experiment-design-analysis",
+      "category": "research",
+      "path": "skills/experiment-design-analysis/SKILL.md",
+      "eval": "evals/experiment-design-analysis.json"
+    },
+    {
+      "name": "experiment-gate-lifecycle",
+      "category": "research",
+      "path": "skills/experiment-gate-lifecycle/SKILL.md",
+      "eval": "evals/experiment-gate-lifecycle.json"
+    },
+    {
+      "name": "firmware-region-forensics",
+      "category": "security",
+      "path": "skills/firmware-region-forensics/SKILL.md",
+      "eval": "evals/firmware-region-forensics.json"
+    },
+    {
+      "name": "frontend-state-architecture",
+      "category": "engineering",
+      "path": "skills/frontend-state-architecture/SKILL.md",
+      "eval": "evals/frontend-state-architecture.json"
+    },
+    {
+      "name": "generative-model-evaluation",
+      "category": "media",
+      "path": "skills/generative-model-evaluation/SKILL.md",
+      "eval": "evals/generative-model-evaluation.json"
+    },
+    {
+      "name": "git-checkpoint",
+      "category": "engineering",
+      "path": "skills/git-checkpoint/SKILL.md",
+      "eval": "evals/git-checkpoint.json"
+    },
+    {
+      "name": "go-to-market-launch",
+      "category": "marketing",
+      "path": "skills/go-to-market-launch/SKILL.md",
+      "eval": "evals/go-to-market-launch.json"
+    },
+    {
+      "name": "greenscreen-keying",
+      "category": "media",
+      "path": "skills/greenscreen-keying/SKILL.md",
+      "eval": "evals/greenscreen-keying.json"
+    },
+    {
+      "name": "growth-experimentation",
+      "category": "marketing",
+      "path": "skills/growth-experimentation/SKILL.md",
+      "eval": "evals/growth-experimentation.json"
+    },
+    {
+      "name": "handoff",
+      "category": "meta",
+      "path": "skills/handoff/SKILL.md",
+      "eval": "evals/handoff.json"
+    },
+    {
+      "name": "image-art-direction",
+      "category": "media",
+      "path": "skills/image-art-direction/SKILL.md",
+      "eval": "evals/image-art-direction.json"
+    },
+    {
+      "name": "image-edit-compositing",
+      "category": "media",
+      "path": "skills/image-edit-compositing/SKILL.md",
+      "eval": "evals/image-edit-compositing.json"
+    },
+    {
+      "name": "image-generation-iteration",
+      "category": "media",
+      "path": "skills/image-generation-iteration/SKILL.md",
+      "eval": "evals/image-generation-iteration.json"
+    },
+    {
+      "name": "image-quality-upscale",
+      "category": "media",
+      "path": "skills/image-quality-upscale/SKILL.md",
+      "eval": "evals/image-quality-upscale.json"
+    },
+    {
+      "name": "implementation-plan",
+      "category": "engineering",
+      "path": "skills/implementation-plan/SKILL.md",
+      "eval": "evals/implementation-plan.json"
+    },
+    {
+      "name": "internal-link-strategy",
+      "category": "web-seo",
+      "path": "skills/internal-link-strategy/SKILL.md",
+      "eval": "evals/internal-link-strategy.json"
+    },
+    {
+      "name": "international-seo-localization",
+      "category": "web-seo",
+      "path": "skills/international-seo-localization/SKILL.md",
+      "eval": "evals/international-seo-localization.json"
+    },
+    {
+      "name": "javascript-electron-artifact-recovery",
+      "category": "engineering",
+      "path": "skills/javascript-electron-artifact-recovery/SKILL.md",
+      "eval": "evals/javascript-electron-artifact-recovery.json"
+    },
+    {
+      "name": "landing-page-conversion",
+      "category": "web-seo",
+      "path": "skills/landing-page-conversion/SKILL.md",
+      "eval": "evals/landing-page-conversion.json"
+    },
+    {
+      "name": "lighting-render-optimization",
+      "category": "media",
+      "path": "skills/lighting-render-optimization/SKILL.md",
+      "eval": "evals/lighting-render-optimization.json"
+    },
+    {
+      "name": "long-run",
+      "category": "engineering",
+      "path": "skills/long-run/SKILL.md",
+      "eval": "evals/long-run.json"
+    },
+    {
+      "name": "market-segmentation",
+      "category": "marketing",
+      "path": "skills/market-segmentation/SKILL.md",
+      "eval": "evals/market-segmentation.json"
+    },
+    {
+      "name": "model-file-metadata-forensics",
+      "category": "media",
+      "path": "skills/model-file-metadata-forensics/SKILL.md",
+      "eval": "evals/model-file-metadata-forensics.json"
+    },
+    {
+      "name": "multi-agent-delegation",
+      "category": "meta",
+      "path": "skills/multi-agent-delegation/SKILL.md",
+      "eval": "evals/multi-agent-delegation.json"
+    },
+    {
+      "name": "multi-camera-motion-capture",
+      "category": "media",
+      "path": "skills/multi-camera-motion-capture/SKILL.md",
+      "eval": "evals/multi-camera-motion-capture.json"
+    },
+    {
+      "name": "multilingual-dubbing-localization",
+      "category": "media",
+      "path": "skills/multilingual-dubbing-localization/SKILL.md",
+      "eval": "evals/multilingual-dubbing-localization.json"
+    },
+    {
+      "name": "native-binary-behavior-analysis",
+      "category": "engineering",
+      "path": "skills/native-binary-behavior-analysis/SKILL.md",
+      "eval": "evals/native-binary-behavior-analysis.json"
+    },
+    {
+      "name": "native-runtime-evidence",
+      "category": "security",
+      "path": "skills/native-runtime-evidence/SKILL.md",
+      "eval": "evals/native-runtime-evidence.json"
+    },
+    {
+      "name": "observability-slo-design",
+      "category": "engineering",
+      "path": "skills/observability-slo-design/SKILL.md",
+      "eval": "evals/observability-slo-design.json"
+    },
+    {
+      "name": "openproject-delivery",
+      "category": "delivery",
+      "path": "skills/openproject-delivery/SKILL.md",
+      "eval": "evals/openproject-delivery.json"
+    },
+    {
+      "name": "organic-content-strategy",
+      "category": "marketing",
+      "path": "skills/organic-content-strategy/SKILL.md",
+      "eval": "evals/organic-content-strategy.json"
+    },
+    {
+      "name": "paid-media-measurement",
+      "category": "marketing",
+      "path": "skills/paid-media-measurement/SKILL.md",
+      "eval": "evals/paid-media-measurement.json"
+    },
+    {
+      "name": "pbr-material-lookdev",
+      "category": "media",
+      "path": "skills/pbr-material-lookdev/SKILL.md",
+      "eval": "evals/pbr-material-lookdev.json"
+    },
+    {
+      "name": "performance-profiling",
+      "category": "engineering",
+      "path": "skills/performance-profiling/SKILL.md",
+      "eval": "evals/performance-profiling.json"
+    },
+    {
+      "name": "positioning-message-architecture",
+      "category": "marketing",
+      "path": "skills/positioning-message-architecture/SKILL.md",
+      "eval": "evals/positioning-message-architecture.json"
+    },
+    {
+      "name": "postgres-schema-rls",
+      "category": "engineering",
+      "path": "skills/postgres-schema-rls/SKILL.md",
+      "eval": "evals/postgres-schema-rls.json"
+    },
+    {
+      "name": "presentation-narrative",
+      "category": "design",
+      "path": "skills/presentation-narrative/SKILL.md",
+      "eval": "evals/presentation-narrative.json"
+    },
+    {
+      "name": "privacy-data-minimization",
+      "category": "security",
+      "path": "skills/privacy-data-minimization/SKILL.md",
+      "eval": "evals/privacy-data-minimization.json"
+    },
+    {
+      "name": "procedural-3d-blender",
+      "category": "media",
+      "path": "skills/procedural-3d-blender/SKILL.md",
+      "eval": "evals/procedural-3d-blender.json"
+    },
+    {
+      "name": "product-interface-design",
+      "category": "design",
+      "path": "skills/product-interface-design/SKILL.md",
+      "eval": "evals/product-interface-design.json"
+    },
+    {
+      "name": "python-frozen-app-inventory",
+      "category": "engineering",
+      "path": "skills/python-frozen-app-inventory/SKILL.md",
+      "eval": "evals/python-frozen-app-inventory.json"
+    },
+    {
+      "name": "python-production-engineering",
+      "category": "engineering",
+      "path": "skills/python-production-engineering/SKILL.md",
+      "eval": "evals/python-production-engineering.json"
+    },
+    {
+      "name": "quantitative-modeling",
+      "category": "research",
+      "path": "skills/quantitative-modeling/SKILL.md",
+      "eval": "evals/quantitative-modeling.json"
+    },
+    {
+      "name": "rea-capability-routing",
+      "category": "meta",
+      "path": "skills/rea-capability-routing/SKILL.md",
+      "eval": "evals/rea-capability-routing.json"
+    },
+    {
+      "name": "rea-evidence-lineage-review",
+      "category": "research",
+      "path": "skills/rea-evidence-lineage-review/SKILL.md",
+      "eval": "evals/rea-evidence-lineage-review.json"
+    },
+    {
+      "name": "recorded-agentenv-simulation",
+      "category": "meta",
+      "path": "skills/recorded-agentenv-simulation/SKILL.md",
+      "eval": "evals/recorded-agentenv-simulation.json"
+    },
+    {
+      "name": "recorded-crash-evidence-analysis",
+      "category": "security",
+      "path": "skills/recorded-crash-evidence-analysis/SKILL.md",
+      "eval": "evals/recorded-crash-evidence-analysis.json"
+    },
+    {
+      "name": "requirements-to-roadmap",
+      "category": "delivery",
+      "path": "skills/requirements-to-roadmap/SKILL.md",
+      "eval": "evals/requirements-to-roadmap.json"
+    },
+    {
+      "name": "responsive-design-system",
+      "category": "web-seo",
+      "path": "skills/responsive-design-system/SKILL.md",
+      "eval": "evals/responsive-design-system.json"
+    },
+    {
+      "name": "rigging-animation-retarget",
+      "category": "media",
+      "path": "skills/rigging-animation-retarget/SKILL.md",
+      "eval": "evals/rigging-animation-retarget.json"
+    },
+    {
+      "name": "risk-register-governance",
+      "category": "delivery",
+      "path": "skills/risk-register-governance/SKILL.md",
+      "eval": "evals/risk-register-governance.json"
+    },
+    {
+      "name": "safe-database-migrations",
+      "category": "engineering",
+      "path": "skills/safe-database-migrations/SKILL.md",
+      "eval": "evals/safe-database-migrations.json"
+    },
+    {
+      "name": "secrets-iam-hardening",
+      "category": "security",
+      "path": "skills/secrets-iam-hardening/SKILL.md",
+      "eval": "evals/secrets-iam-hardening.json"
+    },
+    {
+      "name": "secure-code-review",
+      "category": "security",
+      "path": "skills/secure-code-review/SKILL.md",
+      "eval": "evals/secure-code-review.json"
+    },
+    {
+      "name": "secure-llm-rag-engineering",
+      "category": "security",
+      "path": "skills/secure-llm-rag-engineering/SKILL.md",
+      "eval": "evals/secure-llm-rag-engineering.json"
+    },
+    {
+      "name": "security-incident-response",
+      "category": "security",
+      "path": "skills/security-incident-response/SKILL.md",
+      "eval": "evals/security-incident-response.json"
+    },
+    {
+      "name": "security-threat-model",
+      "category": "security",
+      "path": "skills/security-threat-model/SKILL.md",
+      "eval": "evals/security-threat-model.json"
+    },
+    {
+      "name": "seo-content-brief",
+      "category": "web-seo",
+      "path": "skills/seo-content-brief/SKILL.md",
+      "eval": "evals/seo-content-brief.json"
+    },
+    {
+      "name": "seo-technical-audit",
+      "category": "web-seo",
+      "path": "skills/seo-technical-audit/SKILL.md",
+      "eval": "evals/seo-technical-audit.json"
+    },
+    {
+      "name": "shipped-artifact-provenance",
+      "category": "engineering",
+      "path": "skills/shipped-artifact-provenance/SKILL.md",
+      "eval": "evals/shipped-artifact-provenance.json"
+    },
+    {
+      "name": "skill-factory",
+      "category": "meta",
+      "path": "skills/skill-factory/SKILL.md",
+      "eval": "evals/skill-factory.json"
+    },
+    {
+      "name": "skill-red-team-evaluation",
+      "category": "meta",
+      "path": "skills/skill-red-team-evaluation/SKILL.md",
+      "eval": "evals/skill-red-team-evaluation.json"
+    },
+    {
+      "name": "source-license-provenance",
+      "category": "meta",
+      "path": "skills/source-license-provenance/SKILL.md",
+      "eval": "evals/source-license-provenance.json"
+    },
+    {
+      "name": "speech-transcription-diarization",
+      "category": "media",
+      "path": "skills/speech-transcription-diarization/SKILL.md",
+      "eval": "evals/speech-transcription-diarization.json"
+    },
+    {
+      "name": "structured-data-schema",
+      "category": "web-seo",
+      "path": "skills/structured-data-schema/SKILL.md",
+      "eval": "evals/structured-data-schema.json"
+    },
+    {
+      "name": "systematic-debugging",
+      "category": "engineering",
+      "path": "skills/systematic-debugging/SKILL.md",
+      "eval": "evals/systematic-debugging.json"
+    },
+    {
+      "name": "systematic-literature-review",
+      "category": "research",
+      "path": "skills/systematic-literature-review/SKILL.md",
+      "eval": "evals/systematic-literature-review.json"
+    },
+    {
+      "name": "task-skill-router",
+      "category": "meta",
+      "path": "skills/task-skill-router/SKILL.md",
+      "eval": "evals/task-skill-router.json"
+    },
+    {
+      "name": "technical-documentation-investigation",
+      "category": "research",
+      "path": "skills/technical-documentation-investigation/SKILL.md",
+      "eval": "evals/technical-documentation-investigation.json"
+    },
+    {
+      "name": "technical-specification",
+      "category": "engineering",
+      "path": "skills/technical-specification/SKILL.md",
+      "eval": "evals/technical-specification.json"
+    },
+    {
+      "name": "test-driven-implementation",
+      "category": "engineering",
+      "path": "skills/test-driven-implementation/SKILL.md",
+      "eval": "evals/test-driven-implementation.json"
+    },
+    {
+      "name": "text-to-speech-voice-direction",
+      "category": "media",
+      "path": "skills/text-to-speech-voice-direction/SKILL.md",
+      "eval": "evals/text-to-speech-voice-direction.json"
+    },
+    {
+      "name": "text-to-video-production",
+      "category": "media",
+      "path": "skills/text-to-video-production/SKILL.md",
+      "eval": "evals/text-to-video-production.json"
+    },
+    {
+      "name": "typesafe-ai",
+      "category": "engineering",
+      "path": "skills/typesafe-ai/SKILL.md",
+      "eval": "evals/typesafe-ai.json"
+    },
+    {
+      "name": "typography-layout-system",
+      "category": "design",
+      "path": "skills/typography-layout-system/SKILL.md",
+      "eval": "evals/typography-layout-system.json"
+    },
+    {
+      "name": "ux-research-usability",
+      "category": "design",
+      "path": "skills/ux-research-usability/SKILL.md",
+      "eval": "evals/ux-research-usability.json"
+    },
+    {
+      "name": "video-edit-color-delivery",
+      "category": "media",
+      "path": "skills/video-edit-color-delivery/SKILL.md",
+      "eval": "evals/video-edit-color-delivery.json"
+    },
+    {
+      "name": "video-storyboard-shotlist",
+      "category": "media",
+      "path": "skills/video-storyboard-shotlist/SKILL.md",
+      "eval": "evals/video-storyboard-shotlist.json"
+    },
+    {
+      "name": "voice-clone-consent",
+      "category": "media",
+      "path": "skills/voice-clone-consent/SKILL.md",
+      "eval": "evals/voice-clone-consent.json"
+    },
+    {
+      "name": "web-app-pentest-authorized",
+      "category": "security",
+      "path": "skills/web-app-pentest-authorized/SKILL.md",
+      "eval": "evals/web-app-pentest-authorized.json"
+    },
+    {
+      "name": "web-capture-api-surface",
+      "category": "security",
+      "path": "skills/web-capture-api-surface/SKILL.md",
+      "eval": "evals/web-capture-api-surface.json"
+    },
+    {
+      "name": "web-migration-seo",
+      "category": "web-seo",
+      "path": "skills/web-migration-seo/SKILL.md",
+      "eval": "evals/web-migration-seo.json"
+    },
+    {
+      "name": "web-performance-core-vitals",
+      "category": "web-seo",
+      "path": "skills/web-performance-core-vitals/SKILL.md",
+      "eval": "evals/web-performance-core-vitals.json"
+    },
+    {
+      "name": "web-security-headers",
+      "category": "web-seo",
+      "path": "skills/web-security-headers/SKILL.md",
+      "eval": "evals/web-security-headers.json"
+    },
+    {
+      "name": "website-discovery-architecture",
+      "category": "web-seo",
+      "path": "skills/website-discovery-architecture/SKILL.md",
+      "eval": "evals/website-discovery-architecture.json"
+    }
+  ]
+}

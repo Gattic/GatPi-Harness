@@ -1,0 +1,110 @@
+{
+  "topologies": [
+    {
+      "topologyId": "project-subagent-smoke",
+      "name": "Project Subagent Smoke",
+      "description": "Validates that topology nodes can execute through branch-backed subagents.",
+      "executionMode": "sequential",
+      "failurePolicy": "fail-fast",
+      "aggregationPolicy": "last",
+      "nodes": [
+        {
+          "id": "worker",
+          "roleId": "researcher",
+          "task": "Run isolated subagent smoke for {{task}}",
+          "executionMode": "subagent",
+          "contextPolicy": "task-only",
+          "memoryPolicy": "none",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "shared-readonly",
+          "mutationPolicy": "forbidden",
+          "budget": {
+            "maxModelCalls": 6,
+            "maxToolCalls": 48,
+            "wallClockMs": 180000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "findings",
+              "evidence"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        }
+      ],
+      "terminalNodes": [
+        "worker"
+      ],
+      "schemaVersion": 2,
+      "roleRuntimeVersion": 2,
+      "contractVersion": "role-v2",
+      "resultSchemaVersion": 2,
+      "metadata": {
+        "requiresTypedResults": true,
+        "provenance": {
+          "source": "project-config",
+          "file": ".pi/topologies/subagent-smoke.json",
+          "version": 2
+        }
+      }
+    }
+  ]
+}

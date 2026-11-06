@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "stage": "M1",
+  "writes": true,
+  "automatic": true,
+  "autoSave": true,
+  "recordedAt": "2026-10-25",
+  "rationale": "Operator-authorized selective source-bound capture and task-conditioned recall. M2-M5 evidence promotion, verified upserts, review-queue writes, Hermes curation, and maintenance remain blocked by the stale memory-effectiveness scorecard."
+}

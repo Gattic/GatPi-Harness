@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+"use strict";
+const assert = require("node:assert/strict");
+const { BARS, parseArgs, normalize, scoreRetrieval, evaluateRetrievalGate } = require("../scripts/run-code-context-offline-retrieval-benchmark.js");
+assert.equal(parseArgs(["--count=5"]).count, 5);
+assert.throws(() => parseArgs(["--count=31"]), /1 through 30/);
+assert.deepEqual(normalize(["src\\a.js", "src/a.js"]), ["src/a.js"]);
+const pin = { version: "0.9.3", fingerprint: "fp", status: { initialized: true, pendingChanges: { added: 0, modified: 0, removed: 0 } }, adapterFreshness: { stale: false, gatingSafe: true } };
+const task = { taskId: "one", parentRevision: "rev", gold: { sourceFiles: ["src/a.js", "src/b.js"] } };
+const result = { provider: "repository-map", queryId: "q", strategyId: "s", freshness: "fresh", gatingSafe: true, degradation: null, items: [{ path: "src/a.js" }, { path: "src/other.js" }, { path: "src/b.js" }], metrics: { elapsedMs: 2 }, serializedTokens: 100 };
+const row = scoreRetrieval(task, result, pin);
+assert.equal(row.environmentValid, true);
+assert.equal(row.metrics.file_recall_at_5, 1);
+assert.equal(row.metrics.file_mrr, 1);
+const rows = Array.from({ length: 5 }, (_, index) => ({ ...row, taskId: `task-${index}` }));
+assert.equal(evaluateRetrievalGate(rows).verdict, "pass");
+const missed = rows.map((item, index) => index ? item : { ...item, metrics: { ...item.metrics, file_recall_at_5: 0, file_mrr: 0 } });
+assert.equal(evaluateRetrievalGate(missed).verdict, "fail");
+assert.equal(BARS.fileRecallAt5, 0.95);
+console.log("code-context offline retrieval benchmark tests passed");

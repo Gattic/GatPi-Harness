@@ -1,0 +1,45 @@
+"use strict";
+
+const assert=require("node:assert/strict");
+const {MANIFEST}=require("../src/codemode-benchmark");
+const {random,p95Ratio,upperBound,assessPower}=require("../src/codemode-decision-benchmark");
+const {interval,referenceFor,interleavedReference,drawStudy,studyPass,simulateDesign,project}=require("../src/codemode-acceptance-planning");
+const rows=[0,1].flatMap(trial=>MANIFEST.flatMap(task=>["direct","codemode"].map(arm=>({trial,...task,arm,phases:{promptMs:(100+task.seed*5+trial*20)*(arm==="codemode"?(task.seed%7===0?2:.97):1)},setupMs:0,postprocessMs:0,cleanupMs:0,reportedCost:.01}))));
+const reference=referenceFor(rows),before=JSON.stringify(rows);
+const interleaved=interleavedReference(reference);
+assert.equal(interleaved.groups.length,6);assert(interleaved.groups.every(g=>g.length===20&&g.every(p=>p.trial===g[0].trial&&p.kind===g[0].kind)));
+for(const seed of [1,5,7,11])for(const design of [{clusters:3,blocks:2},{clusters:10,blocks:3}]){
+  const study=drawStudy(reference,design,random(seed));
+  const pairs=study.flatMap(g=>g.clusters.flatMap((cluster,j)=>cluster.map((p,block)=>({...p,trial:g.trial,kind:g.kind,id:`task-${j}`,block}))));
+  const points=[0,1].map(trial=>p95Ratio(pairs.filter(p=>p.trial===trial)));points.push(p95Ratio(pairs));
+  const bound=upperBound(pairs,{resamples:200,seed});
+  if(seed===7&&design.blocks===3)assert.equal(bound,1.1176470588235294,"regression: row-wise random IDs wrongly yielded a passing bound of1");
+  const expected=points.every(p=>p<=1.1)&&bound<=1.1;
+  const result=studyPass(study,{resamples:200,seed});
+  assert.deepEqual(result.points,points,"weighted ranks must match nearest-rank p95 on explicit repeated pairs");
+  assert.equal(result.pass,expected,"fixed-bootstrap decision including exact early rejection must match reference implementation");
+}
+const old=assessPower(rows,{simulations:10,resamples:50});
+const optimized=simulateDesign(reference,{clusters:10,blocks:3},{simulations:10,resamples:50});
+assert.equal(optimized.successes,old.successes);assert.deepEqual(optimized.monteCarlo95,old.monteCarlo95);
+assert.equal(JSON.stringify(rows),before,"planning is read-only");
+assert.deepEqual(simulateDesign(reference,{clusters:10,blocks:4},{simulations:3,resamples:20}),simulateDesign(reference,{clusters:10,blocks:4},{simulations:3,resamples:20}));
+assert.equal(simulateDesign(reference,{clusters:10,blocks:4},{simulations:3,resamples:20,coupling:1}).power,1,"perfect hypothetical coupling is only a sensitivity ceiling");
+assert.equal(simulateDesign(reference,{clusters:10,blocks:4},{simulations:3,resamples:20,coupling:1,scale:1.2}).power,0,"a genuine20% regression cannot become a variance-reduction pass");
+assert.equal(project(rows,{clusters:10,blocks:4}).sessions,480);
+assert.equal(project(rows,{clusters:10,blocks:4}).withinBudget,true);
+assert.equal(project(rows,{clusters:100,blocks:4}).withinBudget,false);
+assert(Math.abs(interval(11,120)[0]-0.0519566467894248)<1e-12);
+assert(Math.abs(interval(11,120)[1]-0.15670990790625097)<1e-12);
+assert.throws(()=>referenceFor(rows.slice(1)),/all60/);
+assert.throws(()=>simulateDesign(reference,{clusters:0,blocks:3}),/Positive/);
+assert.throws(()=>simulateDesign(reference,{clusters:10,blocks:3},{coupling:2}),/Invalid/);
+const {grid,scalarSensitivityOptions}=require("../scripts/plan-codemode-acceptance");
+const scalar=scalarSensitivityOptions({simulations:3,resamples:20,seed:1,bootstrapSeed:2,coupling:[.5,1],scale:[.8,.9]});
+assert.deepEqual(scalar,{simulations:3,resamples:20,seed:1,bootstrapSeed:2});
+assert.doesNotThrow(()=>simulateDesign(reference,{clusters:10,blocks:4},{...scalar,coupling:.5}));
+assert.doesNotThrow(()=>simulateDesign(reference,{clusters:10,blocks:4},{...scalar,scale:.8}));
+assert.equal(grid().length,52);assert.equal(new Set(grid().map(d=>d.id)).size,52);
+const cli=require("node:child_process").spawnSync(process.execPath,[require("node:path").join(__dirname,"../scripts/plan-codemode-acceptance.js"),"--live"],{encoding:"utf8",timeout:10000});
+assert.equal(cli.status,1);assert.match(cli.stderr,/Offline planning takes no live\/override arguments/);
+console.log("offline acceptance design weighted-rank/reference equivalence, paired clusters, seeds, budgets and sensitivity tests passed");

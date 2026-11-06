@@ -1,0 +1,198 @@
+{
+  "topologies": [
+    {
+      "topologyId": "project-memory-curator-after-success",
+      "name": "Memory Curator After Success",
+      "description": "Verify work, then curate a provenance-backed memory update.",
+      "executionMode": "sequential",
+      "failurePolicy": "fail-fast",
+      "aggregationPolicy": "last",
+      "memoryPolicy": "none",
+      "nodes": [
+        {
+          "id": "verify",
+          "roleId": "verifier",
+          "task": "Verify {{task}}",
+          "contextPolicy": "task-only",
+          "memoryPolicy": "read-only",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "isolated-worktree",
+          "mutationPolicy": "isolated-only",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 64,
+            "wallClockMs": 300000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "evidence",
+              "verification"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "curate",
+          "roleId": "memory-curator",
+          "task": "Curate durable summary for {{task}} after successful verification",
+          "contextPolicy": "summarized",
+          "memoryPolicy": "read-write",
+          "executionMode": "handler",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "handler-only",
+          "mutationPolicy": "forbidden",
+          "budget": {
+            "maxModelCalls": 0,
+            "maxToolCalls": 0,
+            "wallClockMs": 0,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 0,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "evidence"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        }
+      ],
+      "edges": [
+        {
+          "source": "verify",
+          "target": "curate",
+          "condition": "no_errors"
+        }
+      ],
+      "terminalNodes": [
+        "curate"
+      ],
+      "schemaVersion": 2,
+      "roleRuntimeVersion": 2,
+      "contractVersion": "role-v2",
+      "resultSchemaVersion": 2,
+      "metadata": {
+        "requiresTypedResults": true,
+        "provenance": {
+          "source": "project-config",
+          "file": ".pi/topologies/memory-curator-after-success.json",
+          "version": 2
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "roadmap-large-corpus-2026-07-27",
+  "sizes": [10, 50, 100, 500],
+  "titlePattern": "Deterministic roadmap item {ordinal} with bounded public content",
+  "mutation": {
+    "itemPath": "1",
+    "from": "active",
+    "to": "done"
+  },
+  "bars": {
+    "minimumTotalCharacterReduction": 0.8,
+    "maximumMutationP99Characters": 2500
+  }
+}

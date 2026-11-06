@@ -1,0 +1,118 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { FileIntegrationStorage, appendBoundedJsonl, pruneDiagnosticJsonl, DIAGNOSTIC_POLICIES } = require("../src/file-integration-storage");
+const { createPiIntegrationBoundary } = require("../src/integration-boundary");
+const { retainTraceFiles } = require("../src/trace-retention");
+const { FileTraceStorage, TraceRuntime } = require("../src/trace-observability");
+const { MetricsPersistence } = require("../src/entropy-monitor");
+const { tmpFixture } = require("./helpers/tmp-fixture");
+const root = tmpFixture("pi-diagnostic-retention-");
+const now = Date.now();
+const old = new Date(now - 30 * 86400000);
+try {
+  const policy = { maxBytes: 2048, maxRecords: 10, maxAgeMs: 86400000 };
+  const file = path.join(root, "bounded.jsonl");
+  for (let i = 0; i < 200; i++) appendBoundedJsonl(file, { at: now, n: i, text: "ü".repeat(90) }, policy, now);
+  assert(fs.statSync(file).size <= policy.maxBytes);
+  let rows = fs.readFileSync(file, "utf8").trim().split("\n").map(JSON.parse);
+  assert(rows.length <= policy.maxRecords);
+  assert.equal(rows.at(-1).n, 199);
+  assert.equal(rows.at(-1).text, "ü".repeat(90));
+  assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+  assert.equal(pruneDiagnosticJsonl(file, policy, { now: now + 2 * 86400000 }).records, 0);
+  assert.equal(fs.statSync(file).size, 0);
+  // An oversized pre-upgrade stream is trimmed with bounded reads, not parsed whole.
+  fs.writeFileSync(file, Array.from({ length: 1000 }, (_, n) => JSON.stringify({ at: now, n })).join("\n") + "\n");
+  appendBoundedJsonl(file, { at: now, n: 1000 }, policy, now);
+  rows = fs.readFileSync(file, "utf8").trim().split("\n").map(JSON.parse);
+  assert(rows.length <= 10); assert.equal(rows.at(-1).n, 1000);
+  appendBoundedJsonl(file, { at: now, n: 1001, text: "x".repeat(1850) }, policy, now);
+  rows = fs.readFileSync(file, "utf8").trim().split("\n").map(JSON.parse);
+  assert.equal(rows.at(-1).n, 1001, "a permitted near-cap event survives headroom compaction");
+  assert(fs.statSync(file).size <= policy.maxBytes);
+  assert.throws(() => appendBoundedJsonl(file, { text: "x".repeat(3000) }, policy, now), /oversized/);
+  // A torn append left NUL holes where a record was sized but never written.
+  // Retention must drop the corrupt line and compact, or every later append
+  // fails while re-parsing it (a crash must not brick the diagnostic stream).
+  const line = (row) => `${JSON.stringify(row)}\n`;
+  const torn = path.join(root, "torn.jsonl");
+  fs.writeFileSync(torn, line({ at: now, n: 1 }) + Buffer.alloc(64) + line({ at: now, n: 2 }));
+  const healed = pruneDiagnosticJsonl(torn, policy, { now });
+  assert.equal(healed.dropped, 1, "the corrupt record is counted, not silently kept");
+  assert.equal(fs.readFileSync(torn, "utf8"), line({ at: now, n: 1 }), "compaction rewrites the stream without the corrupt line");
+  appendBoundedJsonl(torn, { at: now, n: 3 }, policy, now);
+  assert.deepEqual(fs.readFileSync(torn, "utf8").trim().split("\n").map(JSON.parse).map((row) => row.n), [1, 3], "later appends recover once the corrupt record is gone");
+  const holeOnly = path.join(root, "hole-only.jsonl");
+  fs.writeFileSync(holeOnly, Buffer.alloc(32));
+  const emptied = pruneDiagnosticJsonl(holeOnly, policy, { now });
+  assert.equal(emptied.dropped, 1); assert.equal(emptied.records, 0);
+  assert.equal(fs.readFileSync(holeOnly, "utf8"), "", "a fully corrupt tail is discarded rather than retained");
+  appendBoundedJsonl(holeOnly, { at: now, n: 4 }, policy, now);
+  assert.deepEqual(fs.readFileSync(holeOnly, "utf8").trim().split("\n").map(JSON.parse).map((row) => row.n), [4]);
+  const outside = path.join(root, "outside.txt"); fs.writeFileSync(outside, "preserve", { mode: 0o644 }); fs.chmodSync(outside, 0o644);
+  const linked = path.join(root, "linked.jsonl"); fs.symlinkSync(outside, linked);
+  assert.throws(() => appendBoundedJsonl(linked, { n: 1 }, policy, now), /real file/);
+  assert.equal(fs.readFileSync(outside, "utf8"), "preserve");
+  assert.equal(fs.statSync(outside).mode & 0o777, 0o644);
+
+  const storageRoot = path.join(root, "storage"); const storage = new FileIntegrationStorage(storageRoot);
+  storage.appendJsonl("entropy/events", { at: old.getTime(), type: "old-event" });
+  storage.appendJsonl("entropy/snapshots", { at: old.getTime(), type: "old-snapshot" });
+  const boundary = createPiIntegrationBoundary({ storage, branching: { cwd: root }, skills: { options: { cwd: root, loadNative: false, loadCurated: false } } });
+  boundary.entropy.observe({ type: "progress", at: now, ok: true, text: "PRIVATE_DIAGNOSTIC_TEXT" });
+  assert.equal(storage.readJsonl("entropy/events").length, 1, "live boundary storage enforces retention, not only standalone monitoring");
+  assert.equal(storage.readJsonl("entropy/snapshots").length, 1);
+  assert.doesNotMatch(fs.readFileSync(storage.jsonlPath("entropy/events"), "utf8"), /PRIVATE_DIAGNOSTIC_TEXT/);
+  const standalone = new MetricsPersistence({ dir: path.join(root, "standalone"), retention: policy });
+  for (let n = 0; n < 30; n++) standalone.recordEvent({ at: now, n });
+  assert(fs.readFileSync(standalone.eventsFile, "utf8").trim().split("\n").length <= 10);
+
+  const disabledRoot = path.join(root, "disabled-traces");
+  new TraceRuntime({ enabled: false, root: disabledRoot }).close();
+  assert.equal(fs.existsSync(disabledRoot), false, "disabled tracing must not create leases or apply retention");
+  const traces = path.join(root, "traces"); fs.mkdirSync(traces);
+  for (let n = 0; n < 8; n++) {
+    const writer = new FileTraceStorage({ root: traces, cwd: root, sessionId: `old-${n}`, maxAgeDays: 100 });
+    writer.write({ name: "old-diagnostic", padding: "x".repeat(500) }); writer.close();
+    fs.utimesSync(writer.path(), old, old);
+  }
+  const pinned = path.join(traces, "pinned.jsonl"); fs.writeFileSync(pinned, "keep"); fs.chmodSync(pinned, 0o600); fs.utimesSync(pinned, old, old); fs.writeFileSync(`${pinned}.keep`, "");
+  fs.writeFileSync(path.join(traces, "unrelated.md"), "authored"); fs.chmodSync(path.join(traces, "unrelated.md"), 0o644);
+  fs.symlinkSync(outside, path.join(traces, "linked.jsonl"));
+  const before = fs.readdirSync(traces);
+  const preview = retainTraceFiles(traces, { cwd: root, maxTotalBytes: 2048, now });
+  assert.equal(preview.candidates.length, 8, "unrotated settled history is prunable");
+  assert.deepEqual(fs.readdirSync(traces), before, "preview performs no mutation");
+  const active = new FileTraceStorage({ root: traces, cwd: root, sessionId: "active", maxTotalBytes: 2048 });
+  active.write({ at: now, name: "work" });
+  fs.utimesSync(active.path(), old, old);
+  const cleaned = retainTraceFiles(traces, { cwd: root, maxTotalBytes: 2048, maxFiles: 2, now, apply: true });
+  assert.equal(cleaned.overBudget, false);
+  assert(fs.existsSync(active.path()), "a live owner protects even an old active file");
+  assert(fs.existsSync(pinned)); assert(fs.existsSync(path.join(traces, "unrelated.md")));
+  assert.equal(fs.statSync(active.path()).mode & 0o777, 0o600);
+  assert.equal(fs.statSync(pinned).mode & 0o777, 0o600);
+  assert.equal(fs.statSync(outside).mode & 0o777, 0o644);
+  active.write({ name: "session_shutdown" }); active.close(); active.close();
+  assert(!fs.readdirSync(traces).some((name) => name.startsWith(".active-")), "shutdown releases the lease");
+  assert.throws(() => active.write({ name: "late" }), /closed/);
+  assert.equal(retainTraceFiles(traces, { cwd: root, maxTotalBytes: 1, now, apply: true }).overBudget, true, "protected overflow is reported rather than silently claiming the cap");
+  assert(fs.existsSync(pinned));
+  const concurrentFile = path.join(root, "concurrent.jsonl");
+  const moduleFile = require.resolve("../src/file-integration-storage");
+  const child = `const {appendBoundedJsonl}=require(${JSON.stringify(moduleFile)}); for(let n=0;n<50;n++) appendBoundedJsonl(${JSON.stringify(concurrentFile)},{at:Date.now(),pid:process.pid,n},{maxBytes:100000,maxRecords:1000,maxAgeMs:86400000});`;
+  const runner = `const {spawn}=require('node:child_process'); Promise.all(Array.from({length:3},()=>new Promise((resolve,reject)=>{const p=spawn(process.execPath,['-e',${JSON.stringify(child)}],{stdio:'inherit'});p.on('exit',code=>code===0?resolve():reject(new Error('writer failed')));}))).catch(error=>{console.error(error);process.exitCode=1;});`;
+  require("node:child_process").execFileSync(process.execPath, ["-e", runner], { timeout: 15000 });
+  assert.equal(fs.readFileSync(concurrentFile, "utf8").trim().split("\n").map(JSON.parse).length, 150, "concurrent writers do not lose diagnostic records");
+  const payloadWriter = new FileTraceStorage({ root: traces, cwd: root, sessionId: "old-payload", capturePayloads: true });
+  payloadWriter.write({ name: "private", payload: { text: "preserve historical evidence" } }); payloadWriter.close();
+  const payloadFile = payloadWriter.path();
+  fs.utimesSync(payloadFile, old, old);
+  const payloadRetention = retainTraceFiles(traces, { cwd: root, maxTotalBytes: 1, now, apply: true });
+  assert(fs.existsSync(payloadFile), "payload-bearing and unknown historical traces require explicit review");
+  assert.equal(payloadRetention.reviewRequiredFiles, 1);
+  assert.equal(DIAGNOSTIC_POLICIES.entropy.maxBytes * 2, 8 * 1024 * 1024);
+} finally { fs.rmSync(root, { recursive: true, force: true }); }
+console.log("diagnostic retention tests passed");

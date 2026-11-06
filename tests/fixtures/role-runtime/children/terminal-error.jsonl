@@ -1,0 +1,2 @@
+{"type":"session","version":3,"id":"synthetic-child-error","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/synthetic/project"}
+{"type":"message","id":"error-message","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"assistant","content":[],"stopReason":"error","errorMessage":"synthetic provider failure"}}

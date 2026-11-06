@@ -1,0 +1,27 @@
+{
+  "name": "pi-harness",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Local Pi harness extensions, adapters, and verification scripts",
+  "license": "MIT",
+  "author": "cabral450",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gattic/GatPi-Harness.git"
+  },
+  "homepage": "https://github.com/Gattic/GatPi-Harness",
+  "scripts": {
+    "lint": "eslint .pi/extensions extensions src/file-integration-storage.js src/state-retention.js src/shell-policy.js src/test-selection.js src/extension-import-policy.js src/extension-args.js src/extension-opportunity-reviews-store.js src/experiment-ledger.js src/debug-ledger.js src/provider-result-rendering.js --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "check:static": "npm run lint && npm run typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "eslint": "9.39.4",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.64.0"
+  },
+  "overrides": {
+    "ignore": "7.0.8"
+  }
+}

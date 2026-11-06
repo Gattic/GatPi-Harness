@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "classifierVersion": "memory-effectiveness-v1",
+  "evidenceClass": "synthetic-readiness",
+  "privacy": {
+    "syntheticOnly": true,
+    "containsPrompts": false,
+    "containsSessionIds": false,
+    "containsPaths": false,
+    "containsSecretValues": false
+  },
+  "retrievalCases": [
+    {
+      "id": "repeated-memory-audit",
+      "queryTerms": ["session", "memory", "obsidian", "effectiveness"],
+      "relevantIds": ["prior-memory-audit"],
+      "requiredTopK": 3
+    },
+    {
+      "id": "canonical-authority",
+      "queryTerms": ["canonical", "durable", "authority"],
+      "relevantIds": ["canonical-obsidian-decision"],
+      "requiredTopK": 5
+    },
+    {
+      "id": "same-name-project-isolation",
+      "queryTerms": ["project", "constraint"],
+      "relevantIds": ["root-a-constraint"],
+      "forbiddenIds": ["root-b-constraint"],
+      "requiredTopK": 5
+    },
+    {
+      "id": "known-fix-verbose-thread",
+      "queryTerms": ["hermes", "recall", "timeout", "fresh", "install"],
+      "relevantIds": ["hermes-timeout-thread"],
+      "requiredTopK": 1
+    }
+  ],
+  "saveCases": [
+    { "id": "verified-decision", "expected": "saved" },
+    { "id": "explicit-unverified", "expected": "saved-labeled" },
+    { "id": "duplicate", "expected": "deduped" },
+    { "id": "conflict", "expected": "review-queued" },
+    { "id": "transient-git", "expected": "rejected" },
+    { "id": "recovered-failure", "expected": "rejected" },
+    { "id": "secret-like", "expected": "rejected" },
+    { "id": "full-transcript", "expected": "rejected" }
+  ],
+  "bars": {
+    "precisionAt5": 0.9,
+    "recallAt5": 0.9,
+    "crossProjectContamination": 0,
+    "currentFactStaleRate": 0,
+    "explicitSavePrecision": 0.95,
+    "automaticSavePrecision": 0.98,
+    "localRecallP95Ms": 50,
+    "minimumExactVersionUses": 30,
+    "minimumIndependentSessions": 10,
+    "minimumObservedDays": 14
+  }
+}

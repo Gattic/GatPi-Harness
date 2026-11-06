@@ -1,0 +1,349 @@
+{
+  "topologies": [
+    {
+      "topologyId": "docs-update",
+      "name": "Docs Update",
+      "description": "Inspect behavior and update docs with a verification check.",
+      "executionMode": "sequential",
+      "failurePolicy": "continue-on-error",
+      "aggregationPolicy": "last",
+      "tags": [
+        "docs"
+      ],
+      "nodes": [
+        {
+          "id": "inspect",
+          "roleId": "researcher",
+          "task": "Inspect current docs and implementation behavior for {{task}}.",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "shared-readonly",
+          "mutationPolicy": "forbidden",
+          "budget": {
+            "maxModelCalls": 6,
+            "maxToolCalls": 48,
+            "wallClockMs": 180000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "findings",
+              "evidence"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "plan",
+          "roleId": "planner",
+          "task": "Plan the documentation update for {{task}} and emit roadmapPlan milestones with nested goals for parent application before implementation.",
+          "contextPolicy": "summarized",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "shared-readonly",
+          "mutationPolicy": "forbidden",
+          "budget": {
+            "maxModelCalls": 4,
+            "maxToolCalls": 24,
+            "wallClockMs": 120000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 120000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": ["summary", "findings", "evidence", "roadmapPlan"],
+            "properties": {
+              "summary": { "type": "string", "minLength": 1 },
+              "findings": { "type": "array", "items": { "type": "object" } },
+              "evidence": { "type": "array", "items": { "type": "object" } },
+              "roadmapPlan": {
+                "type": "object",
+                "required": ["title", "milestones"],
+                "properties": {
+                  "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+                  "milestones": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "required": ["title", "goals"],
+                      "properties": {
+                        "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+                        "goals": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 500 } }
+                      }
+                    }
+                  }
+                }
+              },
+              "artifacts": { "type": "array", "items": { "type": "object" } },
+              "proposedPatch": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+              "verification": {
+                "type": "object",
+                "required": ["status", "evidence"],
+                "properties": {
+                  "status": { "enum": ["unchecked", "passed", "failed"] },
+                  "evidence": { "type": "array" }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "write-docs",
+          "roleId": "coder",
+          "task": "Update docs concisely for {{task}}.",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "isolated-worktree",
+          "mutationPolicy": "proposed-patch",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 64,
+            "wallClockMs": 300000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "artifacts",
+              "proposedPatch",
+              "verification"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "check",
+          "roleId": "verifier",
+          "task": "Run docs/source checks for {{task}} if available.",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "isolated-worktree",
+          "mutationPolicy": "isolated-only",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 64,
+            "wallClockMs": 300000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "evidence",
+              "verification"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        }
+      ],
+      "edges": [
+        {
+          "source": "inspect",
+          "target": "plan",
+          "condition": "ok"
+        },
+        {
+          "source": "plan",
+          "target": "write-docs",
+          "condition": "ok"
+        },
+        {
+          "source": "write-docs",
+          "target": "check",
+          "condition": "ok"
+        }
+      ],
+      "terminalNodes": [
+        "check"
+      ],
+      "schemaVersion": 2,
+      "roleRuntimeVersion": 2,
+      "contractVersion": "role-v2",
+      "resultSchemaVersion": 2,
+      "metadata": {
+        "requiresTypedResults": true,
+        "roadmapPlanGate": {
+          "plannerNodeId": "plan",
+          "beforeNodeIds": ["write-docs"]
+        },
+        "provenance": {
+          "source": "project-config",
+          "file": ".pi/topologies/docs-update.json",
+          "version": 2
+        }
+      }
+    }
+  ]
+}

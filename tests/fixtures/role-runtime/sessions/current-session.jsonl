@@ -1,0 +1,2 @@
+{"type":"session","version":3,"id":"synthetic-current","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/synthetic/current"}
+{"type":"message","id":"current-message","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":"CURRENT_SESSION_SYNTHETIC_TEXT_MUST_NOT_APPEAR"}}

@@ -1,0 +1,8 @@
+{
+  "calls": [
+    { "name": "create_primitive", "arguments": { "primitive_type": "cube", "name": "Cube", "size": 2 } },
+    { "name": "set_frame_range", "arguments": { "frame_start": 1, "frame_end": 25 } },
+    { "name": "create_turntable_animation", "arguments": { "object_name": "Cube", "frame_start": 1, "frame_end": 25, "axis": "Z", "revolutions": 0.25, "interpolation": "LINEAR" } },
+    { "name": "read_animation_summary", "arguments": { "object_names": ["Cube"], "include_fcurves": true } }
+  ]
+}

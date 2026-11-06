@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-27T10:22:37.015Z",
+  "sourceVersion": "roadmap-v3-2026-07-27-e78415c0fb9b35c1",
+  "configVersion": {
+    "roadmapSchemaVersion": 3,
+    "mutationEnvelopeSchemaVersion": 1,
+    "telemetrySchemaVersion": 1,
+    "telemetryEnabled": true
+  },
+  "fixtureHash": "c9f1e997091d46a722056766777d62826846bb86b9501cf44869ab9ea2873bd8",
+  "privacy": {
+    "aggregateOnly": true,
+    "forbiddenContentStored": false,
+    "forbiddenFieldCount": 0,
+    "malformedEventCount": 0,
+    "activeSessionExclusion": "not-requested",
+    "rawSessionContentRead": false
+  },
+  "historicalBaseline": {
+    "evidenceClass": "historical-lifetime",
+    "corpusId": "pi-roadmap-lifetime-2026-07-27",
+    "runtimeVersion": "roadmap-v2-pre-remediation",
+    "configVersion": "roadmap-lifetime-audit-2026-07-27",
+    "repeatedTaskCohortId": "roadmap-repeated-task-aggregate-2026-07-27",
+    "sessionFiles": 1502,
+    "corpusBytes": 779486656,
+    "eligibleInteractiveSessions": 91,
+    "adoptingSessions": 61,
+    "adoptionRate": 0.67,
+    "toolCalls": 1923,
+    "toolResults": 1922,
+    "errors": 28,
+    "errorRate": 0.0146,
+    "completeSnapshots": 252,
+    "uniqueRootSnapshots": 275,
+    "settledSnapshots": 259,
+    "invariantViolations": 0,
+    "applicationViolations": 0,
+    "verifiedTransitionsWithEvidenceRate": 0.0247,
+    "finalVerifiedItemsWithEvidenceRate": 0.035,
+    "resultCharacters": 2770000,
+    "adjacentResultP90LineOverlap": 0.82,
+    "largeRoadmapMedianMutationCharacters": 21618
+  },
+  "exactVersion": {
+    "evidenceClass": "exact-version-field",
+    "schemaVersion": 1,
+    "cohortVersion": "roadmap-v3-2026-07-27-e78415c0fb9b35c1",
+    "excludedActiveSession": {
+      "requested": false,
+      "matchedEvents": 0
+    },
+    "sample": {
+      "events": 0,
+      "interactiveOperations": 0,
+      "independentInteractiveSessions": 0,
+      "firstAt": null,
+      "lastAt": null
+    },
+    "reliability": {
+      "errors": 0,
+      "errorRate": null,
+      "addSubtaskAttempts": 0,
+      "invalidAddSubtaskRequests": 0,
+      "addSubtaskSuccesses": 0,
+      "addSubtaskSuccessRate": null,
+      "corrections": 0
+    },
+    "efficiency": {
+      "mutationResults": 0,
+      "totalMutationResultChars": 0,
+      "mutationResultP99Chars": null,
+      "mutationDeltaP99Chars": null
+    },
+    "actionability": {
+      "latestActionableCount": null,
+      "latestNonActionableCount": null,
+      "latestBlockedCount": null
+    },
+    "evidence": {
+      "latestBindings": null,
+      "latestUnsupportedVerificationCount": null
+    },
+    "usage": {
+      "eligibleOpportunities": 0,
+      "adoptedOpportunities": 0,
+      "adoptionRate": null,
+      "settledObservations": 0
+    }
+  },
+  "deterministic": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "verifiedAt": "2026-07-27T10:22:16.482Z",
+    "sourceVersion": "roadmap-v3-2026-07-27-e78415c0fb9b35c1",
+    "fixtureId": "roadmap-large-corpus-2026-07-27",
+    "fixtureHash": "c9f1e997091d46a722056766777d62826846bb86b9501cf44869ab9ea2873bd8",
+    "invariantViolations": 0,
+    "applicationViolations": 0,
+    "mutationCharacterReduction": 0.8849754590074532,
+    "mutationP99Characters": 1268,
+    "privacyForbiddenValueFindings": 0,
+    "evidence": {
+      "focusedRoadmapAndIntegrationTests": "passed",
+      "fullRepositoryCheck": {
+        "command": "bash scripts/check-all.sh",
+        "jobId": "job-ms32lvla-6dbc",
+        "exitCode": 0,
+        "extensionRpcProbes": 47,
+        "fullFleetModelSmoke": "passed"
+      },
+      "staticAnalysis": {
+        "provider": "semgrep",
+        "configs": [
+          "p/default",
+          "p/security-audit"
+        ],
+        "findings": 0
+      },
+      "privacyGuard": {
+        "root": ".pi/roadmap",
+        "actionableFindings": 0,
+        "rawSessionContentRead": false
+      },
+      "gitDiffCheck": "passed"
+    },
+    "claimBoundary": "Deterministic verification does not satisfy the independent exact-version field-session gate."
+  },
+  "gates": {
+    "deterministic": "pass",
+    "independentFieldSample": "blocked-insufficient-sample",
+    "fieldReliability": "blocked-insufficient-sample",
+    "activeSessionExclusion": "blocked-insufficient-sample",
+    "privacy": "pass"
+  },
+  "decision": "no-go-deferred",
+  "blockers": [
+    "exact-version cohort has 0/30 independent interactive sessions"
+  ]
+}

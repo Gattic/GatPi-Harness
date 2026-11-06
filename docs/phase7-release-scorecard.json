@@ -1,0 +1,342 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-30T12:14:02.372Z",
+  "scorecardId": "phase7_ff33511ad87774e9",
+  "freeze": {
+    "schemaVersion": 1,
+    "frozenAt": "2026-07-30T12:13:03.140Z",
+    "cohortStartAt": "2026-07-30T12:13:03.140Z",
+    "baseRevision": "c8177875319516c15c2d6424d44bf5a3d5664f61",
+    "sourceVersion": "c81778753195+c304d682f772924d",
+    "runtimeSourceHash": "c304d682f772924df029b217ce5ed7fdf57da237c9b44ce8776082a64cc6bf33",
+    "runtimeFileCount": 175,
+    "configVersion": "settings-2d0f65e6ac93a12a+portfolio-2+telemetry-4+outcome-2+cohort-1",
+    "settingsHash": "2d0f65e6ac93a12a69a61537101430be611bb6f7c8668c05fb5b9565396c13f2",
+    "roleManifestHash": "72c76de0075939a2f6dc373abceab31604cbfe556a28421821bd4f09b67547a5",
+    "portfolioSchemaVersion": 2,
+    "telemetrySchemaVersion": 4,
+    "outcomeSchemaVersion": 2,
+    "cohortContractVersion": 1,
+    "sessionMinerSchemaVersion": 5,
+    "sessionMinerClassifierVersion": "session-miner-v5",
+    "sessionKindPolicyVersion": "session-kind-policy-v2",
+    "sessionAuditSchemaVersion": 3,
+    "sessionAuditClassifierVersion": "pi-session-audit-v3",
+    "sessionAuditKindPolicyVersion": "pi-session-audit-kind-v2",
+    "privacy": {
+      "containsSourceBodies": false,
+      "containsSettingsBodies": false,
+      "containsPaths": false
+    }
+  },
+  "cohort": {
+    "sinceAt": "2026-07-30T12:13:03.140Z",
+    "requiredDays": 14,
+    "observedHours": 0.01,
+    "observedDays": 0,
+    "sufficient": false,
+    "eventCount": 1,
+    "rateDenominatorEligible": false,
+    "classification": "metadata-events-not-joined-to-session-kind",
+    "firstAt": "2026-07-30T12:13:46.962Z",
+    "lastAt": "2026-07-30T12:13:46.962Z",
+    "versions": [
+      {
+        "extension": "ast-tools",
+        "version": "extension-telemetry-v2",
+        "eventCount": 1,
+        "firstAt": "2026-07-30T12:13:46.962Z",
+        "lastAt": "2026-07-30T12:13:46.962Z",
+        "kinds": {
+          "model-tool": 1
+        },
+        "outcomes": {
+          "succeeded": 1
+        }
+      }
+    ],
+    "privacy": {
+      "metadataOnly": true,
+      "containsArguments": false,
+      "containsPrompts": false,
+      "containsPaths": false,
+      "containsOutputs": false
+    }
+  },
+  "cohortAudit": {
+    "sourceVersion": "c81778753195+c304d682f772924d",
+    "configVersion": "settings-2d0f65e6ac93a12a+portfolio-2+telemetry-4+outcome-2+cohort-1",
+    "currentSessionExcluded": true,
+    "sessionKinds": {
+      "other": 1
+    },
+    "analyzedFiles": 1,
+    "invalidRows": 0,
+    "observedInteractiveDays": 0,
+    "eligibleForFourteenDayDecision": false
+  },
+  "roleRollout": {
+    "schemaVersion": 1,
+    "selectedVersion": 2,
+    "compatibilityMode": "current-v2",
+    "mutationMode": "isolated",
+    "autoRouteMode": "suggest",
+    "sidecarEnabled": true,
+    "requestedStage": "R0",
+    "requestedStageSource": "containment-default",
+    "eligibleStage": "R0",
+    "effectiveStage": "R0",
+    "promotionAuthorized": true,
+    "promotionReason": null,
+    "benchmarkManifestHash": null,
+    "benchmarkRuntimeSourceHash": null,
+    "benchmarkEvidenceStatus": "runtime-source-hash-mismatch",
+    "fixtureOnlyAtR0": true,
+    "fixtureExecution": false,
+    "stateMigrationRequired": false,
+    "preserveV2StateOnRollback": true,
+    "benchmarkEvidencePresent": false
+  },
+  "metrics": [
+    {
+      "id": "role-sidecar-launch",
+      "label": "Role sidecar launch",
+      "status": "pass",
+      "measured": {
+        "status": "finished",
+        "modelCalls": 2,
+        "toolCalls": 3,
+        "toolResults": 3,
+        "toolFailures": 0,
+        "totalDurationMs": 21776,
+        "typedTermination": true,
+        "sample": 1
+      },
+      "bar": "0 load failures; >=1 model call; typed submit_role_result termination",
+      "evidence": [
+        "run-deck:phase1-live-role-sidecar-pilot"
+      ]
+    },
+    {
+      "id": "read-only-role-reliability",
+      "label": "Read-only role reliability",
+      "status": "pass",
+      "measured": {
+        "deterministicEligibleStage": "R4",
+        "pilot": {
+          "completionRate": 1,
+          "timeoutRate": 0,
+          "p95Ms": 21776,
+          "sample": 1
+        }
+      },
+      "bar": "deterministic pass; pilot completion >=90%; timeout <=5%; p95 <=120s",
+      "evidence": [
+        "role-runtime-benchmark:R4",
+        "run-deck:phase1-live-role-sidecar-pilot"
+      ]
+    },
+    {
+      "id": "semantic-outcome-truth",
+      "label": "Semantic outcome truth",
+      "status": "pass",
+      "measured": {
+        "parity": true,
+        "postFixRoleRuns": 1,
+        "postFixFindings": {
+          "falseSuccessTerminalErrors": 0,
+          "modelBudgetOverruns": 0,
+          "toolAccountingMismatches": 0,
+          "timedOutMutatingRuns": 0
+        }
+      },
+      "bar": "100% canonical status/termination agreement",
+      "evidence": [
+        "role provenance/result parity tests",
+        "live typed reviewer pilot"
+      ]
+    },
+    {
+      "id": "extension-inventory",
+      "label": "Extension inventory",
+      "status": "pass",
+      "measured": {
+        "capturedAt": "2026-07-26T09:50:40.200Z",
+        "extensions": 47,
+        "loaded": 46,
+        "degraded": 0,
+        "declaredCommands": 382,
+        "declaredTools": 67,
+        "registeredCommands": 382,
+        "registeredTools": 59,
+        "activeTools": 59,
+        "conflicts": 0,
+        "unexplained": 0,
+        "portfolioRecords": 47,
+        "toolDecisions": 67,
+        "portfolioReconciled": true,
+        "observationStatus": "insufficient-data",
+        "evidence": [
+          "full-fleet RPC extensions-inventory"
+        ]
+      },
+      "bar": "47 records; runtime/source reconciliation; 0 unexplained discrepancies",
+      "evidence": [
+        "full-fleet RPC extensions-inventory"
+      ]
+    },
+    {
+      "id": "semgrep",
+      "label": "Semgrep reliability",
+      "status": "insufficient-data",
+      "measured": {
+        "smokePassed": true,
+        "infrastructureErrorRate": null,
+        "coldConfigReady": true,
+        "findings": 0,
+        "evidence": [
+          "focused p/default scan: 0 findings/errors; one non-fatal Python taint fixpoint warning",
+          "Semgrep+CodeGraph bridge ready"
+        ],
+        "cohortDays": 0
+      },
+      "bar": "cold/default scan works; post-fix infrastructure error rate <5% over >=14 days",
+      "evidence": [
+        "focused p/default scan: 0 findings/errors; one non-fatal Python taint fixpoint warning",
+        "Semgrep+CodeGraph bridge ready"
+      ]
+    },
+    {
+      "id": "obsidian-hermes",
+      "label": "Obsidian Hermes readiness",
+      "status": "pass",
+      "measured": {
+        "capturedAt": "2026-07-26T09:52:36.465Z",
+        "localMarkdownReady": true,
+        "desktopReady": false,
+        "authReady": true,
+        "authStatus": "ready",
+        "providerModelReady": true,
+        "curationReady": true,
+        "dryRunPassed": true,
+        "curationStatus": "ready",
+        "category": "dry-run-succeeded",
+        "durationMs": 5412,
+        "filesIncluded": 0,
+        "noteWritten": false,
+        "evidence": [
+          "bounded live auth probe",
+          "synthetic-input dry-run; filesIncluded=0; noteWritten=false"
+        ]
+      },
+      "bar": "layered readiness truthful; bounded authenticated dry-run passes",
+      "evidence": [
+        "bounded live auth probe",
+        "synthetic-input dry-run; filesIncluded=0; noteWritten=false"
+      ]
+    },
+    {
+      "id": "test-runner",
+      "label": "Test Runner semantics",
+      "status": "pass",
+      "measured": {
+        "notApplicableSemantics": true
+      },
+      "bar": "no-command/no-prior-failure are not-applicable",
+      "evidence": [
+        "test-runner semantic regression passed"
+      ]
+    },
+    {
+      "id": "cognitive-context",
+      "label": "Cognitive context efficiency",
+      "status": "insufficient-data",
+      "measured": {
+        "deterministicReductionPct": 91.75,
+        "correctnessPassed": true,
+        "liveRateAvailable": false,
+        "evidence": [
+          "phase5 deterministic benchmark",
+          "reasoning context/injection regressions"
+        ],
+        "cohortDays": 0
+      },
+      "bar": ">=60% live reduction with objective/constraint correctness over >=14 days",
+      "evidence": [
+        "phase5 deterministic benchmark",
+        "reasoning context/injection regressions"
+      ]
+    },
+    {
+      "id": "prompt-ui-telemetry",
+      "label": "Prompt/UI telemetry",
+      "status": "pass",
+      "measured": {
+        "metadataOnly": true,
+        "events": 30,
+        "shown": 20,
+        "accepted": 3,
+        "timedOut": 6,
+        "retried": 1,
+        "evidence": [
+          "metadata-only prompt suggestion structural evidence; pre-freeze events excluded from post-fix rates"
+        ]
+      },
+      "bar": "shown/accepted/dismissed/failed metadata exists without text",
+      "evidence": [
+        "metadata-only prompt suggestion structural evidence; pre-freeze events excluded from post-fix rates"
+      ]
+    },
+    {
+      "id": "privacy",
+      "label": "Privacy",
+      "status": "pass",
+      "measured": {
+        "actionable": 0,
+        "ignored": 1,
+        "telemetryRedactionPassed": true,
+        "evidence": [
+          "fresh current Privacy Guard scan: 0 actionable, 1 ignored policy match",
+          "extension telemetry/session-miner/phase7 privacy tests"
+        ]
+      },
+      "bar": "0 actionable findings; telemetry redaction tests pass",
+      "evidence": [
+        "fresh current Privacy Guard scan: 0 actionable, 1 ignored policy match",
+        "extension telemetry/session-miner/phase7 privacy tests"
+      ]
+    },
+    {
+      "id": "portfolio",
+      "label": "Extension portfolio",
+      "status": "pass",
+      "measured": {
+        "records": 47,
+        "toolDecisions": 67,
+        "activeTools": 59
+      },
+      "bar": "every custom tool has owner/trigger/overlap/metric/lifecycle decision",
+      "evidence": [
+        "full-fleet RPC extensions-inventory"
+      ]
+    }
+  ],
+  "summary": {
+    "pass": 9,
+    "fail": 0,
+    "insufficientData": 2,
+    "decision": "no-go-deferred"
+  },
+  "release": {
+    "decision": "no-go-deferred",
+    "reason": "The mandatory versioned 14-day cohort is incomplete; irreversible release/promotion decisions remain blocked.",
+    "irreversiblePortfolioChangesAllowed": false,
+    "automaticMutatingDelegationAllowed": false
+  },
+  "privacy": {
+    "aggregateOnly": true,
+    "rawSessionContentPersisted": false,
+    "sourceBodiesPersisted": false,
+    "pathsPersisted": false
+  }
+}

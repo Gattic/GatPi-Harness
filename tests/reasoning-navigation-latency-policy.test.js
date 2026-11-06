@@ -1,0 +1,25 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const source = fs.readFileSync(path.join(process.cwd(), ".pi", "extensions", "reasoning-runtime", "index.ts"), "utf8");
+assert(source.includes("const boundaryCache = new Map"), "boundary should be cached across same-cwd session replacement");
+assert(source.includes("const staleCleanupDone = new Set"), "stale cleanup should not rerun on every /new session_start");
+assert(source.includes("STALE_CLEANUP_MARKER_KEY"), "stale cleanup should have a persisted marker across process restarts");
+assert(source.includes("PI_COGNITIVE_FORCE_STALE_CLEANUP"), "persisted stale cleanup skip should have an explicit force override");
+assert(source.includes('trim().startsWith("/")'), "slash commands should skip cognitive input objective persistence");
+const shutdown = source.slice(source.indexOf('pi.on("session_shutdown"'), source.indexOf('pi.registerCommand("cognitive-status"'));
+assert(shutdown.includes('["new", "resume", "fork", "reload"].includes(event?.reason)'), "navigation shutdown should skip redundant large persists");
+assert(shutdown.includes("Quit/unknown shutdown still flushes"), "correctness-preserving flush policy should be documented");
+assert(source.includes('pi.registerCommand("cognitive-timing"') && source.includes('mode === "on"') && source.includes('mode === "off"'), "cognitive timing should be toggleable without another restart");
+assert(source.includes('pi.registerCommand("cognitive-prune-memory"'), "assistant-turn memory pruning should be available as explicit maintenance command");
+assert(source.includes('pi.registerCommand("cognitive-prune-trace"'), "trace event log pruning should be available as explicit maintenance command");
+assert(source.includes("trace/snapshots/pre-trace-prune"), "trace pruning should snapshot before applying destructive retention");
+assert(source.includes('pi.registerCommand("reasoning-prune-automated"'), "automated verifier reasoning artifacts should have explicit pruning command");
+assert(source.includes("PI_REASONING_AUTO_PRUNE_AUTOMATED"), "automated verifier reasoning retention should have an explicit env toggle");
+assert(source.includes("scheduleReasoningAutomatedPrune(runtime)"), "automated verifier reasoning pruning should be scheduled off session_start hot path");
+assert(source.includes("reasoning/snapshots/pre-automated-prune"), "automated reasoning pruning should snapshot before applying destructive retention");
+assert(source.includes("reasoning/snapshots/pre-auto-automated-prune"), "automatic reasoning pruning should snapshot before applying destructive retention");
+assert(source.includes("memory/snapshots/pre-assistant-turn-prune"), "memory pruning should snapshot before applying destructive retention");
+console.log("reasoning-navigation-latency-policy tests passed");

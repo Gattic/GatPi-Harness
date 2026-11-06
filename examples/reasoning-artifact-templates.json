@@ -1,0 +1,52 @@
+{
+  "plan": {
+    "objective": "Refactor module X to use the reasoning runtime scaffold.",
+    "summary": "Public plan summary only; no private reasoning.",
+    "steps": [
+      { "id": "step-1", "description": "Inspect current adapter boundary", "status": "pending" },
+      { "id": "step-2", "description": "Implement minimal runtime scaffold change", "status": "pending" }
+    ],
+    "dependencies": ["src/integration-boundary.js"],
+    "risks": ["stale compatibility path"],
+    "successCriteria": ["tests pass", "no private reasoning fields are persisted"]
+  },
+  "task_decomposition": {
+    "task": "Add verifier-backed failure artifacts",
+    "subtasks": [
+      { "id": "task-1", "title": "Run verifier", "status": "pending" },
+      { "id": "task-2", "title": "Record verifier_evidence", "status": "pending" },
+      { "id": "task-3", "title": "Create failure_analysis on rejection", "status": "pending" }
+    ],
+    "ordering": ["task-1", "task-2", "task-3"],
+    "parallelizable": []
+  },
+  "verifier_evidence": {
+    "claim": "Patch satisfies the requested behavior.",
+    "ok": false,
+    "kind": "unit",
+    "method": "verification-pipeline",
+    "observations": ["Unit test failed: expected X, got Y"],
+    "artifacts": ["memory://verification/evidence/example"],
+    "confidence": 0.85,
+    "verifier": "unit-test"
+  },
+  "failure_analysis": {
+    "failure": { "summary": "Verifier rejected the patch" },
+    "summary": "Patch failed because the implementation did not update the compatibility adapter.",
+    "evidenceIds": ["verifier-evidence-id"],
+    "actionIds": ["executor-action-id"],
+    "hypothesisIds": [],
+    "likelyCauses": ["Compatibility path not updated"],
+    "correctiveActions": [
+      { "action": "Update adapter fallback path", "evidenceId": "verifier-evidence-id" }
+    ]
+  },
+  "decision_record": {
+    "decision": "Keep legacy /cognitive-* commands as aliases while displaying reasoning-runtime status.",
+    "rationale": "Avoid user workflow breakage while making the canonical architecture clear.",
+    "alternatives": ["rename extension immediately", "remove compatibility commands"],
+    "tradeoffs": ["Compatibility may preserve old naming in docs", "Immediate rename risks breaking users"],
+    "evidenceIds": ["verifier-evidence-id"],
+    "status": "accepted"
+  }
+}

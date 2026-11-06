@@ -1,0 +1,148 @@
+#!/usr/bin/env node
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { execFileSync } = require("node:child_process");
+const { AdvisorySkillPilot, SkillSynthesisAdapter, MemoryJsonStorage } = require("../src/integration-boundary");
+const { PROTOCOL, studyDecision } = require("../src/advisory-skill-pilot");
+const { assessVerification } = require("../src/verification-oracle");
+const { hash } = require("../src/reviewed-evidence");
+const { openExperiment } = require("../src/experiment-ledger");
+const { EvidenceStore } = require("../src/evidence-binder");
+const { captureTreeFingerprint } = require("../src/tree-fingerprint");
+const { tmpFixture } = require("./helpers/tmp-fixture");
+const root = tmpFixture("machine-pilot-test-");
+try {
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  fs.writeFileSync(path.join(root, ".gitignore"), ".pi/\n");
+  fs.mkdirSync(path.join(root, "tests"));
+  fs.writeFileSync(path.join(root, "tests/oracle.test.js"), "console.log('fixture check passed');\n");
+  let now = Date.now(), proofNumber = 0;
+  const file = path.join(root, "SKILL.md"); fs.writeFileSync(file, "Verify the existing change without expanding scope.");
+  const skills = new SkillSynthesisAdapter({ cwd: root, storage: new MemoryJsonStorage(), options: { loadNative: false, loadCurated: false } });
+  skills.registerProvider({ providerId: "fixture", skills: [{ skillId: "skill_fixture_verify", name: "Native Agent Skill: change-verify", description: "Verify changes", status: "approved", workflowSteps: [{ description: "Verify the change" }], provenance: { nativeSkillName: "change-verify", file, sourceHash: hash(fs.readFileSync(file, "utf8")) }, approvals: { advisoryRetrieval: "allowed", routing: "not-approved", publishing: "not-approved" } }] });
+  openExperiment(root, "machine verification advisory v2", { bars: ["Frozen checks, independent sessions, fixed horizon; fixture only"] });
+  const evidence = new EvidenceStore({ cwd: root });
+  const env = { PI_HERMES_SKILL_AUTO_DRAFT: "0", PI_COGNITIVE_AUTO_VERIFY: "0" };
+  const pilot = new AdvisorySkillPilot({ cwd: root, skills, env, clock: () => now, evidence });
+  fs.mkdirSync(path.join(root, ".pi/advisory-skill-pilot"), { recursive: true });
+  const legacyFile = path.join(root, ".pi/advisory-skill-pilot/pilot.json"), legacyBytes = '{"cases":[{"review":null}],"schemaVersion":1}\n';
+  fs.writeFileSync(legacyFile, legacyBytes);
+  const state = pilot.initialize(), skillBefore = JSON.stringify(skills.getSkill(state.identity.skillId));
+  assert.equal(pilot.initialize().createdAt, state.createdAt);
+  assert.equal(pilot.review, undefined, "manual outcome API is retired");
+  const request = { prompt: "Verify these changes", interactive: true, sessionId: "session-first", requestId: "request-first", model: { provider: "fixture", id: "model" }, thinkingLevel: "low" };
+  assert.equal(pilot.prepare({ ...request, interactive: false }), null);
+  assert.equal(pilot.prepare({ ...request, prompt: "Implement and verify these changes" }), null);
+  env.PI_COGNITIVE_AUTO_VERIFY = "1";
+  assert.equal(pilot.prepare(request).blocked, "confounding-automatic-behavior-enabled");
+  env.PI_COGNITIVE_AUTO_VERIFY = "0";
+  function proofFor(oracle, passed = true) {
+    const commands = oracle.commands.map(({ id, command, args, kind }) => ({ id, command, args, kind }));
+    for (const command of commands) execFileSync(command.command, command.args, { cwd: root });
+    const proof = { id: `proof_${(++proofNumber).toString(16).padStart(16, "0")}`, ok: passed, status: passed ? "pass" : "fail", createdAt: new Date(now).toISOString(), tree: captureTreeFingerprint(root), executedCommands: commands.map(({ id, command, args }) => ({ id, command, args })), policy: { ok: passed, violations: passed ? [] : [{ policy: "rejectFailedVerifiers" }] }, verifiers: commands.map(c => ({ id: c.id, ok: passed, startedAt: new Date(now).toISOString(), cached: false, metrics: { exitCode: passed ? 0 : 1, signal: null } })) };
+    const dir = path.join(root, ".pi/verification-center/evidence"); fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${proof.id}.json`), JSON.stringify(proof));
+    return { commands, evidence: proof };
+  }
+  const first = pilot.prepare(request);
+  assert.match(first.evidenceInstructions, /captured and assessed automatically/);
+  pilot.delivered(); pilot.observeModel(); pilot.observeTool();
+  const messages = [{ role: "user", timestamp: now - 100, content: "OLD_PRIVATE_PROMPT" }, { role: "custom", timestamp: now + 1, content: "x".repeat(2000) }, { role: "assistant", timestamp: now + 2, content: [{ type: "thinking", thinking: "NEVER_PERSIST_REASONING" }] }];
+  pilot.observeMessages(messages); pilot.observeMessages(messages);
+  now += 100;
+  const oracle = pilot.active.frozenOracle, proof = proofFor(oracle);
+  assert.equal(assessVerification(root, proof, oracle, new Date(now + 1).toISOString(), now + 2).reason, "outside-execution-window");
+  const wrong = structuredClone(proof); wrong.evidence.ok = false;
+  assert.equal(assessVerification(root, wrong, oracle, first.startedAt, now).reason, "proof-content-mismatch");
+  const skipped = { ...proof, commands: proof.commands.map(c => ({ ...c, args: ["unrelated-test.js"] })) };
+  assert.equal(assessVerification(root, skipped, oracle, first.startedAt, now).reason, "command-provenance-mismatch");
+  const incompleteOracle = structuredClone(oracle); incompleteOracle.contract.commandHashes.push(hash("additional-required-command"));
+  assert.equal(assessVerification(root, proof, incompleteOracle, first.startedAt, now).reason, "frozen-checks-not-covered");
+  const assessment = pilot.observeVerification(proof);
+  assert.equal(assessment.status, "resolved"); assert.equal(assessment.verificationResult, "pass");
+  assert(evidence.validateEvidenceId(assessment.evidenceId).ok);
+  assert.equal(pilot.observeVerification(proof), null, "one packet per case; repeated callbacks do not duplicate observations");
+  now += 900; pilot.settle();
+  assert.equal(pilot.prepare({ ...request, requestId: "same-session-new-turn" }), null, "one observation per independent session");
+  assert.equal(pilot.state().cases[0].metrics.contextAdded, 2000 + request.prompt.length);
+  assert.equal(pilot.state().cases[0].review, undefined);
+  assert.equal(pilot.report().humanReviewRequired, false);
+  assert.equal(pilot.report().automaticReminderEnabled, false);
+
+  now += 100;
+  pilot.prepare({ ...request, sessionId: "failed-check-session" });
+  now += 100;
+  const failed = proofFor(pilot.active.frozenOracle, false);
+  assert.equal(pilot.observeVerification(failed).verificationResult, "fail");
+  now += 100; pilot.settle();
+  assert.equal(pilot.state().cases[1].assessment.status, "resolved", "a failing check can be correctly delivered; this is not code success");
+  assert.equal(evidence.validateEvidenceId(pilot.state().cases[1].assessment.evidenceId, { requireOk: false }).passing, false);
+
+  now += 100; pilot.prepare({ ...request, sessionId: "missing-proof-session" });
+  assert.equal(pilot.observeVerification(proof).reason, "outside-execution-window", "old proof cannot qualify another task");
+  now += 100; pilot.settle();
+  assert.equal(pilot.state().cases[2].assessment.status, "inconclusive");
+  assert.equal(pilot.report().arms.control.assigned + pilot.report().arms.candidate.assigned, 3);
+  assert.equal(pilot.report().verdict, "insufficient-data");
+  env.PI_CODE_CONTEXT_MODE = "on";
+  assert.equal(pilot.prepare({ ...request, sessionId: "drift" }).blocked, "source-or-configuration-changed");
+  assert.equal(pilot.report().identityMatches, false);
+  delete env.PI_CODE_CONTEXT_MODE;
+  assert.equal(pilot.prepare({ ...request, sessionId: "model-drift", model: { id: "other" } }).blocked, "model-cohort-changed");
+  now += 100; pilot.prepare({ ...request, sessionId: "mutated-tree" });
+  fs.appendFileSync(file, " changed");
+  now += 100; pilot.settle();
+  assert.equal(pilot.state().cases[3].assessment.status, "policy-violation");
+  assert.equal(pilot.state().status, "stopped");
+  assert.equal(pilot.prepare({ ...request, sessionId: "stopped" }), null);
+  assert.equal(JSON.stringify(skills.getSkill(state.identity.skillId)), skillBefore, "no synthesis, skill approval, ranking or routing mutations");
+  assert.equal(fs.readFileSync(legacyFile, "utf8"), legacyBytes, "historical labels and bytes stay untouched");
+  const serialized = fs.readFileSync(path.join(root, ".pi/advisory-skill-pilot/machine-pilot.json"), "utf8");
+  for (const secret of [request.prompt, request.sessionId, root, "OLD_PRIVATE_PROMPT", "NEVER_PERSIST_REASONING"]) assert(!serialized.includes(secret));
+  assert.equal(fs.statSync(path.join(root, ".pi/advisory-skill-pilot/machine-pilot.json")).mode & 0o777, 0o600);
+
+  const start = Date.parse("2026-01-01T00:00:00Z");
+  const cases = Array.from({ length: 120 }, (_, i) => ({ caseId: `synthetic-${i}`, sessionIdHash: hash(i), arm: i % 2 ? "candidate" : "control", startedAt: new Date(start + Math.floor(i / 4) * 86400000).toISOString(), status: "settled", delivered: Boolean(i % 2), assessment: { status: i % 2 ? "resolved" : "inconclusive" }, metrics: { latencyMs: 100, modelCalls: 1, toolCalls: 1, contextAdded: 100 } }));
+  const synthetic = { createdAt: new Date(start).toISOString(), cases };
+  const decision = studyDecision(synthetic, start + 30 * 86400000, true);
+  assert.equal(decision.verdict, "pass"); assert.equal(decision.action, PROTOCOL.permittedAction);
+  assert.equal(studyDecision({ ...synthetic, cases: cases.slice(0, 119) }, start + 30 * 86400000, true).action, "none", "no optional stopping before the fixed horizon");
+  assert.equal(studyDecision(synthetic, start + 30 * 86400000, false).action, "none", "identity drift revokes eligibility");
+  for (const item of cases.filter(c => c.arm === "candidate")) item.metrics.latencyMs = 111;
+  assert.equal(studyDecision(synthetic, start + 30 * 86400000, true).verdict, "fail", "cost regression blocks automatic reminder");
+
+  // Synthetic terminal state exercises the actual automatic action boundary;
+  // none of these fixture observations enter the real experiment.
+  fs.writeFileSync(file, "Verify the existing change without expanding scope.");
+  now = start + 31 * 86400000;
+  for (const item of cases) { item.metrics.latencyMs = 100; item.settledAt = new Date(Date.parse(item.startedAt) + 1000).toISOString(); }
+  const terminalState = { ...state, ...synthetic, status: "collection-complete", modelHash: hash({ model: request.model, thinkingLevel: request.thinkingLevel }), decision };
+  pilot.storage.writeJson("machine-pilot", terminalState);
+  assert.equal(pilot.prepare({ ...request, sessionId: "unproven-promotion" }), null, "stored pass without intact registered proof cannot activate");
+  for (const item of cases.filter(c => c.arm === "candidate")) {
+    const raw = structuredClone(proof.evidence);
+    raw.id = `proof_${(++proofNumber).toString(16).padStart(16, "0")}`;
+    raw.createdAt = new Date(Date.parse(item.startedAt) + 100).toISOString();
+    raw.verifiers.forEach(v => { v.startedAt = item.startedAt; });
+    fs.writeFileSync(path.join(root, ".pi/verification-center/evidence", `${raw.id}.json`), JSON.stringify(raw));
+    item.oracle = first.oracle;
+    item.assessment = { status: "resolved", verificationResult: "pass", proofId: raw.id, proofHash: hash(raw) };
+    const packet = evidence.saveEvidence({ source: "machine-verification", ok: true, createdAt: raw.createdAt, tree: raw.tree, metadata: { caseId: item.caseId, oracleHash: item.oracle.hash, ...item.assessment } });
+    item.assessment.evidenceId = packet.id; item.assessment.evidenceFingerprint = packet.fingerprint;
+  }
+  pilot.storage.writeJson("machine-pilot", terminalState);
+  assert.equal(pilot.prepare({ ...request, sessionId: "post-experiment" }).automatic, true, "passing machine evidence enables the exact reminder without a review");
+  assert.equal(pilot.report().automaticReminderEnabled, true);
+  assert.equal(pilot.state().cases.length, 120, "post-decision exposure never contaminates the randomized cohort");
+  assert.equal(JSON.stringify(skills.getSkill(state.identity.skillId)), skillBefore);
+  const corruptPath = path.join(root, ".pi/verification-center/evidence", `${cases[1].assessment.proofId}.json`);
+  const corrupt = JSON.parse(fs.readFileSync(corruptPath, "utf8")); corrupt.verifiers[0].metrics.exitCode = 1;
+  fs.writeFileSync(corruptPath, JSON.stringify(corrupt));
+  assert.equal(pilot.report().automaticReminderEnabled, false, "changed proof revokes automatic action");
+  assert.equal(pilot.report().evidenceIntact, false);
+  assert.equal(pilot.prepare({ ...request, sessionId: "revoked" }), null);
+  assert.equal(fs.readFileSync(legacyFile, "utf8"), legacyBytes);
+} finally { fs.rmSync(root, { recursive: true, force: true }); }
+console.log("machine advisory skill pilot tests passed");

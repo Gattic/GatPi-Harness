@@ -1,0 +1,47 @@
+#!/usr/bin/env node
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const file = path.join(process.cwd(), ".pi", "extensions", "verification-center", "index.ts");
+const source = fs.readFileSync(file, "utf8");
+assert.match(source, /createCodeContextService/);
+assert.match(source, /impactService\.changeImpact/);
+assert.match(source, /CODE_CONTEXT_MODE === "off"/);
+assert.match(source, /status: "disabled"/, "off mode bypasses advisory impact discovery instead of scanning the entire working tree");
+assert.match(source, /\["select-tests", "on"\]/);
+assert.match(source, /selectedTestImpact/);
+assert.match(source, /baselinePolicy/);
+assert.match(source, /normalizeRequiredProviders/);
+assert.match(source, /providerReadiness/);
+assert.match(source, /providerGateViolations/);
+assert.match(source, /required-provider-unavailable/);
+assert.match(source, /providerDefault: "degraded-advisory"/);
+assert.match(source, /createVisualAdapter/);
+assert.match(source, /requiredProviders\.includes\("visual"\)/);
+assert.match(source, /kind: "visual"/);
+assert.match(source, /baselineMutation: "separate-command-only-script"/);
+assert.match(source, /baseline-mutated-during-verification|visualExecution/);
+assert.match(source, /verifier-mutated-tree/);
+assert.match(source, /treeBefore\.fingerprint !== treeAfter\.fingerprint/);
+assert.match(source, /input\.requiredProviders/, "providers become gates only through explicit input");
+assert.match(source, /promoted: promoteSelected/);
+assert.doesNotMatch(source, /filter\(\(file\).*\\\.test\\\.js/, "test selection must not hard-code only *.test.js");
+const promotion = source.indexOf('const promoteSelected = ["select-tests", "on"].includes(impact.rolloutMode)');
+const baseline = source.indexOf("const commands = input.commands?.length ? input.commands : discoverCommands");
+assert.ok(baseline >= 0 && promotion > baseline, "impact commands augment an already discovered baseline");
+assert.match(source, /rolloutGate\?\.authorized === true/);
+assert.match(source, /tests\.executed/);
+assert.match(source, /verification\.linked/);
+assert.match(source, /NO-VERIFIERS/);
+assert.match(source, /verification\.captureChangeSet/, "working-tree capture crosses the integration boundary");
+assert.match(source, /verification\.captureTreeFingerprint/, "shared-tree fingerprints cross the integration boundary");
+assert.doesNotMatch(source, /function buildChangeSet|function headText|tree-fingerprint\.js/, "the extension must not own full-content or tree fingerprint internals");
+assert.doesNotMatch(source, /sha256\(\{\s*changedFiles,\s*before,\s*after\s*\}\)/, "the extension cannot serialize aggregate file contents");
+assert.doesNotMatch(source, /manage-visual-baselines|applyBaseline/, "Verification Center cannot mutate visual baselines");
+assert.match(source, /no verifier commands discovered \(coverage gap, fail-closed\)/, "unmatched verifier evidence should identify a fail-closed coverage gap");
+assert.match(source, /acknowledgedPublicApiRemovals: input\.acknowledgedPublicApiRemovals \|\| \[\]/, "approved public API removals come only from explicit run input");
+assert.equal((source.match(/acknowledgedPublicApiRemovals: input\./g) || []).length, 1, "approvals reach only the policy-evaluated verification path");
+console.log("verification-center impact tests passed");

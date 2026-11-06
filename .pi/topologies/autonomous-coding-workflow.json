@@ -1,0 +1,566 @@
+{
+  "topologies": [
+    {
+      "topologyId": "project-autonomous-coding-workflow",
+      "name": "Project Autonomous Coding Workflow",
+      "description": "Canonical Pi/Hermes workflow: research, plan, implement, review, verify, then curate memory only after success.",
+      "executionMode": "sequential",
+      "failurePolicy": "fail-fast",
+      "aggregationPolicy": "last",
+      "fallbackTopology": "project-reviewer-verifier-gate",
+      "nodes": [
+        {
+          "id": "research",
+          "roleId": "researcher",
+          "task": "Research code and docs relevant to {{task}}",
+          "contextPolicy": "task-only",
+          "memoryPolicy": "read-only",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "shared-readonly",
+          "mutationPolicy": "forbidden",
+          "budget": {
+            "maxModelCalls": 6,
+            "maxToolCalls": 48,
+            "wallClockMs": 180000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "findings",
+              "evidence"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "plan",
+          "roleId": "planner",
+          "task": "Plan implementation for {{task}} and emit roadmapPlan milestones with nested goals for parent application before implementation",
+          "contextPolicy": "summarized",
+          "memoryPolicy": "read-only",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "shared-readonly",
+          "mutationPolicy": "forbidden",
+          "budget": {
+            "maxModelCalls": 4,
+            "maxToolCalls": 24,
+            "wallClockMs": 120000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 120000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "findings",
+              "evidence",
+              "roadmapPlan"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "roadmapPlan": {
+                "type": "object",
+                "required": ["title", "milestones"],
+                "properties": {
+                  "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+                  "milestones": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "required": ["title", "goals"],
+                      "properties": {
+                        "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+                        "goals": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 500 } }
+                      }
+                    }
+                  }
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "code",
+          "roleId": "coder",
+          "task": "Implement {{task}} following the plan",
+          "contextPolicy": "summarized",
+          "memoryPolicy": "read-only",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "isolated-worktree",
+          "mutationPolicy": "proposed-patch",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 64,
+            "wallClockMs": 300000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "artifacts",
+              "proposedPatch",
+              "verification"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "review",
+          "roleId": "patch-reviewer",
+          "task": "Review implementation for {{task}}",
+          "contextPolicy": "summarized",
+          "executionMode": "subagent",
+          "workspacePolicy": "isolated-worktree",
+          "roleContractVersion": "role-v2",
+          "mutationPolicy": "isolated-only",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 48,
+            "wallClockMs": 180000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "findings",
+              "evidence"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "verify",
+          "roleId": "verifier",
+          "task": "Run verification for {{task}}",
+          "contextPolicy": "summarized",
+          "executionMode": "subagent",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "isolated-worktree",
+          "mutationPolicy": "isolated-only",
+          "budget": {
+            "maxModelCalls": 8,
+            "maxToolCalls": 64,
+            "wallClockMs": 300000,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 180000,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "evidence",
+              "verification"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        },
+        {
+          "id": "curate",
+          "roleId": "memory-curator",
+          "task": "Curate durable summary for successful {{task}}",
+          "contextPolicy": "summarized",
+          "memoryPolicy": "read-write",
+          "executionMode": "handler",
+          "roleContractVersion": "role-v2",
+          "workspacePolicy": "handler-only",
+          "mutationPolicy": "forbidden",
+          "budget": {
+            "maxModelCalls": 0,
+            "maxToolCalls": 0,
+            "wallClockMs": 0,
+            "maxResultChars": 12000,
+            "maxQueueWaitMs": 0,
+            "maxLengthContinuations": 0
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "summary",
+              "evidence"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "proposedPatch": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verification": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "evidence"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "unchecked",
+                      "passed",
+                      "failed"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          "requiresTypedResult": true
+        }
+      ],
+      "edges": [
+        {
+          "source": "research",
+          "target": "plan",
+          "condition": "ok"
+        },
+        {
+          "source": "plan",
+          "target": "code",
+          "condition": "ok"
+        },
+        {
+          "source": "code",
+          "target": "review",
+          "condition": "ok"
+        },
+        {
+          "source": "review",
+          "target": "verify",
+          "condition": "ok"
+        },
+        {
+          "source": "verify",
+          "target": "curate",
+          "condition": "no_errors"
+        }
+      ],
+      "terminalNodes": [
+        "curate"
+      ],
+      "schemaVersion": 2,
+      "roleRuntimeVersion": 2,
+      "contractVersion": "role-v2",
+      "resultSchemaVersion": 2,
+      "metadata": {
+        "requiresTypedResults": true,
+        "roadmapPlanGate": {
+          "plannerNodeId": "plan",
+          "beforeNodeIds": ["code"]
+        },
+        "provenance": {
+          "source": "project-config",
+          "file": ".pi/topologies/autonomous-coding-workflow.json",
+          "version": 2
+        }
+      }
+    }
+  ]
+}

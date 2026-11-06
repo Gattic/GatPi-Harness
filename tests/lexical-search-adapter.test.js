@@ -1,0 +1,55 @@
+#!/usr/bin/env node
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { createLexicalSearchAdapter, parseRgJson, normalizeSearchPath } = require("../src/lexical-search-adapter.js");
+const { tmpFixture } = require("./helpers/tmp-fixture");
+
+(async () => {
+  const tmp = tmpFixture("pi-lexical-search-");
+  fs.mkdirSync(path.join(tmp, "src"), { recursive: true });
+  fs.mkdirSync(path.join(tmp, "generated"), { recursive: true });
+  fs.mkdirSync(path.join(tmp, "vendor"), { recursive: true });
+  fs.mkdirSync(path.join(tmp, ".pi", "extensions", "chat-focus"), { recursive: true });
+  fs.mkdirSync(path.join(tmp, ".pi", "private"), { recursive: true });
+  fs.mkdirSync(path.join(tmp, ".pi", "extensions-private"), { recursive: true });
+  fs.writeFileSync(path.join(tmp, "src", "a.js"), "const exactKey = 1;\n// exactKey comment\nthrow new Error('E_CONFIG_BAD');\n");
+  fs.writeFileSync(path.join(tmp, "src", "b.js"), "function exactKey() {}\n");
+  fs.writeFileSync(path.join(tmp, "generated", "a.js"), "const exactKey = 2;\n");
+  fs.writeFileSync(path.join(tmp, "vendor", "a.js"), "const exactKey = 3;\n");
+  fs.writeFileSync(path.join(tmp, ".pi", "extensions", "chat-focus", "index.ts"), "const chatFocus = true;\n");
+  fs.writeFileSync(path.join(tmp, ".pi", "private", "state.json"), "{\"chatFocus\":\"secret\"}\n");
+  fs.writeFileSync(path.join(tmp, ".pi", "extensions-private", "state.json"), "{\"chatFocus\":\"secret\"}\n");
+  const adapter = createLexicalSearchAdapter({ defaultLimit: 1 });
+  const first = await adapter.search(tmp, { query: "exactKey", mode: "identifier", limit: 1 });
+  assert.equal(first.items.length, 1);
+  assert.equal(first.items[0].sourceKind, "first_party");
+  assert.ok(first.items[0].scoreReasons.includes("exact_identifier"));
+  assert.ok(first.cursor, "bounded result should provide a cursor");
+  assert.equal(first.rawOutputPath, undefined, "raw output is opt-in");
+  const second = await adapter.search(tmp, { query: "exactKey", mode: "identifier", limit: 1, cursor: first.cursor });
+  assert.equal(second.items.length, 1);
+  assert.notEqual(second.items[0].id, first.items[0].id);
+  const distinct = await adapter.search(tmp, { query: "exactKey", mode: "identifier", limit: 2, distinctPaths: true });
+  assert.deepEqual(distinct.items.map((item) => item.path), ["src/a.js", "src/b.js"], "repository-map pagination can request path diversity before page limits");
+  const generated = await adapter.search(tmp, { query: "exactKey", mode: "identifier", limit: 20, sourceKinds: ["generated"] });
+  assert.deepEqual(generated.items.map((item) => item.path), ["generated/a.js"]);
+  const extensionSource = await adapter.search(tmp, { query: "chatFocus", mode: "fixed", paths: [".pi/extensions"] });
+  assert.deepEqual(extensionSource.items.map((item) => item.path), [".pi/extensions/chat-focus/index.ts"]);
+  const hiddenDefault = await adapter.search(tmp, { query: "chatFocus", mode: "fixed" });
+  assert.equal(hiddenDefault.items.length, 0, "default search must not expose hidden runtime state");
+  const lookalikeHidden = await adapter.search(tmp, { query: "chatFocus", mode: "fixed", paths: [".pi/extensions-private"] });
+  assert.equal(lookalikeHidden.items.length, 0, "only the exact tracked extension source root may enable hidden search");
+  const error = await adapter.search(tmp, { query: "E_CONFIG_BAD", mode: "fixed" });
+  assert.ok(error.items[0].scoreReasons.includes("error_or_config_term"));
+  await assert.rejects(adapter.search(tmp, { query: "x", paths: ["../outside"] }), /inside project root/);
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(adapter.search(tmp, { query: "exactKey" }, controller.signal), (reason) => reason.name === "AbortError" || reason.code === "ABORT_ERR");
+  assert.equal(normalizeSearchPath(tmp, "src\\a.js"), "src/a.js");
+  const parsed = parseRgJson(`${JSON.stringify({ type: "match", data: { path: { text: "src/a.js" }, lines: { text: "x\n" }, line_number: 1, submatches: [{ match: { text: "x" }, start: 0, end: 1 }] } })}\n`, tmp);
+  assert.equal(parsed.matches.length, 1);
+  console.log("lexical search adapter tests passed");
+})().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -1,0 +1,496 @@
+diff --git a/dist/core/slash-commands.js b/dist/core/slash-commands.js
+index 502ac8c..6050e9b 100644
+--- a/dist/core/slash-commands.js
++++ b/dist/core/slash-commands.js
+@@ -17,9 +17,11 @@ export const BUILTIN_SLASH_COMMANDS = [
+     { name: "login", description: "Configure provider authentication" },
+     { name: "logout", description: "Remove provider authentication" },
+     { name: "new", description: "Start a new session" },
++    { name: "clear", description: "Start a new session (alias for /new)" },
+     { name: "compact", description: "Manually compact the session context" },
+     { name: "resume", description: "Resume a different session" },
+     { name: "reload", description: "Reload keybindings, extensions, skills, prompts, and themes" },
+     { name: "quit", description: `Quit ${APP_NAME}` },
++    { name: "exit", description: `Quit ${APP_NAME} (alias for /quit)` },
+ ];
+ //# sourceMappingURL=slash-commands.js.map
+\ No newline at end of file
+diff --git a/dist/modes/interactive/components/assistant-message.js b/dist/modes/interactive/components/assistant-message.js
+index d749175..f9a1fd6 100644
+--- a/dist/modes/interactive/components/assistant-message.js
++++ b/dist/modes/interactive/components/assistant-message.js
+@@ -1,8 +1,9 @@
+ import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
+ import { getMarkdownTheme, theme } from "../theme/theme.js";
+-const OSC133_ZONE_START = "\x1b]133;A\x07";
+-const OSC133_ZONE_END = "\x1b]133;B\x07";
+-const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
++// Disabled: some terminals misinterpret OSC 133 prompt markers as title changes.
++const OSC133_ZONE_START = "";
++const OSC133_ZONE_END = "";
++const OSC133_ZONE_FINAL = "";
+ /**
+  * Component that renders a complete assistant message
+  */
+diff --git a/dist/modes/interactive/components/user-message.js b/dist/modes/interactive/components/user-message.js
+index fe7086d..696e3ec 100644
+--- a/dist/modes/interactive/components/user-message.js
++++ b/dist/modes/interactive/components/user-message.js
+@@ -1,8 +1,9 @@
+ import { Box, Container, Markdown } from "@earendil-works/pi-tui";
+ import { getMarkdownTheme, theme } from "../theme/theme.js";
+-const OSC133_ZONE_START = "\x1b]133;A\x07";
+-const OSC133_ZONE_END = "\x1b]133;B\x07";
+-const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
++// Disabled: some terminals misinterpret OSC 133 prompt markers as title changes.
++const OSC133_ZONE_START = "";
++const OSC133_ZONE_END = "";
++const OSC133_ZONE_FINAL = "";
+ /**
+  * Component that renders a user message
+  */
+diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
+index 408e384..b78cbfd 100644
+--- a/dist/modes/interactive/interactive-mode.js
++++ b/dist/modes/interactive/interactive-mode.js
+@@ -19,7 +19,7 @@ import { defaultModelPerProvider, findExactModelReferenceMatch, resolveModelScop
+ import { DefaultPackageManager } from "../../core/package-manager.js";
+ import { BUILT_IN_PROVIDER_DISPLAY_NAMES } from "../../core/provider-display-names.js";
+ import { formatMissingSessionCwdPrompt, MissingSessionCwdError } from "../../core/session-cwd.js";
+-import { SessionManager } from "../../core/session-manager.js";
++import { loadEntriesFromFile, SessionManager } from "../../core/session-manager.js";
+ import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.js";
+ import { isInstallTelemetryEnabled } from "../../core/telemetry.js";
+ import { getChangelogPath, getNewEntries, parseChangelog } from "../../utils/changelog.js";
+@@ -213,6 +213,7 @@ export class InteractiveMode {
+         });
+         this.version = VERSION;
+         this.ui = new TUI(new ProcessTerminal(), this.settingsManager.getShowHardwareCursor());
++        this.ui.setResizeRedrawProvider?.((context) => this.getIdleLatestAssistantResizeRedrawStart(context));
+         this.ui.setClearOnShrink(this.settingsManager.getClearOnShrink());
+         this.headerContainer = new Container();
+         this.chatContainer = new Container();
+@@ -1182,6 +1183,61 @@ export class InteractiveMode {
+         this.showLoadedResources({ force: false, showDiagnosticsWhenQuiet: true });
+         this.showStartupNoticesIfNeeded();
+     }
++    isActivelyOutputtingForResizeRedraw() {
++        return Boolean(this.session.isStreaming ||
++            this.session.isBashRunning ||
++            this.session.isCompacting ||
++            this.loadingAnimation ||
++            this.autoCompactionLoader ||
++            this.retryLoader ||
++            this.pendingTools.size > 0);
++    }
++    assistantMessageHasVisibleAnswer(message) {
++        return Boolean(message?.role === "assistant" &&
++            Array.isArray(message.content) &&
++            message.content.some((content) => content.type === "text" && content.text.trim()));
++    }
++    countRenderedLinesForResize(component, width) {
++        return component.render(width).length;
++    }
++    getIdleLatestAssistantResizeRedrawStart(context) {
++        if (context.hasOverlays || this.isActivelyOutputtingForResizeRedraw()) {
++            return undefined;
++        }
++        const chatChildren = this.chatContainer.children;
++        let assistantIndex = -1;
++        for (let i = chatChildren.length - 1; i >= 0; i--) {
++            const child = chatChildren[i];
++            if (child instanceof AssistantMessageComponent && this.assistantMessageHasVisibleAnswer(child.lastMessage)) {
++                assistantIndex = i;
++                break;
++            }
++        }
++        if (assistantIndex < 0) {
++            return undefined;
++        }
++        let start = 0;
++        let foundChat = false;
++        for (const child of this.ui.children) {
++            if (child === this.chatContainer) {
++                foundChat = true;
++                break;
++            }
++            start += this.countRenderedLinesForResize(child, context.width);
++        }
++        if (!foundChat) {
++            return undefined;
++        }
++        for (let i = 0; i < assistantIndex; i++) {
++            start += this.countRenderedLinesForResize(chatChildren[i], context.width);
++        }
++        // If the latest answer plus prompt/footer already fits, the normal viewport
++        // repaint already contains the whole answer and keeps more surrounding context.
++        if (context.lines.length - start <= context.height) {
++            return undefined;
++        }
++        return start;
++    }
+     applyRuntimeSettings() {
+         this.footer.setSession(this.session);
+         this.footer.setAutoCompactEnabled(this.session.autoCompactionEnabled);
+@@ -1704,8 +1760,12 @@ export class InteractiveMode {
+      */
+     setCustomEditorComponent(factory) {
+         this.editorComponentFactory = factory;
+-        // Save text from current editor before switching
++        // Save text and prompt history from current editor before switching.
++        // Extension reload can replace the active editor component; keep the
++        // up/down prompt history available across that swap when both editors
++        // are based on the built-in Editor implementation.
+         const currentText = this.editor.getText();
++        const currentHistory = Array.isArray(this.editor.history) ? [...this.editor.history] : undefined;
+         this.editorContainer.clear();
+         if (factory) {
+             // Create the custom editor with tui, theme, and keybindings
+@@ -1713,8 +1773,12 @@ export class InteractiveMode {
+             // Wire up callbacks from the default editor
+             newEditor.onSubmit = this.defaultEditor.onSubmit;
+             newEditor.onChange = this.defaultEditor.onChange;
+-            // Copy text from previous editor
++            // Copy text and prompt history from previous editor
+             newEditor.setText(currentText);
++            if (currentHistory && Array.isArray(newEditor.history)) {
++                newEditor.history = [...currentHistory];
++                newEditor.historyIndex = -1;
++            }
+             // Copy appearance settings if supported
+             if (newEditor.borderColor !== undefined) {
+                 newEditor.borderColor = this.defaultEditor.borderColor;
+@@ -1750,8 +1814,12 @@ export class InteractiveMode {
+             this.editor = newEditor;
+         }
+         else {
+-            // Restore default editor with text from custom editor
++            // Restore default editor with text and prompt history from custom editor
+             this.defaultEditor.setText(currentText);
++            if (currentHistory && Array.isArray(this.defaultEditor.history)) {
++                this.defaultEditor.history = [...currentHistory];
++                this.defaultEditor.historyIndex = -1;
++            }
+             this.editor = this.defaultEditor;
+         }
+         this.editorContainer.addChild(this.editor);
+@@ -2037,7 +2105,7 @@ export class InteractiveMode {
+                 this.editor.setText("");
+                 return;
+             }
+-            if (text === "/new") {
++            if (text === "/new" || text === "/clear") {
+                 this.editor.setText("");
+                 await this.handleClearCommand();
+                 return;
+@@ -2073,7 +2141,7 @@ export class InteractiveMode {
+                 this.editor.setText("");
+                 return;
+             }
+-            if (text === "/quit") {
++            if (text === "/quit" || text === "/exit") {
+                 this.editor.setText("");
+                 await this.shutdown();
+                 return;
+@@ -2350,8 +2418,10 @@ export class InteractiveMode {
+                     }
+                 }
+                 else if (event.result) {
+-                    this.chatContainer.clear();
+-                    this.rebuildChatFromMessages();
++                    // Compaction changes the LLM context, but it should not erase
++                    // the user's visible chat scrollback in the active TUI session.
++                    // Keep existing chat components and append a compaction marker.
++                    this.rebuildEditorPromptHistoryFromBranch(undefined, { preserveCurrent: true });
+                     this.addMessageToChat(createCompactionSummaryMessage(event.result.summary, event.result.tokensBefore, new Date().toISOString()));
+                     this.footer.invalidate();
+                 }
+@@ -2422,6 +2492,52 @@ export class InteractiveMode {
+             : message.content.filter((c) => c.type === "text");
+         return textBlocks.map((c) => c.text).join("");
+     }
++    getPromptHistoryTextFromEntry(entry) {
++        if (entry.type !== "message") {
++            return "";
++        }
++        const message = entry.message;
++        if (message.role === "user") {
++            return this.getUserMessageText(message);
++        }
++        if (message.role === "bashExecution" && message.command) {
++            return `${message.excludeFromContext ? "!!" : "!"}${message.command}`;
++        }
++        return "";
++    }
++    getBranchEntriesFromLoadedEntries(entries) {
++        const sessionEntries = entries.filter((entry) => entry && entry.type !== "session" && entry.id);
++        const byId = new Map(sessionEntries.map((entry) => [entry.id, entry]));
++        const branchEntries = [];
++        let current = sessionEntries[sessionEntries.length - 1];
++        while (current) {
++            branchEntries.unshift(current);
++            current = current.parentId ? byId.get(current.parentId) : undefined;
++        }
++        return branchEntries;
++    }
++    rebuildEditorPromptHistoryFromBranch(branchEntries = this.sessionManager.getBranch(), options = {}) {
++        if (!Array.isArray(this.editor.history)) {
++            return;
++        }
++        const previousHistory = options.preserveCurrent ? [...this.editor.history] : [];
++        this.resetEditorPromptHistory();
++        for (const entry of branchEntries) {
++            const textContent = this.getPromptHistoryTextFromEntry(entry);
++            if (textContent) {
++                this.editor.addToHistory?.(textContent);
++            }
++        }
++        if (previousHistory.length > 0) {
++            const restored = new Set(this.editor.history);
++            for (const textContent of previousHistory.slice().reverse()) {
++                if (textContent && !restored.has(textContent)) {
++                    this.editor.addToHistory?.(textContent);
++                    restored.add(textContent);
++                }
++            }
++        }
++    }
+     /**
+      * Show a status message in the chat.
+      *
+@@ -2590,8 +2706,9 @@ export class InteractiveMode {
+         const context = this.sessionManager.buildSessionContext();
+         this.renderSessionContext(context, {
+             updateFooter: true,
+-            populateHistory: true,
+         });
++        this.rebuildEditorPromptHistoryFromBranch();
++        this.seedEditorPromptHistoryFromRepoSessions(context);
+         // Show compaction info if session was compacted
+         const allEntries = this.sessionManager.getEntries();
+         const compactionCount = allEntries.filter((e) => e.type === "compaction").length;
+@@ -2608,10 +2725,51 @@ export class InteractiveMode {
+             };
+         });
+     }
++    resetEditorPromptHistory() {
++        if (Array.isArray(this.editor.history)) {
++            this.editor.history = [];
++            this.editor.historyIndex = -1;
++        }
++    }
++    seedEditorPromptHistoryFromRepoSessions(currentContext = this.sessionManager.buildSessionContext()) {
++        if (!Array.isArray(this.editor.history) || this.editor.history.length > 0) {
++            return;
++        }
++        const currentHasUserMessages = currentContext.messages.some((message) => message.role === "user" && this.getUserMessageText(message));
++        if (currentHasUserMessages) {
++            return;
++        }
++        let files;
++        try {
++            files = fs
++                .readdirSync(this.sessionManager.getSessionDir())
++                .filter((file) => file.endsWith(".jsonl"))
++                .map((file) => path.join(this.sessionManager.getSessionDir(), file))
++                .filter((file) => path.resolve(file) !== path.resolve(this.sessionManager.getSessionFile() ?? ""))
++                .map((file) => ({ file, mtime: fs.statSync(file).mtimeMs }))
++                .sort((a, b) => b.mtime - a.mtime);
++        }
++        catch {
++            return;
++        }
++        for (const { file } of files.reverse()) {
++            const entries = loadEntriesFromFile(file);
++            if (entries.length === 0) {
++                continue;
++            }
++            for (const entry of this.getBranchEntriesFromLoadedEntries(entries)) {
++                const textContent = this.getPromptHistoryTextFromEntry(entry);
++                if (textContent) {
++                    this.editor.addToHistory?.(textContent);
++                }
++            }
++        }
++    }
+     rebuildChatFromMessages() {
+         this.chatContainer.clear();
+         const context = this.sessionManager.buildSessionContext();
+         this.renderSessionContext(context);
++        this.rebuildEditorPromptHistoryFromBranch(undefined, { preserveCurrent: true });
+     }
+     // =========================================================================
+     // Key handlers
+diff --git a/dist/modes/interactive/theme/theme.d.ts b/dist/modes/interactive/theme/theme.d.ts
+index d33c489..639a23c 100644
+--- a/dist/modes/interactive/theme/theme.d.ts
++++ b/dist/modes/interactive/theme/theme.d.ts
+@@ -2,7 +2,7 @@ import type { EditorTheme, MarkdownTheme, SelectListTheme } from "@earendil-work
+ import type { SourceInfo } from "../../../core/source-info.js";
+ export type ThemeColor = "accent" | "border" | "borderAccent" | "borderMuted" | "success" | "error" | "warning" | "muted" | "dim" | "text" | "thinkingText" | "userMessageText" | "customMessageText" | "customMessageLabel" | "toolTitle" | "toolOutput" | "mdHeading" | "mdLink" | "mdLinkUrl" | "mdCode" | "mdCodeBlock" | "mdCodeBlockBorder" | "mdQuote" | "mdQuoteBorder" | "mdHr" | "mdListBullet" | "toolDiffAdded" | "toolDiffRemoved" | "toolDiffContext" | "syntaxComment" | "syntaxKeyword" | "syntaxFunction" | "syntaxVariable" | "syntaxString" | "syntaxNumber" | "syntaxType" | "syntaxOperator" | "syntaxPunctuation" | "thinkingOff" | "thinkingMinimal" | "thinkingLow" | "thinkingMedium" | "thinkingHigh" | "thinkingXhigh" | "bashMode";
+ export type ThemeBg = "selectedBg" | "userMessageBg" | "customMessageBg" | "toolPendingBg" | "toolSuccessBg" | "toolErrorBg";
+-type ColorMode = "truecolor" | "256color";
++type ColorMode = "truecolor" | "256color" | "ansi16";
+ export declare class Theme {
+     readonly name?: string;
+     readonly sourcePath?: string;
+diff --git a/dist/modes/interactive/theme/theme.js b/dist/modes/interactive/theme/theme.js
+index 4da7b86..59f7c3a 100644
+--- a/dist/modes/interactive/theme/theme.js
++++ b/dist/modes/interactive/theme/theme.js
+@@ -87,7 +87,47 @@ const validateThemeJson = Compile(ThemeJsonSchema);
+ // ============================================================================
+ // Color Utilities
+ // ============================================================================
++function normalizeColorMode(value) {
++    const mode = value?.toLowerCase();
++    if (mode === "truecolor" || mode === "24bit" || mode === "24-bit" || mode === "16m") {
++        return "truecolor";
++    }
++    if (mode === "256color" || mode === "256" || mode === "8bit" || mode === "8-bit") {
++        return "256color";
++    }
++    if (mode === "ansi16" || mode === "16color" || mode === "16-color" || mode === "ansi") {
++        return "ansi16";
++    }
++    return undefined;
++}
++function isScreenLikeTerm(term) {
++    return term === "screen" || term.startsWith("screen-") || term.startsWith("screen.");
++}
++function isTmuxLikeTerm(term) {
++    return term === "tmux" || term.startsWith("tmux-");
++}
+ function detectColorMode() {
++    const forcedMode = normalizeColorMode(process.env.PI_COLOR_MODE);
++    if (forcedMode) {
++        return forcedMode;
++    }
++    const term = process.env.TERM || "";
++    // Fall back to broadly supported ANSI colors for truly limited terminals.
++    if (term === "dumb" || term === "" || term === "linux") {
++        return "ansi16";
++    }
++    const inScreen = Boolean(process.env.STY) || isScreenLikeTerm(term);
++    const inTmux = Boolean(process.env.TMUX) || isTmuxLikeTerm(term);
++    // Multiplexers often inherit COLORTERM=truecolor from the outer terminal even
++    // when the multiplexer itself is not configured for direct color. Prefer the
++    // capability advertised by TERM, with PI_COLOR_MODE available as an explicit
++    // override for truecolor-capable screen/tmux setups.
++    if (inScreen || inTmux) {
++        if (term.includes("direct") || term.includes("truecolor") || term.includes("24bit")) {
++            return "truecolor";
++        }
++        return term.includes("256color") ? "256color" : "ansi16";
++    }
+     const colorterm = process.env.COLORTERM;
+     if (colorterm === "truecolor" || colorterm === "24bit") {
+         return "truecolor";
+@@ -96,18 +136,11 @@ function detectColorMode() {
+     if (process.env.WT_SESSION) {
+         return "truecolor";
+     }
+-    const term = process.env.TERM || "";
+-    // Fall back to 256color for truly limited terminals
+-    if (term === "dumb" || term === "" || term === "linux") {
+-        return "256color";
+-    }
+     // Terminal.app also doesn't support truecolor
+     if (process.env.TERM_PROGRAM === "Apple_Terminal") {
+         return "256color";
+     }
+-    // GNU screen doesn't support truecolor unless explicitly opted in via COLORTERM=truecolor.
+-    // TERM under screen is typically "screen", "screen-256color", or "screen.xterm-256color".
+-    if (term === "screen" || term.startsWith("screen-") || term.startsWith("screen.")) {
++    if (term.includes("256color")) {
+         return "256color";
+     }
+     // Assume truecolor for everything else - virtually all modern terminals support it
+@@ -193,9 +226,78 @@ function hexTo256(hex) {
+     const { r, g, b } = hexToRgb(hex);
+     return rgbTo256(r, g, b);
+ }
++const ANSI16_RGB = [
++    { r: 0, g: 0, b: 0 },
++    { r: 128, g: 0, b: 0 },
++    { r: 0, g: 128, b: 0 },
++    { r: 128, g: 128, b: 0 },
++    { r: 0, g: 0, b: 128 },
++    { r: 128, g: 0, b: 128 },
++    { r: 0, g: 128, b: 128 },
++    { r: 192, g: 192, b: 192 },
++    { r: 128, g: 128, b: 128 },
++    { r: 255, g: 0, b: 0 },
++    { r: 0, g: 255, b: 0 },
++    { r: 255, g: 255, b: 0 },
++    { r: 0, g: 0, b: 255 },
++    { r: 255, g: 0, b: 255 },
++    { r: 0, g: 255, b: 255 },
++    { r: 255, g: 255, b: 255 },
++];
++function ansi256ToRgb(index) {
++    const clamped = Math.max(0, Math.min(255, index));
++    if (clamped < 16) {
++        return ANSI16_RGB[clamped];
++    }
++    if (clamped < 232) {
++        const cubeIndex = clamped - 16;
++        const r = Math.floor(cubeIndex / 36);
++        const g = Math.floor((cubeIndex % 36) / 6);
++        const b = cubeIndex % 6;
++        const channel = (value) => (value === 0 ? 0 : 55 + value * 40);
++        return { r: channel(r), g: channel(g), b: channel(b) };
++    }
++    const gray = 8 + (clamped - 232) * 10;
++    return { r: gray, g: gray, b: gray };
++}
++function rgbToAnsi16(r, g, b) {
++    let minDist = Infinity;
++    let minIdx = 0;
++    for (let i = 0; i < ANSI16_RGB.length; i++) {
++        const candidate = ANSI16_RGB[i];
++        const dist = colorDistance(r, g, b, candidate.r, candidate.g, candidate.b);
++        if (dist < minDist) {
++            minDist = dist;
++            minIdx = i;
++        }
++    }
++    return minIdx;
++}
++function colorToAnsi16Index(color) {
++    if (typeof color === "number") {
++        if (color < 16) {
++            return color;
++        }
++        const { r, g, b } = ansi256ToRgb(color);
++        return rgbToAnsi16(r, g, b);
++    }
++    if (color.startsWith("#")) {
++        const { r, g, b } = hexToRgb(color);
++        return rgbToAnsi16(r, g, b);
++    }
++    throw new Error(`Invalid color value: ${color}`);
++}
++function fgAnsi16(index) {
++    return index < 8 ? `\x1b[3${index}m` : `\x1b[9${index - 8}m`;
++}
++function bgAnsi16(index) {
++    return index < 8 ? `\x1b[4${index}m` : `\x1b[10${index - 8}m`;
++}
+ function fgAnsi(color, mode) {
+     if (color === "")
+         return "\x1b[39m";
++    if (mode === "ansi16")
++        return fgAnsi16(colorToAnsi16Index(color));
+     if (typeof color === "number")
+         return `\x1b[38;5;${color}m`;
+     if (color.startsWith("#")) {
+@@ -213,6 +315,8 @@ function fgAnsi(color, mode) {
+ function bgAnsi(color, mode) {
+     if (color === "")
+         return "\x1b[49m";
++    if (mode === "ansi16")
++        return bgAnsi16(colorToAnsi16Index(color));
+     if (typeof color === "number")
+         return `\x1b[48;5;${color}m`;
+     if (color.startsWith("#")) {

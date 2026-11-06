@@ -1,0 +1,92 @@
+diff --git a/dist/tui.d.ts b/dist/tui.d.ts
+index 8394d46..3d1f1bd 100644
+--- a/dist/tui.d.ts
++++ b/dist/tui.d.ts
+@@ -33,6 +33,16 @@ type InputListenerResult = {
+     data?: string;
+ } | undefined;
+ type InputListener = (data: string) => InputListenerResult;
++export interface ResizeRedrawContext {
++    lines: readonly string[];
++    width: number;
++    height: number;
++    widthChanged: boolean;
++    heightChanged: boolean;
++    viewportTop: number;
++    hasOverlays: boolean;
++}
++export type ResizeRedrawProvider = (context: ResizeRedrawContext) => number | undefined;
+ /**
+  * Interface for components that can receive focus and display a hardware cursor.
+  * When focused, the component should emit CURSOR_MARKER at the cursor position
+@@ -152,6 +162,7 @@ export declare class TUI extends Container {
+     private maxLinesRendered;
+     private previousViewportTop;
+     private fullRedrawCount;
++    private resizeRedrawProvider;
+     private stopped;
+     private focusOrderCounter;
+     private overlayStack;
+@@ -166,6 +177,7 @@ export declare class TUI extends Container {
+      * When false, empty rows remain (reduces redraws on slower terminals).
+      */
+     setClearOnShrink(enabled: boolean): void;
++    setResizeRedrawProvider(provider: ResizeRedrawProvider | undefined): void;
+     setFocus(component: Component | null): void;
+     /**
+      * Show an overlay component with configurable positioning and sizing.
+diff --git a/dist/tui.js b/dist/tui.js
+index 626889d..0272ad0 100644
+--- a/dist/tui.js
++++ b/dist/tui.js
+@@ -114,6 +114,9 @@ export class TUI extends Container {
+     maxLinesRendered = 0; // Track terminal's working area (max lines ever rendered)
+     previousViewportTop = 0; // Track previous viewport top for resize-aware cursor moves
+     fullRedrawCount = 0;
++    // Optional embedding hook: return a logical line index before the viewport
++    // to replay a longer suffix on terminal resize while preserving the final viewport.
++    resizeRedrawProvider = undefined;
+     stopped = false;
+     // Overlay stack for modal components rendered on top of base content
+     focusOrderCounter = 0;
+@@ -151,6 +154,9 @@ export class TUI extends Container {
+     setClearOnShrink(enabled) {
+         this.clearOnShrink = enabled;
+     }
++    setResizeRedrawProvider(provider) {
++        this.resizeRedrawProvider = provider;
++    }
+     setFocus(component) {
+         // Clear focused flag on old component
+         if (isFocusable(this.focusedComponent)) {
+@@ -798,7 +804,29 @@ export class TUI extends Container {
+             this.fullRedrawCount += 1;
+             const bufferLength = Math.max(height, newLines.length);
+             const nextViewportTop = Math.max(0, bufferLength - height);
+-            const visibleLines = newLines.slice(nextViewportTop, nextViewportTop + height);
++            let visibleLines = newLines.slice(nextViewportTop, nextViewportTop + height);
++            if (this.resizeRedrawProvider) {
++                try {
++                    const requestedStart = this.resizeRedrawProvider({
++                        lines: newLines,
++                        width,
++                        height,
++                        widthChanged,
++                        heightChanged,
++                        viewportTop: nextViewportTop,
++                        hasOverlays: this.overlayStack.some((entry) => this.isOverlayVisible(entry)),
++                    });
++                    if (Number.isInteger(requestedStart) && requestedStart >= 0 && requestedStart < newLines.length && newLines.length - requestedStart > height) {
++                        // Replay a suffix ending at the same logical bottom. If the suffix is
++                        // taller than the viewport, the terminal scrolls to the same final
++                        // screen while keeping the replayed content contiguous in scrollback.
++                        visibleLines = newLines.slice(requestedStart);
++                    }
++                }
++                catch {
++                    // Resize repaint should never fail because an embedding hook failed.
++                }
++            }
+             let buffer = "\x1b[?2026h"; // Begin synchronized output
+             buffer += this.deleteKittyImages(this.previousKittyImageIds);
+             buffer += "\x1b[2J\x1b[H"; // Clear visible viewport and move home; keep existing scrollback.

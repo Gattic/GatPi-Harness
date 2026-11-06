@@ -1,0 +1,12 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { ProjectMemoryDecisionStore } = require("../src/project-memory-decisions");
+const { tmpFixture } = require("./helpers/tmp-fixture");
+const cwd = tmpFixture("project-memory-decisions-"); const store = new ProjectMemoryDecisionStore({ cwd, clock: () => new Date("2026-07-27T00:00:00Z") });
+const rejected = store.record({ projectKey: "pi:fixture:abcd", kind: "decision", action: "rejected", reason: "transient", candidateHash: `sha256:${"a".repeat(64)}`, verification: "verified" }); assert.equal(store.status().lastAttempt.decisionId, rejected.decisionId); assert.equal(store.status().lastSuccessful, null);
+const saved = store.record({ projectKey: "pi:fixture:abcd", kind: "decision", action: "saved", reason: "explicit-save", candidateHash: `sha256:${"b".repeat(64)}`, noteRevision: "c".repeat(64), verification: "verified", sourceFingerprints: ["fixture-v1"], evidenceIds: ["proof-1"] }); const status = store.status(); assert.equal(status.lastAttempt.decisionId, saved.decisionId); assert.equal(status.lastSuccessful.decisionId, saved.decisionId); assert.equal(status.canonicalRevision, "c".repeat(64));
+const deduped = store.record({ projectKey: "pi:fixture:abcd", kind: "decision", action: "deduped", reason: "duplicate", candidateHash: `sha256:${"b".repeat(64)}`, noteRevision: "c".repeat(64), verification: "verified" }); assert.equal(store.status().lastAttempt.decisionId, deduped.decisionId); assert.equal(store.status().lastSuccessful.decisionId, saved.decisionId, "deduped no-ops do not replace the latest successful save"); assert.equal(store.status().canonicalRevision, "c".repeat(64));
+const ledger = fs.readFileSync(path.join(cwd, ".pi", "project-memory", "decisions.jsonl"), "utf8"); assert.doesNotMatch(ledger, /candidate body|prompt|tool output/); assert.equal(fs.statSync(path.join(cwd, ".pi", "project-memory", "decisions.jsonl")).mode & 0o777, 0o600); assert.equal(store.list().length, 3);
+console.log("project memory decision tests passed");

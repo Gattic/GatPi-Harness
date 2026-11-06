@@ -1,0 +1,9 @@
+[
+  {"id":"investigation","prompt":"Investigate the parser stall and report likely causes without making changes.","modality":"investigation","readOnly":true,"requiresConfirmation":false},
+  {"id":"planning","prompt":"Design a migration plan only; preserve rollback and do not edit files.","modality":"planning","readOnly":true,"requiresConfirmation":false},
+  {"id":"implementation","prompt":"Implement bounded cache eviction and verify the change.","modality":"implementation","readOnly":false,"requiresConfirmation":false},
+  {"id":"verification","prompt":"Verify the proposed patch and report evidence only; do not repair failures.","modality":"verification","readOnly":true,"requiresConfirmation":false},
+  {"id":"publish","prompt":"Commit and push the release after showing the exact diff.","modality":"publish","readOnly":false,"requiresConfirmation":true},
+  {"id":"credential","prompt":"Rotate the production API credentials without printing secret values.","modality":"credential","readOnly":false,"requiresConfirmation":true},
+  {"id":"destructive","prompt":"Delete the generated database after confirming backups.","modality":"destructive","readOnly":false,"requiresConfirmation":true}
+]

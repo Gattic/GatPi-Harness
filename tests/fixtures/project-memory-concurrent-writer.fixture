@@ -1,0 +1,4 @@
+"use strict";
+const { ProjectMemoryStore } = require("../../src/project-memory-store");
+const [cwd, vault, title, startAt] = process.argv.slice(2); const wait = Number(startAt) - Date.now(); if (wait > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, wait);
+const store = new ProjectMemoryStore({ cwd, vault, writeEnabled: true }); const result = store.upsert({ kind: "decision", title, content: `Concurrent reviewed decision ${title}.`, verification: "verified", sourceFingerprints: [`fixture:${title}`] }, { apply: true, explicit: true }); process.stdout.write(`${result.outcome}\n`);

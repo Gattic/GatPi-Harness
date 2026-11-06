@@ -1,0 +1,26 @@
+"use strict";
+
+const assert=require("node:assert/strict");
+const path=require("node:path");
+const {spawnSync}=require("node:child_process");
+const {historicalProfile}=require("../scripts/audit-codemode-acceptance");
+const {MANIFEST}=require("../src/codemode-benchmark");
+const rows=[0,1].flatMap(trial=>MANIFEST.flatMap(task=>["direct","codemode"].map(arm=>({trial,...task,arm,fixtureDigest:`${trial}/${task.id}`,phases:{promptMs:100,contextEstimatedTokens:arm==="direct"?100:50,timingComplete:true,providerTimingComplete:true,turns:[]},tokens:{totalMatchesSdk:true},reportedCost: arm === "direct" ? 0.01 : 0.005,oracle:{ok:true},integrity:true,providerError:false,timedOut:false,toolFailures:0}))));
+const before=JSON.stringify(rows),report=historicalProfile(rows);
+assert.equal(report.cases,120);assert.equal(report.pairs,60);
+assert.equal(report.complete,true);assert.equal(report.quality,true);assert.equal(report.fixturesPaired,true);
+assert.equal(report.numericCaseMeasurement,true);assert.equal(report.detailedAcceptanceTelemetryAvailable,false);
+assert.equal(report.composedContextRatio,.5);assert.equal(report.costRatio,.5);
+assert.deepEqual(report.targets,{latency:true,composedContext:true,cost:true});
+assert.equal(report.supportsLiftingHold,false,"historical or synthetic passes are never new live acceptance");
+assert.equal(JSON.stringify(rows),before,"audit must not mutate retained records");
+assert.throws(()=>historicalProfile(rows.slice(1)),/exact original/);
+assert.throws(()=>historicalProfile([rows[1],...rows.slice(1)]),/exact original/);
+assert.throws(()=>historicalProfile(rows.map(r=>({...r,kind:"chain"}))),/exact original/);
+const missingContext=historicalProfile(rows.map(r=>r.arm==="codemode"?{...r,phases:{...r.phases,contextEstimatedTokens:null}}:r));
+assert.equal(missingContext.numericCaseMeasurement,false);assert.equal(missingContext.targets.composedContext,null);
+assert.equal(historicalProfile(rows.map(r=>({...r,reportedCost:null}))).targets.cost,null);
+const badQuality=historicalProfile(rows.map((r,i)=>i===0?{...r,providerError:true}:r));assert.equal(badQuality.quality,false);
+const cli=spawnSync(process.execPath,[path.join(__dirname,"../scripts/audit-codemode-acceptance.js"),"--live"],{encoding:"utf8",timeout:10000});
+assert.equal(cli.status,1);assert.match(cli.stderr,/Offline audit takes no live or override arguments/);
+console.log("acceptance audit coverage, missing metadata, read-only inputs and no-live CLI tests passed");

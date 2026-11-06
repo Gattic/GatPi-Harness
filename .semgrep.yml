@@ -1,0 +1,32 @@
+# Versioned harness security rules. Changes require positive and negative fixtures.
+rules:
+  - id: harness-no-disabled-tls-verification
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Do not disable TLS certificate verification; configure the trusted CA instead.
+    pattern-either:
+      - pattern: "{ ..., rejectUnauthorized: false, ... }"
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+
+  - id: harness-no-environment-secret-logging
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Do not log environment credentials; record presence or a redacted identifier instead.
+    patterns:
+      - pattern-either:
+          - pattern: console.log(..., process.env.$KEY, ...)
+          - pattern: console.error(..., process.env.$KEY, ...)
+          - pattern: console.warn(..., process.env.$KEY, ...)
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: .*(TOKEN|SECRET|PASSWORD|API_KEY|PRIVATE_KEY).*
+
+  - id: harness-no-interpolated-shell-command
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: Review interpolated shell execution; prefer execFile/spawn with an argument array.
+    pattern-either:
+      - pattern: require('node:child_process').execSync($A + $B, ...)
+      - pattern: require('node:child_process').exec($A + $B, ...)
+      - pattern: require('child_process').execSync($A + $B, ...)
+      - pattern: require('child_process').exec($A + $B, ...)

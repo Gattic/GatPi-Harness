@@ -1,0 +1,13 @@
+{
+  "name": "pi-harness-request-queue",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Redis-backed queue that Pi model requests join before reaching a shared model endpoint",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dependencies": {
+    "ioredis": "6.0.0"
+  }
+}

@@ -1,0 +1,34 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+const { execFileSync } = require("node:child_process");
+const { roadmapCohortVersion } = require("../src/roadmap-telemetry.js");
+const { tmpFixture } = require("./helpers/tmp-fixture");
+
+const root = path.resolve(__dirname, "..");
+const fixture = tmpFixture("pi-roadmap-scorecard-");
+fs.mkdirSync(path.join(fixture, "tests", "fixtures", "roadmap"), { recursive: true });
+fs.mkdirSync(path.join(fixture, "docs"), { recursive: true });
+fs.copyFileSync(path.join(root, "tests", "fixtures", "roadmap", "large-roadmap-manifest.json"), path.join(fixture, "tests", "fixtures", "roadmap", "large-roadmap-manifest.json"));
+const fixtureText = fs.readFileSync(path.join(fixture, "tests", "fixtures", "roadmap", "large-roadmap-manifest.json"), "utf8");
+const fixtureHash = crypto.createHash("sha256").update(fixtureText).digest("hex");
+fs.writeFileSync(path.join(fixture, "docs", "roadmap-deterministic-verification.json"), `${JSON.stringify({ status: "passed", sourceVersion: roadmapCohortVersion(fixture), fixtureHash, invariantViolations: 0, applicationViolations: 0, mutationCharacterReduction: 0.8878, mutationP99Characters: 1237, privacyForbiddenValueFindings: 0 }, null, 2)}\n`);
+execFileSync(process.execPath, [path.join(root, "scripts", "generate-roadmap-release-scorecard.js"), fixture], { stdio: "pipe" });
+const report = JSON.parse(fs.readFileSync(path.join(fixture, "docs", "roadmap-field-report.json"), "utf8"));
+const scorecard = JSON.parse(fs.readFileSync(path.join(fixture, "docs", "roadmap-release-scorecard.json"), "utf8"));
+const markdown = fs.readFileSync(path.join(fixture, "docs", "roadmap-release-scorecard.md"), "utf8");
+assert.equal(report.deterministic.status, "passed");
+assert.equal(report.exactVersion.sample.independentInteractiveSessions, 0);
+assert.equal(scorecard.decision, "no-go-deferred", "deterministic success cannot replace the 30-session field gate");
+assert.equal(scorecard.gates.independentFieldSample, "blocked-insufficient-sample");
+assert.equal(scorecard.gates.activeSessionExclusion, "blocked-insufficient-sample", "offline reports cannot authorize rollout without an exact active-session token");
+assert.match(scorecard.blockers.join("\n"), /0\/30/);
+assert.match(markdown, /Historical evidence remains design\/regression evidence/);
+assert.equal(/[ \t]+$/m.test(markdown), false, "generated Markdown is clean under git diff --check");
+assert.notDeepEqual(report.historicalBaseline, report.exactVersion);
+assert.equal(report.privacy.rawSessionContentRead, false);
+assert.match(report.fixtureHash, /^[a-f0-9]{64}$/);
+console.log("roadmap release scorecard tests passed");

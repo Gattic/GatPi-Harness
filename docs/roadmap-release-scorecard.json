@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-27T10:22:37.015Z",
+  "sourceVersion": "roadmap-v3-2026-07-27-e78415c0fb9b35c1",
+  "fixtureHash": "c9f1e997091d46a722056766777d62826846bb86b9501cf44869ab9ea2873bd8",
+  "gates": {
+    "deterministic": "pass",
+    "independentFieldSample": "blocked-insufficient-sample",
+    "fieldReliability": "blocked-insufficient-sample",
+    "activeSessionExclusion": "blocked-insufficient-sample",
+    "privacy": "pass"
+  },
+  "decision": "no-go-deferred",
+  "blockers": [
+    "exact-version cohort has 0/30 independent interactive sessions"
+  ],
+  "sample": {
+    "events": 0,
+    "interactiveOperations": 0,
+    "independentInteractiveSessions": 0,
+    "firstAt": null,
+    "lastAt": null
+  }
+}

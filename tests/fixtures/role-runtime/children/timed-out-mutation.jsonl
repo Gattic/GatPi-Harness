@@ -1,0 +1,4 @@
+{"type":"session","version":3,"id":"synthetic-child-mutation","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/synthetic/project"}
+{"type":"message","id":"mutation-call","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"assistant","content":[{"type":"toolCall","id":"call-edit","name":"edit","arguments":{"path":"synthetic.txt"}}],"stopReason":"toolUse"}}
+{"type":"message","id":"mutation-result","parentId":"mutation-call","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"toolResult","toolCallId":"call-edit","toolName":"edit","content":[{"type":"text","text":"synthetic edit complete"}],"isError":false}}
+{"type":"message","id":"mutation-final","parentId":"mutation-result","timestamp":"2026-01-01T00:00:03.000Z","message":{"role":"assistant","content":[{"type":"text","text":"synthetic final"}],"stopReason":"stop"}}

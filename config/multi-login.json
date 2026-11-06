@@ -1,0 +1,12 @@
+{
+  "accounts": {
+    "anthropic": 2,
+    "openai-codex": 2
+  },
+  "priority": [
+    "anthropic/claude-opus-5-5",
+    "openai-codex/gpt-6-astra",
+    "openai-codex/gpt-6.1-sol"
+  ],
+  "cooldownMinutes": 60
+}

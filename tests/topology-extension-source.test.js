@@ -1,0 +1,62 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const source = fs.readFileSync(path.join(__dirname, "..", ".pi", "extensions", "reasoning-runtime", "index.ts"), "utf8");
+const recipeSource = fs.readFileSync(path.join(__dirname, "..", "src", "topology-recipes.js"), "utf8");
+const containmentSource = fs.readFileSync(path.join(__dirname, "..", "src", "role-runtime-containment.js"), "utf8");
+const tuiSmoke = fs.readFileSync(path.join(__dirname, "..", "scripts", "check-topology-tui.sh"), "utf8");
+for (const command of ["auto-roles", "skill-intake-validate", "skill-intake", "skill-intake-status", "skill-intake-list", "skill-intake-show", "skill-intake-import", "topology-list", "topology-show", "topology-roles", "topology-reload", "topology-run", "topology-runs", "topology-show-run", "topology-export", "topology-prune", "topology-metrics", "topology-doctor", "topology-template", "topology-trace", "topology-replay"]) {
+  assert(source.includes(`pi.registerCommand("${command}"`), `${command} command is registered`);
+}
+assert(source.includes('pi.registerTool({ name: "auto_role_router"'), "auto_role_router tool is registered");
+assert(source.includes('pi.registerTool({ name: "run_topology"'), "run_topology tool is registered");
+assert(source.includes('Type.Literal("runs")') && source.includes('Type.Literal("getRun")') && source.includes('Type.Literal("metrics")') && source.includes('Type.Literal("doctor")'), "run_topology supports persisted run operations");
+assert(source.includes("makeTopologyTools"), "live topology tool adapters are installed");
+assert(source.includes("topologyUnsafeReason") && source.includes("PI_TOPOLOGY_ALLOW_UNSAFE"), "topology shell safety policy is implemented");
+assert(source.includes("PI_TOPOLOGY_AUTO_PRUNE") && source.includes("maybeAutoPruneTopologies"), "topology auto-prune policy is implemented");
+assert(source.includes("PI_TOPOLOGY_AUTO_ROUTE") && source.includes("maybeHandleAutoRouteInput"), "topology auto-router policy is implemented");
+assert(source.includes("const LIB_ROOT = resolve(EXTENSION_SOURCE_PATH"), "cognitive extension resolves libraries from extension root for external repos");
+assert(source.includes('raw === "latest" ? latestTopologyRunId(runtime)'), "topology-show-run supports latest");
+assert(source.includes("PI_TOPOLOGY_CONFIG_DIRS"), "topology config dirs are configurable");
+assert(source.includes("getBuiltInRoleTopology(templateId)"), "generated live topology templates use validated role-aware built-ins");
+assert(source.includes("loadTopologyConfigDir"), "topology configs are loaded through shared library helper");
+assert(source.includes('src", "role-router.js'), "topology extension uses the pure role router");
+assert(source.includes("listBuiltInRoleTopologies"), "trusted external repositories receive built-in role topologies");
+assert(source.includes("runtime.boundary.topologies.execute"), "topology run uses integration boundary adapter");
+assert(source.includes("runtime.boundary.topologies.recommendRole") || source.includes("rt.boundary.topologies.recommendRole"), "role recommendations use the integration boundary adapter");
+assert(source.includes("runtime.boundary.skillIntake") && source.includes("PI_SKILL_INTAKE_ENABLED"), "skill intake surfaces use only the integration boundary adapter and an explicit feature flag");
+assert(source.includes("governed-skill-intake is current-user command-only") && source.includes("generic topology-run input is disabled for privacy-safe intake"), "model and generic topology surfaces cannot initiate governed skill intake");
+assert(source.includes("topology.metadata?.explicitOnly !== true") && source.includes('topology.metadata?.autoRoutePolicy !== "never"'), "explicit-only topologies are excluded from auto-routing");
+assert(source.includes("if (id !== GOVERNED_SKILL_INTAKE_TOPOLOGY_ID)"), "skill intake does not auto-capture skills or sync topology memory");
+assert(recipeSource.includes("recipe.metadata?.explicitOnly !== true") && recipeSource.includes('recipe.metadata?.autoRoutePolicy !== "never"'), "run_topology recipe recommendations exclude explicit-only recipes");
+assert(source.includes('Type.Literal("recipes")') && source.includes('Type.Literal("install")') && source.includes('Type.Literal("lint")'), "run_topology owns recipe administration operations");
+assert(source.includes('appendTopologyRoleRuns(pi, result, "topology-command")'), "manual topology commands persist per-role execution provenance");
+assert(source.includes('appendTopologyRoleRuns(pi, result, "topology-tool")'), "model topology runs persist per-role execution provenance");
+assert(source.includes('piContext: { cwd: runtime.cwd, model: ctx.model, thinkingLevel: ctx.thinkingLevel, signal, executionMode: "tool-rpc" }'), "topology tool always uses the canonical RPC sidecar for subagent nodes");
+assert(!source.includes('executionMode: "pi-fork"'), "topology surfaces do not retain replacement-session fallback");
+assert(source.includes("runtime.boundary.topologies.replay"), "topology replay uses adapter replay API");
+assert(source.includes("join=") && source.includes("joinDecisions") && source.includes("evidence="), "topology inspection renders compact join and evidence state");
+assert(source.includes("parallel-evidence-synthesis"), "topology template command exposes the parallel evidence recipe");
+assert(source.includes("rows.map(formatTopology)") && source.includes("details: { topologies: rows }"), "model topology listing is compact while retaining full structured details");
+assert(!source.includes("PI_TOPOLOGY_SYNC_FINAL"), "topology execution has no automatic Hermes sync switch");
+assert(!source.includes("scheduleTopologyHermesSync"), "topology settlement never starts background Hermes learning");
+assert(source.includes("autoRouteModeFromSession") && source.includes('pi.appendEntry?.("auto-router.state"'), "auto-router mode persists in session entries");
+assert(source.includes('pi.appendEntry?.("auto-router.decision"'), "matched and skipped classifier outcomes persist without prompt text");
+assert(source.includes('mode === "delegate"') && source.includes("explicitInvocation"), "delegate execution requires an explicit command/tool invocation");
+assert(source.includes("normal assistant turn continues"), "read-only auto-router shadow mode must not consume matching typed prompts");
+assert(source.includes("roleRuntimeVersion") && source.includes("contractVersion") && source.includes("resultSchemaVersion"), "topology doctor and auto-router status expose role runtime contract versions");
+assert(source.includes("autoRouteSafety") && source.includes("inspectAutoRouteSafety"), "mutating auto-routes are inspected during containment");
+assert(containmentSource.includes("AUTO_ROUTE_MUTATION_BLOCKED"), "containment defines the mutation-blocked denial code");
+assert(source.includes("PI_COGNITIVE_STORAGE_ROOT"), "runtime-state storage root can be isolated for smoke tests");
+assert(tuiSmoke.includes("PI_COGNITIVE_STORAGE_ROOT='$state_root/cognitive'") && tuiSmoke.includes("PI_SUBAGENT_STATE_ROOT='$state_root/subagents'"), "topology TUI smoke uses isolated runtime and role state");
+assert(!tuiSmoke.includes("rm -rf .pi/cognitive-automation/topologies"), "topology TUI smoke must not delete project role evidence");
+assert(tuiSmoke.includes('project="$state_root/project"') && tuiSmoke.includes('cd "$project"'), "successful roadmap application must occur in a disposable project");
+assert(tuiSmoke.includes('node "$root/scripts/check-topology-tui-results.js" "$state_root/cognitive/topologies/runs"'), "the shell gate invokes persisted graph-specific semantic acceptance");
+assert(!tuiSmoke.includes("grep -q 'status=succeeded'"), "an unrelated success line cannot satisfy topology acceptance");
+assert(tuiSmoke.includes('pipeline_status=("${PIPESTATUS[@]}")') && !tuiSmoke.includes("|| true"), "timeouts and child failures cannot be silently accepted");
+assert(tuiSmoke.includes("PI_TOPOLOGY_AUTO_ROUTE=off") && tuiSmoke.includes("PI_ROLE_WORKER_SHADOW_CANARY=0"), "the explicit TUI gate does not activate routing");
+
+console.log("topology extension source tests passed");
