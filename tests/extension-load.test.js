@@ -71,7 +71,7 @@ const COMMAND_ONLY_MODEL_TOOLS = {
   "extensions/output-compactor": "output_compactor",
 };
 
-function stubPi(registered) {
+function stubPi(registered, events = { on: () => {}, off: () => {}, emit: () => {} }) {
   const noop = () => {};
   registered.hooks ||= [];
   registered.commandDefs ||= {};
@@ -90,7 +90,7 @@ function stubPi(registered) {
     registerVirtualModel: noop,
     on: (event, handler) => { registered.hooks.push({ event, handler }); },
     off: noop,
-    events: { on: noop, off: noop, emit: noop },
+    events,
     system: { addSystemPrompt: noop },
     appendSystemPrompt: noop,
     sendUserMessage: noop,
@@ -235,6 +235,55 @@ if (process.argv[2] === 'scan' && !process.argv.includes('--validate')) {
           }
           const state = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "policy-enforcer", "approvals.json"), "utf8"));
           assert.deepEqual(state.approvals, [], "invalid commands create no authority");
+
+          // pi-dash's phone answers in parallel with the desktop dialog; the first decision wins and the
+          // phone's still-pending card is withdrawn. Without an answer surface the desktop dialog decides.
+          const phoneFixture = tmpFixture("pi-policy-phone-approval-");
+          const emitted = [];
+          const desktop = { calls: 0, answer: () => new Promise(() => {}) };
+          const phoneCtx = { cwd: phoneFixture, hasUI: true, ui: { notify() {}, confirm: () => { desktop.calls++; return desktop.answer(); } } };
+          const phoneRegistered = { commands: [], tools: [] };
+          const phoneApi = stubPi(phoneRegistered, {
+            on: () => {},
+            off: () => {},
+            emit: (channel, data) => {
+              emitted.push({ channel, data });
+              if (channel !== "approval:request") return;
+              if (phoneApi.offline) return;
+              data.handled = true;
+              setTimeout(() => data.respond(phoneApi.decision), 0);
+            },
+          });
+          fn(phoneApi);
+          const phoneHook = phoneRegistered.hooks.find((row) => row.event === "tool_call").handler;
+          const risky = { toolName: "bash", input: { command: "rm -rf ." } };
+          try {
+            await phoneRegistered.commandDefs["policy-mode"].handler("approval", phoneCtx);
+            phoneApi.decision = "accept";
+            assert.equal(await phoneHook(risky, phoneCtx), undefined, "a phone acceptance allows the call");
+            assert.equal(desktop.calls, 1, "the desktop dialog is offered at the same time");
+            assert.equal(emitted.find((row) => row.channel === "approval:request").data.request.title, "Policy approval required");
+            assert.equal(emitted.find((row) => row.channel === "approval:settle").data.id, emitted.find((row) => row.channel === "approval:request").data.request.id);
+            assert.equal(JSON.parse(fs.readFileSync(path.join(phoneFixture, ".pi", "policy-enforcer", "approvals.json"), "utf8")).approvals.length, 1, "the acceptance grants the same 24h approval as the desktop");
+
+            fs.rmSync(path.join(phoneFixture, ".pi", "policy-enforcer", "approvals.json"), { force: true });
+            emitted.length = 0;
+            phoneApi.decision = "deny";
+            assert.equal((await phoneHook(risky, phoneCtx)).block, true, "a phone denial blocks the call");
+            assert.equal(fs.existsSync(path.join(phoneFixture, ".pi", "policy-enforcer", "approvals.json")), false, "a denial records no approval");
+
+            emitted.length = 0;
+            phoneApi.offline = true;
+            desktop.answer = async () => true;
+            assert.equal(await phoneHook(risky, phoneCtx), undefined, "without an answer surface the desktop dialog decides");
+            assert.equal(emitted.filter((row) => row.channel === "approval:settle").length, 0, "a request the bridge did not take is not withdrawn");
+            emitted.length = 0;
+            desktop.answer = async () => false;
+            fs.rmSync(path.join(phoneFixture, ".pi", "policy-enforcer", "approvals.json"), { force: true });
+            assert.equal((await phoneHook(risky, phoneCtx)).block, true, "a desktop denial still blocks the call");
+          } finally {
+            fs.rmSync(phoneFixture, { recursive: true, force: true });
+          }
         } finally {
           fs.rmSync(fixture, { recursive: true, force: true });
         }

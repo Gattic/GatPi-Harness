@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 
@@ -39,6 +40,42 @@ function registerPolicyGate(pi: ExtensionAPI) {
 }
 
 function store(ctx: any) { return new FileApprovalStore({ cwd: ctx.cwd }); }
+
+// pi-dash publishes an approval request to a paired phone and answers it through this channel. The desktop
+// dialog runs in parallel, so whoever is closest to the user answers; the first decision wins.
+const APPROVAL_REQUEST_EVENT = "approval:request";
+const APPROVAL_SETTLE_EVENT = "approval:settle";
+/** One decision window for both surfaces: the first answer wins, and an unanswered request blocks the call. */
+const APPROVAL_WINDOW_MS = 2 * 60 * 1000;
+
+/** Offers the decision to pi-dash's dashboard/phone; "unavailable" means no answer surface is connected. */
+function requestPhoneApproval(pi: ExtensionAPI, decision: any) {
+  const id = `policy-${randomUUID()}`;
+  let answer: (reply: string) => void = () => {};
+  const reply = new Promise<string>((resolveReply) => { answer = resolveReply; });
+  const payload: any = {
+    request: { id, title: "Policy approval required", detail: formatEnforcementDecision(decision), timeoutMs: APPROVAL_WINDOW_MS },
+    respond: (value: string) => answer(value === "accept" ? "accept" : value === "deny" ? "deny" : "timeout"),
+    handled: false,
+  };
+  pi.events.emit(APPROVAL_REQUEST_EVENT, payload);
+  const handled = payload.handled === true;
+  if (!handled) answer("unavailable");
+  return { id, handled, reply };
+}
+
+/** The desktop dialog answers at the same time; a phone answer withdraws its still-pending card. */
+async function approvedOnce(pi: ExtensionAPI, ctx: any, decision: any): Promise<boolean> {
+  const desktop = ctx.ui.confirm("Policy approval required", `${formatEnforcementDecision(decision)}\n\nAllow once for 24h?`, { timeout: APPROVAL_WINDOW_MS })
+    .then((ok: boolean) => (ok ? "accept" : "deny"));
+  const phone = requestPhoneApproval(pi, decision);
+  const first = await Promise.race([phone.reply, desktop]);
+  if (phone.handled) pi.events.emit(APPROVAL_SETTLE_EVENT, { id: phone.id });
+  if (first === "accept") return true;
+  if (first === "deny") return false;
+  // No phone answer surface, or its deadline passed: the desktop dialog is the remaining decision.
+  return (await desktop) === "accept";
+}
 function activeToolPolicy(pi: ExtensionAPI, cwd: string) {
   const tools = (pi.getAllTools?.() || []).map((tool: any) => tool.name).filter(Boolean);
   return { ...gatePolicy(cwd), ...(tools.length ? { allowTools: [...new Set(tools)] } : {}) };
@@ -74,7 +111,7 @@ export default function policyEnforcer(pi: ExtensionAPI) {
     if (decision.action === "warn") ctx.ui.notify(formatEnforcementDecision(decision), "warning");
     if (decision.allow) return;
     if (ctx.hasUI && decision.action === "approval-required") {
-      const ok = await ctx.ui.confirm("Policy approval required", `${formatEnforcementDecision(decision)}\n\nAllow once for 24h?`, { timeout: 15000 });
+      const ok = await approvedOnce(pi, ctx, decision);
       if (ok) {
         for (const item of decision.missingApprovals || []) store(ctx).approve(item.request, { reason: "interactive approval" });
         return;
