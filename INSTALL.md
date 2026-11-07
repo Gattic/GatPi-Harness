@@ -150,6 +150,10 @@ It also updates `~/.pi/agent/settings.json` to load:
 ~/GatPi-Harness/extensions
 ```
 
+Absolute extension paths from a previous harness checkout are removed during
+the same update. Leaving both checkouts configured makes Pi load every tool
+twice and report a conflict for each one on startup.
+
 The same refresh installs the pinned Redis client for the Pi request queue
 (`src/pi-queue/`). It does not create a broker, issue credentials or start
 services. DeepSeek (`local`) requests are queued, so each machine needs its own

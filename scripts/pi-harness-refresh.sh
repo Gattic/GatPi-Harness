@@ -222,22 +222,18 @@ if ((DO_EXTENSIONS)); then
     node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$settings_file" 2>/dev/null || \
       fail "Pi settings file is not valid JSON; refusing to let the installer replace it: $settings_file"
   fi
-  extension_state="$(node - "$settings_file" "$REPO_ROOT/.pi/extensions" "$REPO_ROOT/extensions" <<'NODE'
+  extension_state="$(node - "$settings_file" "$REPO_ROOT" <<'NODE'
 const fs = require("node:fs");
 const path = require("node:path");
-const [settingsFile, ...wanted] = process.argv.slice(2);
-let configuredExtensions = [];
+const [settingsFile, repoRoot] = process.argv.slice(2);
+const { extensionSettingsState } = require(path.join(repoRoot, "src/extension-settings.js"));
+let settings = {};
 if (fs.existsSync(settingsFile)) {
-  const settings = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
-  configuredExtensions = Array.isArray(settings.extensions)
-    ? settings.extensions.map((entry) => path.resolve(String(entry)))
-    : [];
+  settings = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
 }
-const missingExtensions = wanted
-  .map((entry) => path.resolve(entry))
-  .filter((entry) => !configuredExtensions.includes(entry));
-const missingCount = missingExtensions.length;
-process.stdout.write(missingCount === 0 ? "configured" : `needs reconciliation (${missingCount} resource(s) missing)`);
+const { missing, stale } = extensionSettingsState(settings, repoRoot);
+const pendingCount = missing.length + stale.length;
+process.stdout.write(pendingCount === 0 ? "configured" : `needs reconciliation (${pendingCount} resource(s) to reconcile)`);
 NODE
 )"
   state "extensions: $extension_state"

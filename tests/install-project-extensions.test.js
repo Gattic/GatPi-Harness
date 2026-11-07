@@ -14,9 +14,27 @@ try {
   fs.mkdirSync(agentDir, { recursive: true });
   const unrelated = path.join(tmp, "other-extension.ts");
   fs.writeFileSync(unrelated, "export default function () {}\n");
+  const staleHarness = path.join(tmp, "stale-harness");
+  fs.mkdirSync(path.join(staleHarness, ".pi", "extensions", "stale-extension"), { recursive: true });
+  fs.mkdirSync(path.join(staleHarness, "extensions", "00-harness-defaults"), { recursive: true });
+  fs.writeFileSync(path.join(staleHarness, "package.json"), `${JSON.stringify({ name: "pi-harness", private: true })}\n`);
+  fs.writeFileSync(path.join(staleHarness, ".pi", "extensions", "stale-extension", "index.ts"), "export default function () {}\n");
+  fs.writeFileSync(path.join(staleHarness, "extensions", "00-harness-defaults", "index.ts"), "export default function () {}\n");
+  const unrelatedExtensionsDir = path.join(tmp, "unrelated-project", "extensions");
+  fs.mkdirSync(unrelatedExtensionsDir, { recursive: true });
   fs.writeFileSync(path.join(agentDir, "settings.json"), `${JSON.stringify({
     defaultProvider: "fixture-provider",
-    extensions: [path.join(root, "extensions"), unrelated, path.join(root, ".pi", "extensions"), path.join(root, ".pi", "extensions", "00-harness-defaults", "index.ts")],
+    extensions: [
+      path.join(staleHarness, "extensions", "00-harness-defaults", "index.ts"),
+      path.join(staleHarness, ".pi", "extensions"),
+      path.join(staleHarness, ".pi", "extensions", "stale-extension", "index.ts"),
+      path.join(staleHarness, "extensions"),
+      unrelatedExtensionsDir,
+      path.join(root, "extensions"),
+      unrelated,
+      path.join(root, ".pi", "extensions"),
+      path.join(root, ".pi", "extensions", "00-harness-defaults", "index.ts"),
+    ],
     packages: [
       "npm:unrelated-package",
       { source: "git:github.com/example/other-package", skills: [] },
@@ -46,6 +64,16 @@ try {
   assert.equal(settings.extensions[3], "-builtin:codemode", "built-in codemode is disabled after the managed paths");
   assert.equal(settings.extensions.filter((value) => value === "-builtin:codemode").length, 1);
   assert(!settings.extensions.includes(path.join(root, ".pi", "extensions", "00-harness-defaults", "index.ts")), "obsolete managed path is removed");
+  for (const staleEntry of [
+    path.join(staleHarness, "extensions", "00-harness-defaults", "index.ts"),
+    path.join(staleHarness, ".pi", "extensions"),
+    path.join(staleHarness, ".pi", "extensions", "stale-extension", "index.ts"),
+    path.join(staleHarness, "extensions"),
+  ]) {
+    assert(!settings.extensions.includes(staleEntry), `extension path from another harness checkout is pruned: ${staleEntry}`);
+  }
+  assert.match(result.stdout, /pruned stale harness extension entry/, "pruned stale harness roots are reported");
+  assert(settings.extensions.includes(unrelatedExtensionsDir), "an extensions directory outside a harness checkout is preserved");
   assert(settings.extensions.includes(unrelated), "unmanaged extensions are preserved");
   assert.deepEqual(settings.packages, [
     "npm:unrelated-package",
@@ -65,6 +93,7 @@ try {
   assert.equal(repeated.status, 0, repeated.stderr || repeated.stdout);
   const repeatedSettings = JSON.parse(fs.readFileSync(path.join(agentDir, "settings.json"), "utf8"));
   assert.deepEqual(repeatedSettings, settings, "a repeated install leaves settings unchanged, including preserved preferences");
+  assert.doesNotMatch(repeated.stdout, /pruned stale harness extension entry/, "stale-root pruning is idempotent");
   assert.equal(repeatedSettings.extensions.filter((value) => value === "-builtin:codemode").length, 1, "built-in codemode disable entry is not duplicated");
   const calls = fs.readFileSync(npmLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
   assert.deepEqual(calls, Array.from({ length: 2 }, () => ["--prefix", path.join(root, "src/pi-queue"), "ci", "--ignore-scripts", "--no-audit", "--no-fund"]),

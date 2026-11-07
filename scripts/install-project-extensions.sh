@@ -25,27 +25,25 @@ fi
 # The harness extensions are source-linked through Pi's global settings rather
 # than copied into ~/.pi/agent/extensions.
 
-node - "$settings_file" "$repo_root/extensions/00-harness-defaults/index.ts" "$repo_root/.pi/extensions" "$repo_root/extensions" <<'NODE'
+node - "$settings_file" "$repo_root" <<'NODE'
 const fs = require("node:fs");
 const path = require("node:path");
-const [settingsFile, ...managedExtensionPaths] = process.argv.slice(2);
+const [settingsFile, repoRoot] = process.argv.slice(2);
+const { reconcileExtensionSettings } = require(path.join(repoRoot, "src/extension-settings.js"));
 let settings = {};
 try {
   settings = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
 } catch {
   settings = {};
 }
-const managed = managedExtensionPaths.map((value) => path.resolve(value));
-const managedSet = new Set(managed);
-managedSet.add(path.join(managed[1], "00-harness-defaults", "index.ts"));
 // extensions/codemode replaces the built-in CodeMode tool through its policy facade;
-// disable the built-in so Pi does not report a replacement conflict on every start.
-const disabledBuiltins = ["-builtin:codemode"];
-const existing = Array.isArray(settings.extensions) ? settings.extensions : [];
-const unmanaged = existing.filter(
-  (value) => !managedSet.has(path.resolve(String(value))) && !disabledBuiltins.includes(String(value)),
-);
-settings.extensions = [...managed, ...disabledBuiltins, ...unmanaged];
+// the shared reconciler disables the built-in and prunes extension paths from
+// other harness checkouts so every tool is registered once.
+const { extensions, pruned } = reconcileExtensionSettings(settings.extensions, repoRoot);
+settings.extensions = extensions;
+for (const { entry, harnessRoot } of pruned) {
+  console.log(`pruned stale harness extension entry (${harnessRoot}): ${entry}`);
+}
 // Canonical compaction/retry values are defaults, not overrides: a value already present
 // in the user's settings stays authoritative across reinstalls.
 function withDefaults(existing, defaults) {

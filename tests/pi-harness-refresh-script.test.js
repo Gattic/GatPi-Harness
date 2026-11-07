@@ -31,8 +31,10 @@ function makeFixture(name) {
   fs.mkdirSync(path.join(fixtureRoot, "extensions", "hermes-advisory"), { recursive: true });
   fs.mkdirSync(path.join(fixtureRoot, "skills", "skills", "fixture-skill"), { recursive: true });
   fs.mkdirSync(path.join(fixtureRoot, "config"), { recursive: true });
+  fs.mkdirSync(path.join(fixtureRoot, "src"), { recursive: true });
   fs.mkdirSync(scriptsDir, { recursive: true });
   fs.mkdirSync(agentDir, { recursive: true });
+  fs.copyFileSync(path.join(root, "src", "extension-settings.js"), path.join(fixtureRoot, "src", "extension-settings.js"));
   fs.writeFileSync(path.join(fixtureRoot, "extensions", "hermes-advisory", "index.ts"), "export default function () {}\n");
   fs.writeFileSync(path.join(fixtureRoot, "skills", "skills", "fixture-skill", "SKILL.md"), "---\nname: fixture-skill\ndescription: fixture\n---\n");
   fs.writeFileSync(path.join(agentDir, "settings.json"), "{}\n");
@@ -146,6 +148,26 @@ try {
   const extensionsResult = extensions.run(["--extensions", "--no-check"]);
   assert.equal(extensionsResult.status, 0, extensionsResult.stderr);
   assert.deepEqual(extensions.lines(), ["install-project-extensions.sh"]);
+
+  const staleRoots = makeFixture("stale-roots");
+  const staleHarness = path.join(tmp, "stale-roots", "old-harness");
+  fs.mkdirSync(path.join(staleHarness, ".pi", "extensions", "old-extension"), { recursive: true });
+  fs.mkdirSync(path.join(staleHarness, "extensions", "00-harness-defaults"), { recursive: true });
+  fs.writeFileSync(path.join(staleHarness, "package.json"), "{}\n");
+  fs.writeFileSync(path.join(staleHarness, "extensions", "00-harness-defaults", "index.ts"), "export default function () {}\n");
+  fs.writeFileSync(path.join(staleRoots.agentDir, "settings.json"), `${JSON.stringify({
+    extensions: [
+      path.join(staleRoots.root, "extensions", "00-harness-defaults", "index.ts"),
+      path.join(staleRoots.root, ".pi", "extensions"),
+      path.join(staleRoots.root, "extensions"),
+      "-builtin:codemode",
+      path.join(staleHarness, "extensions"),
+    ],
+  }, null, 2)}\n`);
+  const staleRootsResult = staleRoots.run(["--extensions", "--no-check"]);
+  assert.equal(staleRootsResult.status, 0, staleRootsResult.stderr);
+  assert.match(staleRootsResult.stdout, /extensions: needs reconciliation \(1 resource\(s\) to reconcile\)/, "extension paths from another harness checkout require reconciliation");
+  assert.deepEqual(staleRoots.lines(), ["install-project-extensions.sh"]);
 
   const checkOnly = makeFixture("check-only");
   const checkOnlyResult = checkOnly.run(["--check-only"]);
