@@ -15,7 +15,7 @@ const { learningSelfBenchmarkPlan } = require(join(LIB_ROOT, "src", "learning-lo
 const { codegraphAffectedTests, codegraphProjectSnapshot } = require(join(LIB_ROOT, "src", "codegraph-adapter.js"));
 const { securityCheckpointPlan, runSecurityCheckpoint, securityCheckpointSummary } = require(join(LIB_ROOT, "src", "security-checkpoint.js"));
 const { createCodeContextService } = require(join(LIB_ROOT, "src", "code-context-service.js"));
-const { readJson, writeJson, short, notify, setTurnExitCode } = require(join(LIB_ROOT, "src", "pi-extension-kit.js"));
+const { readJson, writeJson, short, notify, setTurnExitCode, parseObjectInput } = require(join(LIB_ROOT, "src", "pi-extension-kit.js"));
 const { normalizeRequiredProviders, providerReadiness, providerGateViolations } = require(join(LIB_ROOT, "src", "provider-readiness.js"));
 
 const ENABLED = process.env.PI_VERIFICATION_CENTER !== "0";
@@ -266,20 +266,6 @@ async function verify(cwd: string, profile: Profile = "quick", input: any = {}) 
   return { profile, commands, codegraph, semgrep, visual: evidence.visual, providerPolicy, impact, evidence };
 }
 function latest(cwd: string) { return readJson(join(cwd, STATE_DIR, "latest.json"), null); }
-/**
- * Tool calls can deliver the free-form `input` as a JSON string. Spreading a
- * string silently dropped every override (commands, required providers,
- * approved removals), so an input that is not an object fails instead.
- */
-export function toolInput(value: any): Record<string, any> {
-  if (value === undefined || value === null || value === "") return {};
-  let parsed = value;
-  if (typeof value === "string") {
-    try { parsed = JSON.parse(value); } catch { throw new Error("verification_center input must be a JSON object; it is not valid JSON"); }
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("verification_center input must be a JSON object");
-  return parsed;
-}
 
 export default function verificationCenter(pi: ExtensionAPI) {
   pi = require("../../../src/pi-extension-kit.js").instrumentExtensionCommands(pi) as ExtensionAPI;
@@ -320,7 +306,7 @@ export default function verificationCenter(pi: ExtensionAPI) {
 
   pi.registerTool({ name: "verification_center", label: "Verification center", description: "Plan, run, inspect, and diagnose proof-producing project verification. CodeGraph, Semgrep, and Visual Verification are degraded advisory providers unless input.requiredProviders explicitly selects them as gates. Owner-approved public API removals are passed as input.acknowledgedPublicApiRemovals [{file, symbol, reason}], matched exactly and recorded in the evidence. Baseline mutation is not exposed.", parameters: Type.Object({ operation: Type.Optional(Type.Union([Type.Literal("status"), Type.Literal("plan"), Type.Literal("run"), Type.Literal("evidence"), Type.Literal("doctor"), Type.Literal("policy")])), profile: Type.Optional(Type.Union([Type.Literal("quick"), Type.Literal("full"), Type.Literal("changed"), Type.Literal("learning")])), input: Type.Optional(Type.Any()) }), async execute(_id: string, params: any, _signal: any, _update: any, ctx: any) {
     const op = params.operation || "status";
-    const input = toolInput(params.input);
+    const input: Record<string, any> = parseObjectInput(params.input, "verification_center");
     if (op === "run") { const result = await verify(ctx.cwd, params.profile || "quick", { ...input, emitRetrieval }); return { content: [{ type: "text", text: formatEvidence(result.evidence) }], details: result }; }
     if (op === "plan") {
       const impact = await verificationImpact(ctx.cwd, input);

@@ -72,4 +72,26 @@ const staleCapture = captureVerificationEvidence(tmp, { store });
 assert.equal(staleCapture.captured, false);
 assert.equal(staleCapture.reasonCode, "stale-tree");
 assert.equal(store.status().evidenceCount, 3, "stale Verification Center evidence is not recaptured with a newer timestamp");
+
+// Empty packets: a capture that carries nothing is refused, and an empty packet
+// saved before that check cannot pass as current proof. With ok and confidence
+// set, its score alone (0.58) used to clear the claim-support threshold.
+assert.throws(() => store.saveEvidence({ ok: true, confidence: 0.9 }), /Evidence packet has no content/, "a packet without content is refused");
+assert.throws(() => store.saveEvidence({ ok: true, summary: "   ", commands: [], metadata: {} }), /no content/, "blank fields are not content");
+assert.throws(() => store.saveEvidence(createEvidencePacket(JSON.stringify({ ok: true, summary: "tests passed for foo" }))), /no content/, "an unparsed JSON string reads as an empty packet and is refused");
+assert.equal(store.status().evidenceCount, 3, "refused packets are not registered");
+const currentTree = captureTreeFingerprint(tmp);
+const legacyEmpty = createEvidencePacket({ ok: true, confidence: 0.9, tree: currentTree });
+fs.writeFileSync(store.packetFile(legacyEmpty.id), `${JSON.stringify(legacyEmpty, null, 2)}\n`);
+fs.appendFileSync(store.ledgerFile(), `${JSON.stringify({ id: legacyEmpty.id, fingerprint: legacyEmpty.fingerprint })}\n`);
+assert.equal(store.validateEvidenceId(legacyEmpty.id).reason, "evidence-packet-empty", "an empty packet already on disk cannot substantiate verification");
+assert.equal(store.validateEvidenceId(legacyEmpty.id, { requireOk: false }).reason, "evidence-packet-empty");
+assert.equal(store.status().latest.id, legacyEmpty.id);
+assert.deepEqual(store.status().latest.freshness, { status: "empty-packet", currentTree: true, gatingSafe: false }, "status never reports an empty packet as current");
+const emptyClaim = store.checkText("Tests passed for foo.");
+assert.equal(emptyClaim.ok, false, "an empty packet cannot support a claim");
+assert.equal(emptyClaim.evidenceCohort.current, 0);
+const control = store.saveEvidence({ ok: true, confidence: 0.9, summary: "tests passed for foo", tree: currentTree });
+assert.equal(store.validateEvidenceId(control.id).reason, "current-evidence-packet", "the same packet with content on the same tree is current proof");
+assert.equal(store.checkText("Tests passed for foo.").ok, true);
 console.log("evidence-binder tests passed");

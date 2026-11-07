@@ -41,6 +41,16 @@ function extractClaims(text) {
   return sentences.map((sentence, index) => ({ id: `claim_${hash({ sentence, index }).slice(0, 12)}`, text: sentence.trim(), index, requiresEvidence: CLAIM_RE.test(sentence) || PROOF_RE.test(sentence) })).filter((c) => c.requiresEvidence);
 }
 
+const EVIDENCE_CONTENT_FIELDS = "summary, commands, files, artifacts, metadata, or evidence";
+// A packet without any of these fields records nothing that could substantiate a
+// claim. Such packets were once saved and reported current when a tool call's
+// input arrived as an unparsed JSON string.
+function isEmptyEvidencePacket(packet = {}) {
+  const hasItems = (value) => Array.isArray(value) && value.length > 0;
+  const hasKeys = (value) => Boolean(value) && typeof value === "object" && Object.keys(value).length > 0;
+  return !String(packet.summary ?? "").trim() && !hasItems(packet.commands) && !hasItems(packet.files) && !hasItems(packet.artifacts) && !hasKeys(packet.metadata) && !hasKeys(packet.evidence);
+}
+
 function evidenceFingerprint(packet = {}) {
   return hash({ source: packet.source, ok: packet.ok, commands: packet.commands, files: packet.files, summary: packet.summary, artifacts: packet.artifacts, metadata: packet.metadata, tree: packet.tree }).slice(0, 16);
 }
@@ -98,7 +108,8 @@ function supportScore(claim, evidence) {
 
 function evidenceSummary(packet, cwd, currentTree) {
   if (!packet) return null;
-  const freshness = cwd ? compareTreeFingerprint(cwd, packet.tree, { current: currentTree }) : { status: packet.tree?.fingerprint ? "unchecked" : "missing-fingerprint", currentTree: false, gatingSafe: false };
+  const tree = cwd ? compareTreeFingerprint(cwd, packet.tree, { current: currentTree }) : { status: packet.tree?.fingerprint ? "unchecked" : "missing-fingerprint", currentTree: false, gatingSafe: false };
+  const freshness = isEmptyEvidencePacket(packet) ? { status: "empty-packet", currentTree: tree.currentTree, gatingSafe: false } : tree;
   return {
     id: packet.id,
     createdAt: packet.createdAt,
@@ -157,6 +168,7 @@ class EvidenceStore {
   claimLedgerFile() { return path.join(this.root, "claims.jsonl"); }
   saveEvidence(packet) {
     const p = createEvidencePacket({ ...packet, tree: packet?.tree || captureTreeFingerprint(this.cwd) });
+    if (isEmptyEvidencePacket(p)) throw new Error(`Evidence packet has no content; provide at least one of ${EVIDENCE_CONTENT_FIELDS}.`);
     writeJson(this.packetFile(p.id), p);
     appendJsonl(this.ledgerFile(), { at: nowIso(), id: p.id, source: p.source, ok: p.ok, confidence: p.confidence, files: p.files, commands: p.commands, fingerprint: p.fingerprint });
     return p;
@@ -182,6 +194,7 @@ class EvidenceStore {
     if (!evidence || evidence.id !== safeId) return result(false, "evidence-packet-missing");
     if (!evidence.fingerprint || evidence.fingerprint !== registered.fingerprint || evidence.fingerprint !== evidenceFingerprint(evidence)) return result(false, "evidence-fingerprint-mismatch", evidence);
     if (expectedFingerprint && evidence.fingerprint !== expectedFingerprint) return result(false, "evidence-expected-fingerprint-mismatch", evidence);
+    if (isEmptyEvidencePacket(evidence)) return result(false, "evidence-packet-empty", evidence);
     if (requireCurrentTree) {
       const freshness = compareTreeFingerprint(this.cwd, evidence.tree);
       if (!freshness.gatingSafe) return result(false, freshness.status, evidence);
@@ -204,7 +217,7 @@ class EvidenceStore {
   checkText(text, options = {}) {
     const packets = this.listEvidence({ limit: options.limit || 20 });
     const tree = captureTreeFingerprint(this.cwd);
-    const current = packets.filter((packet) => compareTreeFingerprint(this.cwd, packet.tree, { current: tree }).gatingSafe);
+    const current = packets.filter((packet) => !isEmptyEvidencePacket(packet) && compareTreeFingerprint(this.cwd, packet.tree, { current: tree }).gatingSafe);
     return { ...bindClaims(text, current, options), evidenceCohort: { inspected: packets.length, current: current.length, staleOrUnproven: packets.length - current.length } };
   }
   recordClaimCheck(text, result) {

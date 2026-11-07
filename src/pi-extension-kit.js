@@ -14,7 +14,7 @@ const {
   contextSessionKind,
   telemetrySessionToken,
 } = require("./extension-telemetry");
-const { operationKey, normalizeOperation, normalizeStringList } = require("./extension-args");
+const { operationKey, normalizeOperation, normalizeStringList, parseObjectInput } = require("./extension-args");
 const { observeFixedOpportunity, opportunityReviewReport, reviewOpportunity } = require("./extension-opportunity-review");
 
 function readJson(file, fallback = null) {
@@ -157,6 +157,7 @@ module.exports = {
   createContextInjector,
   normalizeOperation,
   normalizeStringList,
+  parseObjectInput,
   execCapture,
   toolResult,
   registerOperationTool,

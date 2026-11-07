@@ -27,4 +27,17 @@ function normalizeStringList(value, fieldName = "value") {
   return value.map((item) => item.trim()).filter(Boolean);
 }
 
-module.exports = { operationKey, normalizeOperation, normalizeStringList };
+// Tool calls can deliver a free-form object parameter as a JSON string. Reading
+// fields off the string silently drops every value, so an input that is not an
+// object fails instead.
+function parseObjectInput(value, toolName = "tool") {
+  if (value === undefined || value === null || value === "") return {};
+  let parsed = value;
+  if (typeof value === "string") {
+    try { parsed = JSON.parse(value); } catch { throw new Error(`${toolName} input must be a JSON object; it is not valid JSON`); }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`${toolName} input must be a JSON object`);
+  return parsed;
+}
+
+module.exports = { operationKey, normalizeOperation, normalizeStringList, parseObjectInput };
