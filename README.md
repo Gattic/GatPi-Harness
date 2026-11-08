@@ -17,13 +17,13 @@ Pi is a fast terminal coding agent. GatPi-Harness is the extension layer that tu
 
 ## What's included
 
-51 extensions and 129 curated Agent Skills, grouped into capability families:
+52 extensions and 129 curated Agent Skills, grouped into capability families:
 
 | Area | What you get | Reference |
 |---|---|---|
 | Verification & git | `gitverify`, `gitevidence`, Verification Center (with separately governed visual baselines), CI/PR companion | [commands](wiki/extensions-and-commands.md) |
 | Delegation | subagents, typed role contracts, topology DAGs, role sidecars, isolated mutation | [roles](wiki/roles-topologies.md) |
-| Coding tools | `code_context`, LSP diagnostics, `test_runner`, AST tools, `docs_lookup`, CodeMode, CodeGraph, Semgrep | [commands](wiki/extensions-and-commands.md) |
+| Coding tools | `code_context`, `lsp` diagnostics, `test_runner`, `ast_search`/`ast_refactor`, `docs_lookup`, CodeMode, CodeGraph, Semgrep | [commands](wiki/extensions-and-commands.md) |
 | Memory & reasoning | Obsidian-backed project memory, layered context, model-side reasoning runtime, skill synthesis | [architecture](wiki/architecture.md) |
 | Long runs | `bg_run`, run deck, run monitor, automation loop, goal loop | [commands](wiki/extensions-and-commands.md) |
 | Governance | policy enforcer, privacy guard, evidence binder/inbox, debug and experiment ledgers, roadmap | [commands](wiki/extensions-and-commands.md) |

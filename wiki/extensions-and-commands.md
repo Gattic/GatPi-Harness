@@ -130,6 +130,14 @@ model tool: code_context                       Retrieve ranked repo maps/search/
 
 Model tools are registered as `code_context`, `lsp`, `test_runner`, `ast_search`, `ast_refactor`, and `docs_lookup`. `code_context` is the preferred read-oriented facade for progressive localization: start with `repoMap`/`search`, inspect symbol cards, and request `symbolGet detail=body` only after localization. Existing provider tools remain available for diagnostics. Retrieval is explicit and advisory by default; stale/degraded cards are never gating-safe and no source map is injected automatically. Promoted `select-tests`/`on` modes require a saved benchmark report and only augment baseline verification. Optional scale-out providers remain blocked unless `node scripts/probe-code-context-scale-gates.js` records actual local pressure for an isolated pilot. `test_runner` reports empty inference/no-prior-failures as `not-applicable`, not pass or fail. `docs_lookup` remains cwd-confined; read Pi framework docs directly from `$PI_SOURCE_ROOT/packages/coding-agent/` (or the default sibling `../pi`) instead of weakening confinement. `ast_*` is regex-backed, not parser/scope-aware. Risk-sensitive Semgrep checks now run inside `gitverify` and Verification Center; Node coverage ingestion is opt-in. See [`docs/code-analysis-workflow.md`](../docs/code-analysis-workflow.md) for routing, limitations, outcome reviews and recommended LSP installations, and [`docs/code-context-benchmark.md`](../docs/code-context-benchmark.md) for benchmark boundaries.
 
+Sectioned document writes are provided by `extensions/write-chunking/`:
+
+```text
+model tool: append_file                        Append a section to a file without rewriting it
+```
+
+`write` creates the file with the first section and `append_file` adds each later section, so a large document never needs one oversized payload. `append_file` creates missing files and parent directories, and inserts a separating newline when the existing file does not end with one. Any `write` or `append_file` payload over `PI_WRITE_CHUNK_LIMIT` (default 16384 characters) is blocked with sectioned-write guidance instead of being sent; the same rule is appended to the `write` tool description so the model sees it before composing. `PI_WRITE_CHUNK_LIMIT=0` stops enforcing the limit and `PI_WRITE_CHUNKING=0` disables the extension. See [configuration](configuration.md) for the canonical defaults.
+
 Context-overflow recovery is provided by `.pi/extensions/context-overflow-recovery/`:
 
 ```text
