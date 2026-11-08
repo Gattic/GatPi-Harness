@@ -2,14 +2,14 @@
 
 Generated from portfolio schema 4.
 
-- Extensions: 51
-- Tool decisions: 70
-- Default active model tools: 65 -> 64 (reduction 1)
+- Extensions: 52
+- Tool decisions: 71
+- Default active model tools: 66 -> 65 (reduction 1)
 - Observation: 0.48 days / 30 required (insufficient-data; source=classified-interactive-audit-unavailable)
 - Measured adoption/opportunity records: 0/0
 - Lifecycle authority: no-go-deferred
 - Reconciled: true
-- Decisions: keep=62, keep-child-only=5, keep-explicit=1, experimental-command-only=1, keep-observation-pending=1
+- Decisions: keep=63, keep-child-only=5, keep-explicit=1, experimental-command-only=1, keep-observation-pending=1
 
 ## Records
 
@@ -64,6 +64,7 @@ Generated from portfolio schema 4.
 - [tool-surface-router](./tool-surface-router.md) — core; model exposure=default
 - [trace-observability](./trace-observability.md) — enabled; model exposure=none
 - [verification-center](./verification-center.md) — enabled; model exposure=default
+- [write-chunking](./write-chunking.md) — enabled; model exposure=default
 
 ## Conservative policy
 
