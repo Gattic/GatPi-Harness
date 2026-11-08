@@ -50,7 +50,7 @@ pi --version
 
 This clones or safely fast-forwards the configured sibling Pi checkout, installs pinned dependencies, builds committed sources, links the coding-agent package into the active user-writable npm prefix, and verifies the link. Routine later updates use `scripts/pi-harness-refresh.sh --pi`; use `--all` to refresh Pi, extensions, and skills together.
 
-Portable dist patches under `patches/` are retained only as a legacy rollback path for machines that cannot build/link the source fork. See [`docs/pi-global-patches.md`](docs/pi-global-patches.md) before using `scripts/apply-pi-global-patches.sh`; do not use `pi update` for the normal fork-backed workflow.
+Portable dist patches under `patches/` are retained only as a legacy rollback path for machines that cannot build/link the source fork. See [`docs/pi-global-patches.md`](../docs/pi-global-patches.md) before using `scripts/apply-pi-global-patches.sh`; do not use `pi update` for the normal fork-backed workflow.
 
 ## 4. Install Hermes
 
@@ -141,7 +141,7 @@ scripts/check-project-setup.sh
 
 The setup check uses extension slash-command smokes and should not require a Pi model login or API key. You still need `/login` or provider API keys before normal model-backed Pi prompts.
 
-Multiple logins per provider and automatic account failover come from `extensions/multi-login` (see the README).
+Multiple logins per provider and automatic account failover come from `extensions/multi-login` (see [configuration](configuration.md)).
 
 It also updates `~/.pi/agent/settings.json` to load:
 
@@ -159,7 +159,7 @@ The same refresh installs the pinned Redis client for the Pi request queue
 services. DeepSeek (`local`) requests are queued, so each machine needs its own
 client credentials at `~/.config/pi-queue/client.env`; without them those
 requests fail with an explicit error (`PI_QUEUE=0` calls DeepSeek directly). See
-[Pi request queue](docs/pi-queue.md) for issuing and installing credentials.
+[Pi request queue](../docs/pi-queue.md) for issuing and installing credentials.
 
 Restart Pi or run `/reload` in an existing Pi session.
 
@@ -341,3 +341,7 @@ Then in Pi:
 ```
 
 If CodeGraph says uninitialized, run `codegraph init -i` in that repo. If Semgrep Docker fails, fix Docker permissions or install native Semgrep.
+
+---
+
+[Back to the README](../README.md) · [Wiki index](README.md)
