@@ -44,7 +44,7 @@ for (const file of [lib, ext, "README.md", "docs/runtime-configuration.md", "doc
   assert.ok(!text(file).includes("--no-code"), `${file} should not retain the removed CodeGraph context option`);
 }
 assert.ok(!text(lib).includes("--markdown"), `${lib} should not parse the removed CodeGraph context format option`);
-assertContains("README.md", "/codegraph-context [--max-files n] <task>");
+assertContains("wiki/extensions-and-commands.md", "/codegraph-context [--max-files n] <task>");
 assertContains("src/project-intelligence.js", "codegraphProjectSnapshot");
 assertContains("src/project-intelligence.js", "codegraphAffectedTests");
 assertContains(".pi/extensions/verification-center/index.ts", "codegraphVerificationAdvisory");
@@ -52,7 +52,7 @@ assertContains(".pi/extensions/runtime-doctor/index.ts", "codegraphDoctor");
 assertContains("docs/productization-extensions.md", "CodeGraph Adapter");
 assertContains("docs/runtime-configuration.md", "PI_CODEGRAPH_BIN=codegraph");
 assertContains(".gitignore", ".pi/codegraph/");
-assertContains("README.md", "codegraph_query");
+assertContains("wiki/extensions-and-commands.md", "codegraph_query");
 assertContains("scripts/extension-smoke-runner.js", "discoverExtensionEntries");
 assertContains("scripts/extension-smoke-runner.js", '[".pi/extensions", "extensions"]');
 console.log("codegraph extension checks passed");

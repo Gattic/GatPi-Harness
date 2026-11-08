@@ -125,7 +125,7 @@ try {
   // Harness docs cover the extension.
   assertContains("docs/productization-extensions.md", "Git Evidence Courier");
   assertContains("docs/productization-extensions.md", "extensions/git-evidence-courier/index.ts");
-  assertContains("README.md", "extensions/git-evidence-courier");
+  assertContains("wiki/extensions-and-commands.md", "extensions/git-evidence-courier");
 
   console.log("git-evidence-courier tests passed");
 } catch (error) {

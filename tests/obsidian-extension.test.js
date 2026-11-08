@@ -33,7 +33,7 @@ assertContains("docs/runtime-configuration.md", "/obsidian-doctor [--probe-auth]
 for (const required of ["probeAuth", "probeCuration", "never reads vault bodies", "layered vault filesystem"]) assertContains(ext, required);
 assertContains("docs/integration-boundary.md", "src/obsidian-adapter.js");
 assertContains(".gitignore", ".pi/obsidian/");
-assertContains("README.md", "obsidian_hermes");
+assertContains("wiki/extensions-and-commands.md", "obsidian_hermes");
 assertContains("scripts/extension-smoke-runner.js", "discoverExtensionEntries");
 assertContains(ext, "HermesAdvisoryAdapter");
 assert.doesNotMatch(text(ext), /hermes-client|runHermes|spawn\([^)]*hermes/i, "active Obsidian consumer must use the integration-boundary advisory adapter");

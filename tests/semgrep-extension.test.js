@@ -32,7 +32,7 @@ assertContains("docs/runtime-configuration.md", "PI_SEMGREP_BIN=semgrep");
 assertContains(ext, "Defaults to PI_SEMGREP_CONFIG or p/default");
 assertContains("docs/integration-boundary.md", "src/semgrep-adapter.js");
 assertContains(".gitignore", ".pi/semgrep/");
-assertContains("README.md", "semgrep_codegraph");
+assertContains("wiki/extensions-and-commands.md", "semgrep_codegraph");
 assertContains("scripts/extension-smoke-runner.js", "discoverExtensionEntries");
 assertContains("scripts/extension-smoke-runner.js", "runRpcProbe");
 console.log("semgrep extension checks passed");
