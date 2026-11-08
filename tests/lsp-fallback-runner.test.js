@@ -165,7 +165,7 @@ test("project-root symlink escape is rejected before workers start", async (t) =
     if (["EPERM", "EACCES", "ENOSYS"].includes(error.code)) { t.skip(`symlinks unavailable: ${error.code}`); return; }
     throw error;
   }
-  await assert.rejects(adapter.definition({ cwd: root }, { path: "escape", symbol: "wanted" }), /inside cwd/);
+  await assert.rejects(adapter.definition({ cwd: root }, { path: "escape", symbol: "wanted" }), /session project scope/);
   assert.equal(workers.length, 0);
   fs.mkdirSync(path.join(root, "..safe"));
   assert.equal((await adapter.documentSymbols({ cwd: root }, { path: "..safe" })).details.gatingSafe, false);

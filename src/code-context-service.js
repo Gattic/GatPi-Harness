@@ -16,9 +16,10 @@ const { createCodeContextTelemetry } = require("./code-context-telemetry.js");
 const { resolveRolloutMode } = require("./code-context-rollout.js");
 const { createCard, createDiagnostic, createRetrievalEnvelope, compactRetrievalEnvelope, deterministicId, sourceKindForPath } = require("./code-context-contracts.js");
 const { readChangeSet, workingTreeRevision, revisionId } = require("./code-context-revision.js");
+const { assertProjectScope } = require("./project-scope.js");
 
 function isInside(root, candidate) { const relative = path.relative(root, candidate); return relative === "" || !relative.startsWith("..") && !path.isAbsolute(relative); }
-function projectPath(ctx, input) { const root = path.resolve(ctx?.cwd || process.cwd()); const target = path.resolve(root, input || "."); if (!isInside(root, target)) throw new Error(`code_context path must stay inside cwd: ${input}`); return target; }
+function projectPath(ctx, input) { const root = path.resolve(ctx?.cwd || process.cwd()); const target = path.resolve(root, input || "."); assertProjectScope(root, target, { label: "code_context" }); return target; }
 function locationRange(location = {}) { return location.range?.startLine ? location.range : location.loc ? { startLine: location.loc.start.line, startColumn: location.loc.start.column, endLine: location.loc.end.line, endColumn: location.loc.end.column } : undefined; }
 function safeFile(root, file) { const absolute = path.resolve(root, String(file || "")); if (!file || !isInside(root, absolute)) throw new Error(`source path must stay inside project: ${file}`); return { absolute, relative: path.relative(root, absolute).replace(/\\/g, "/") }; }
 function lineExtract(text, range, maxLines = 120) { const lines = String(text).split(/\r?\n/); const start = Math.max(1, Number(range?.startLine || 1)); const end = Math.min(lines.length, Number(range?.endLine || start + maxLines - 1), start + maxLines - 1); return { text: lines.slice(start - 1, end).join("\n"), range: { startLine: start, startColumn: 1, endLine: end, endColumn: (lines[end - 1] || "").length + 1 } }; }

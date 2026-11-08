@@ -2,14 +2,14 @@
 
 Generated from portfolio schema 4.
 
-- Extensions: 52
-- Tool decisions: 71
-- Default active model tools: 66 -> 65 (reduction 1)
+- Extensions: 53
+- Tool decisions: 72
+- Default active model tools: 67 -> 66 (reduction 1)
 - Observation: 0.48 days / 30 required (insufficient-data; source=classified-interactive-audit-unavailable)
 - Measured adoption/opportunity records: 0/0
 - Lifecycle authority: no-go-deferred
 - Reconciled: true
-- Decisions: keep=63, keep-child-only=5, keep-explicit=1, experimental-command-only=1, keep-observation-pending=1
+- Decisions: keep=64, keep-child-only=5, keep-explicit=1, experimental-command-only=1, keep-observation-pending=1
 
 ## Records
 
@@ -47,6 +47,7 @@ Generated from portfolio schema 4.
 - [policy-enforcer](./policy-enforcer.md) — enabled; model exposure=default
 - [privacy-guard](./privacy-guard.md) — enabled; model exposure=default
 - [project-intelligence](./project-intelligence.md) — enabled; model exposure=default
+- [project-scope](./project-scope.md) — enabled; model exposure=default
 - [prompt-suggestions](./prompt-suggestions.md) — enabled; model exposure=none
 - [reasoning-runtime](./reasoning-runtime.md) — enabled; model exposure=default
 - [repo-context](./repo-context.md) — core; model exposure=default

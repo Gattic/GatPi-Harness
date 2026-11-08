@@ -142,6 +142,8 @@ PI_PORTFOLIO_EXPERIMENTAL_TOOLS=1  Expose command-only experimental model tools 
 PI_CODEMODE=0                       Opt out of default-on native hybrid CodeMode
 PI_TOOL_SURFACE_ROUTER=0            Disable task/readiness-aware model tool selection
 PI_TOOL_CHURN_GUARD=0               Disable repeated-call advisories
+PI_HARNESS_PROJECT_DIRS=...         Path-delimiter-separated second project directories in the session scope
+PI_PROJECT_SCOPE=0                  Disable the project_scope tool and /project-scope command
 PI_WRITE_CHUNKING=0                 Disable sectioned document writes
 PI_WRITE_CHUNK_LIMIT=16384          Max characters in one write/append_file payload (0 disables enforcement)
 ```
@@ -149,6 +151,23 @@ PI_WRITE_CHUNK_LIMIT=16384          Max characters in one write/append_file payl
 Canonical behavior is local-first and guarded: model prompt refinement and skill drafting are off, Hermes owns no recall or shutdown lifecycle, CodeGraph auto-sync is on but advisory, Semgrep automatic advisory scans are off, role mutation is off, role routing is suggest-only, the model tool surface is task/readiness-routed, repeated-call churn is advisory, and selected oversized structured outputs use the measured canary. See `config/harness-defaults.env` for the complete applied environment.
 
 Document writes stay section-sized so one model turn never generates an oversized payload: `write` creates the file with the first section, `append_file` adds each later section, and a payload over `PI_WRITE_CHUNK_LIMIT` is blocked with sectioned-write guidance instead of being sent. `append_file` inserts a separating newline when the existing file does not end with one. The rule is also carried in the `write` tool description, so it is visible where the model decides to compose the payload.
+
+## Second project directories
+
+Pi runs in one working directory, and harness state (`.pi/`) normally resolves there. A session can also reach another project's `.pi` folder, logs, and memories by putting that directory in the **session project scope**:
+
+- `PI_HARNESS_PROJECT_DIRS=/path/to/Other:/path/to/Third` declares directories for the session (path-delimiter separated).
+- `/policy-approve-directory <directory>` already grants cross-project write authority; an active grant is also a scope root, so one explicit operator decision covers both writes and state reads.
+
+Scope roots are canonicalized, so symlinks resolve before comparison. A grant that expired, belongs to another source project, names a missing directory, or whose destination was replaced by a symlink is rejected and reported in `project_scope list` instead of silently widening scope. A directory is never discovered implicitly.
+
+Inside the scope:
+
+- `project_scope` (`list`, `state`, `logs`, `read`) reads a root's `.pi` inventory, bounded diagnostic log tails, and one bounded state file. It is read-only and confined to `<root>/.pi`.
+- `test_runner`, `code_context`, `docs_lookup`, `ast_search`/`ast_refactor`, `lsp`, `codegraph`, and `semgrep` accept project paths inside scope roots. Their state stays under that project's own `.pi` (for example `.pi/test-runner` and `.pi/code-context`).
+- `memory_explorer` and `memory_curator` accept `path` and use that project's identity, `.pi` state, and canonical vault notes.
+
+Session-scoped tools that do not take a project path (roadmap, debug ledger, run deck, evidence binder) still resolve the working directory's state; name the directory explicitly in the tools that accept one, or start Pi there. Explicit `*_ALLOW_OUTSIDE=1` escapes remain separate from scope: they bypass confinement without making the directory a project root.
 
 ## Pi request queue
 

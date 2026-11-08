@@ -73,7 +73,7 @@ function write(file, text) { mkdirp(path.dirname(file)); fs.writeFileSync(file, 
   assert.ok(lookup.details.results.length >= 1, "docs_lookup should return search results");
   const read = await docs.read(ctx, { file: "docs/api.md", limit: 5 });
   assert.match(read.details.text, /Use add/);
-  await assert.rejects(docs.read(ctx, { path: "..", file: "README.md" }), /project path must stay inside cwd/, "Pi docs routing must not weaken docs_lookup confinement");
+  await assert.rejects(docs.read(ctx, { path: "..", file: "README.md" }), /must stay inside the session project scope/, "Pi docs routing must not weaken docs_lookup confinement");
   const docsExtensionSource = fs.readFileSync(path.join(process.cwd(), ".pi", "extensions", "docs-lookup", "index.ts"), "utf8");
   assert.match(docsExtensionSource, /\$PI_SOURCE_ROOT\/packages\/coding-agent\/README\.md/);
   assert.match(docsExtensionSource, /do not weaken docs_lookup confinement with PI_DOCS_ALLOW_OUTSIDE/);

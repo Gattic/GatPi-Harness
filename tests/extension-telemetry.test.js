@@ -27,7 +27,7 @@ assert.equal(inferExtensionSourceFile("at extension (/repo/extensions/prompt-sug
 const configuredRegistry = require("../src/extension-registry").scanExtensionRegistry({ cwd: process.cwd(), settings: false, extensionPaths: [path.join(process.cwd(), ".pi", "extensions"), path.join(process.cwd(), "extensions")] });
 const { tmpFixture } = require("./helpers/tmp-fixture");
 const commandExtensions = configuredRegistry.extensions.filter((extension) => extension.commands.length > 0);
-assert.equal(commandExtensions.length, 48, "the configured fleet has 48 command-bearing extensions, including /queue-status");
+assert.equal(commandExtensions.length, 49, "the configured fleet has 49 command-bearing extensions, including /queue-status and /project-scope");
 assert.deepEqual(commandExtensions.filter((extension) => !fs.readFileSync(extension.file, "utf8").includes("instrumentExtensionCommands")).map((extension) => extension.name), [], "every command-bearing configured extension opts into metadata-only command telemetry");
 const modelToolExtensions = configuredRegistry.extensions.filter((extension) => extension.tools.length > 0 && extension.name !== "role-sidecar");
 assert.deepEqual(modelToolExtensions.filter((extension) => !fs.readFileSync(extension.file, "utf8").includes("instrumentExtensionCommands")).map((extension) => extension.name), [], "every parent-runtime model tool opts into metadata-only lifecycle telemetry");

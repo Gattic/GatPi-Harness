@@ -1022,9 +1022,10 @@ if (process.argv[2] === 'scan' && !process.argv.includes('--validate')) {
   }
   assert.deepEqual(failures, [], `extensions failed to load/register:\n${failures.join("\n")}`);
   const parentToolCount = new Set(fleetToolNames).size;
-  assert.equal(parentToolCount, 65, "the exact default fleet includes default-on native CodeMode, the optional-tool activation control, specialist controls, two queue tools, and the sectioned-write append tool");
+  assert.equal(parentToolCount, 66, "the exact default fleet includes default-on native CodeMode, the optional-tool activation control, project_scope, specialist controls, two queue tools, and the sectioned-write append tool");
   assert(fleetToolNames.includes("codemode"));
   assert(fleetToolNames.includes("activate_tools"));
+  assert(fleetToolNames.includes("project_scope"));
   assert(fleetToolNames.includes("specialist_tasks"));
   assert.deepEqual(fleetToolNames.filter((tool) => Object.values(COMMAND_ONLY_MODEL_TOOLS).includes(tool)), [], "experimental command-only tools stay out of the default fleet");
   console.log(`extension-load tests passed (${entries.length} extensions; ${parentToolCount} default parent tools)`);

@@ -52,6 +52,10 @@ const AWARENESS = [
     text: "- repo_context: one call for branch/changes/commits/docs digest instead of separate git status/diff/log and doc re-reads.",
   },
   {
+    tools: ["project_scope"],
+    text: "- project_scope: read another in-scope project directory's .pi state inventory, bounded diagnostic logs, and one bounded state file; declare directories with PI_HARNESS_PROJECT_DIRS or /policy-approve-directory.",
+  },
+  {
     tools: ["commit_plan"],
     text: "- commit_plan: when asked to commit, plan logical groups, refine messages, apply per group.",
   },
@@ -59,7 +63,7 @@ const AWARENESS = [
 
 const ACTIVATION_HINT = "More optional harness tools (debug ledger, fix recall, safe try, evidence inbox, run deck, run monitor, experiment ledger, automation loop, commit plan, delegation/topology, memory/vault, codegraph, semgrep, evidence, CI, queue, extension governance) activate when a request matches their task or by name with activate_tools({ tools: [names] }); activate_tools with no arguments lists them with current state and blockers.";
 
-const HELP_TEXT = `${AWARENESS.map((entry) => entry.text).join("\n")}\n\n${ACTIVATION_HINT}\n\nHuman commands: /build /test /bg /bg-status /run-status /runs /run-launch /run-attach /monitor-start /monitor-status /monitors /exp-open /exp-gate /exp-list /loop /loop-status /loop-pause /loop-resume /loop-stop /debug-open /debug-list /fix-recall /try /try-revert /repo-context /commit-plan /subagent-fanout /evidence /harness-metrics`;
+const HELP_TEXT = `${AWARENESS.map((entry) => entry.text).join("\n")}\n\n${ACTIVATION_HINT}\n\nHuman commands: /build /test /bg /bg-status /run-status /runs /run-launch /run-attach /monitor-start /monitor-status /monitors /exp-open /exp-gate /exp-list /loop /loop-status /loop-pause /loop-resume /loop-stop /debug-open /debug-list /fix-recall /try /try-revert /repo-context /project-scope /commit-plan /subagent-fanout /evidence /harness-metrics`;
 
 /** The awareness block for the tools actually declared in this session. */
 export function awarenessPrompt(activeNames: readonly string[]) {

@@ -7,6 +7,7 @@ const { execFile, execFileSync, spawnSync } = require("node:child_process");
 const { codegraphAffectedTests } = require("./codegraph-adapter.js");
 const { normalizeDiagnostics } = require("./diagnostic-normalizer.js");
 const { semgrepScanEnvelope, semgrepCodegraphEnvelope, renderSemgrep, renderSemgrepCodegraph, severityScore, recordResultRendering } = require("./provider-result-rendering.js");
+const { assertProjectScope } = require("./project-scope.js");
 
 const DEFAULT_MAX_LINES = 2000;
 const DEFAULT_MAX_BYTES = 50 * 1024;
@@ -51,9 +52,7 @@ function resolveProjectPath(ctx, inputPath, config = configFromEnv()) {
   const raw = stripAt(inputPath) || ".";
   const cwd = path.resolve(ctx.cwd || process.cwd());
   const absolute = path.resolve(cwd, raw);
-  if (!config.allowOutsideCwd && !isInside(cwd, absolute)) {
-    throw new Error(`Semgrep project path must stay inside cwd (${cwd}). Set PI_SEMGREP_ALLOW_OUTSIDE=1 to allow ${absolute}.`);
-  }
+  assertProjectScope(cwd, absolute, { label: "Semgrep", envVar: "PI_SEMGREP_ALLOW_OUTSIDE", allowOutside: config.allowOutsideCwd });
   return absolute;
 }
 function normalizeProjectFile(projectPath, file) {

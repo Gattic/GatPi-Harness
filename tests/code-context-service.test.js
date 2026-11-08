@@ -114,7 +114,7 @@ else process.exit(1);
   assert.equal(diagnostics.items[0].code, "W1");
   assert.match(service.render(map), /retrieval/);
   assert.match(service.render(map), /stages query=completed/);
-  await assert.rejects(service.execute({ cwd: tmp }, "search", { path: "../outside", query: "x" }), /inside cwd/);
+  await assert.rejects(service.execute({ cwd: tmp }, "search", { path: "../outside", query: "x" }), /session project scope/);
   const disabled = createCodeContextService({ lexical, codegraph, lsp, architecture: () => [], buildLoader, mode: "off" });
   assert.equal((await disabled.execute({ cwd: tmp }, "search", { query: "x" })).degradation.code, "disabled");
   await service.close();

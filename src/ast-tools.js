@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
+const { assertProjectScope } = require("./project-scope.js");
 const crypto = require("node:crypto");
 
 const DEFAULT_MAX_LINES = 2000;
@@ -43,7 +44,7 @@ function resolveProjectPath(ctx, inputPath, config = configFromEnv()) {
   const raw = stripAt(inputPath) || ".";
   const cwd = path.resolve(ctx.cwd || process.cwd());
   const absolute = path.resolve(cwd, raw);
-  if (!config.allowOutsideCwd && !isInside(cwd, absolute)) throw new Error(`AST project path must stay inside cwd (${cwd}). Set PI_AST_ALLOW_OUTSIDE=1 to allow ${absolute}.`);
+  assertProjectScope(cwd, absolute, { label: "AST", envVar: "PI_AST_ALLOW_OUTSIDE", allowOutside: config.allowOutsideCwd });
   return absolute;
 }
 function normalizeProjectFile(projectPath, file) {

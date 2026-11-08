@@ -11,7 +11,7 @@
   },
   "homepage": "https://github.com/Gattic/GatPi-Harness",
   "scripts": {
-    "lint": "eslint .pi/extensions extensions src/file-integration-storage.js src/state-retention.js src/shell-policy.js src/test-selection.js src/extension-import-policy.js src/extension-settings.js src/extension-args.js src/extension-opportunity-reviews-store.js src/experiment-ledger.js src/debug-ledger.js src/provider-result-rendering.js src/tool-output-bounds.js --max-warnings 0",
+    "lint": "eslint .pi/extensions extensions src/file-integration-storage.js src/state-retention.js src/shell-policy.js src/test-selection.js src/extension-import-policy.js src/extension-settings.js src/extension-args.js src/extension-opportunity-reviews-store.js src/experiment-ledger.js src/debug-ledger.js src/provider-result-rendering.js src/tool-output-bounds.js src/project-scope.js --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "check:static": "npm run lint && npm run typecheck"
   },

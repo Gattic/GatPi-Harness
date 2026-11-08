@@ -5,6 +5,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { execFile, execFileSync, spawnSync } = require("node:child_process");
 const { readChangeSet, readChangeSetAsync, runGitAsync, workingTreeRevision, revisionId, fileContentIdentity, sourceKindForPath } = require("./code-context-revision.js");
+const { assertProjectScope, projectScope, owningRoot } = require("./project-scope.js");
 const {
   codegraphQueryEnvelope,
   codegraphAffectedEnvelope,
@@ -72,9 +73,7 @@ function requestedProjectPath(ctx, inputPath, config = configFromEnv()) {
   const cwd = path.resolve(ctx.cwd || process.cwd());
   const absolute = path.resolve(cwd, raw);
   const physical = physicalPath(absolute);
-  if (!config.allowOutsideCwd && (!isInside(cwd, absolute) || !isInside(physicalPath(cwd), physical))) {
-    throw new Error(`CodeGraph project path must stay inside cwd (${cwd}). Set PI_CODEGRAPH_ALLOW_OUTSIDE=1 to allow ${absolute}.`);
-  }
+  assertProjectScope(cwd, physical, { label: "CodeGraph", envVar: "PI_CODEGRAPH_ALLOW_OUTSIDE", allowOutside: config.allowOutsideCwd });
   return physical;
 }
 function resolveProjectPath(ctx, inputPath, config = configFromEnv()) {
@@ -548,12 +547,13 @@ async function toolMutationSnapshot(cwd, toolName, input = {}, config = configFr
   const root = resolveProjectPath({ cwd: sessionCwd }, undefined, config);
   const run = await runGitAsync(root, ["worktree", "list", "--porcelain", "-z"], { ...options, timeoutMs: 3000 });
   const projects = new Set([root]);
+  const scope = projectScope(sessionCwd);
   for (const record of run.ok ? run.stdout.split("\0") : []) {
     if (!record.startsWith("worktree ")) continue;
     const project = record.slice("worktree ".length);
     if (!fs.existsSync(project)) continue;
     const resolved = fs.realpathSync(project);
-    if (config.allowOutsideCwd || isInside(sessionCwd, resolved)) projects.add(resolved);
+    if (config.allowOutsideCwd || owningRoot(scope, resolved)) projects.add(resolved);
   }
   const targets = new Map([...projects].map((project) => [project, null]));
   if (["edit", "write"].includes(toolName)) {
@@ -562,7 +562,7 @@ async function toolMutationSnapshot(cwd, toolName, input = {}, config = configFr
     targets.clear();
     for (const file of inputPathCandidates(input)) {
       const resolved = physicalPath(path.resolve(sessionCwd, stripAt(file)));
-      if (!config.allowOutsideCwd && !isInside(sessionCwd, resolved)) continue;
+      if (!config.allowOutsideCwd && !owningRoot(scope, resolved)) continue;
       const project = projectRoot(path.dirname(resolved), root);
       if (!isInside(project, resolved)) continue;
       if (!targets.has(project)) targets.set(project, []);

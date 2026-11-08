@@ -38,6 +38,7 @@ const EXTENSION_IMPORT_ALLOWLIST = Object.freeze([
   "src/result-rendering.js",
   "src/context-overflow-recovery.js",
   "src/policy-enforcement.js",
+  "src/project-scope.js",
   "src/project-intelligence.js",
   "src/evidence-binder.js",
   "src/extension-registry.js",

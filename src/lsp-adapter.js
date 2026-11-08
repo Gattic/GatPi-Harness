@@ -13,6 +13,7 @@ const { LspSessionManager, classifyFailure } = require("./lsp-session-manager.js
 const { previewWorkspaceEdit, applyWorkspaceEdit } = require("./semantic-editor.js");
 const { readChangeSet } = require("./code-context-revision.js");
 const { normalizeDiagnostics } = require("./diagnostic-normalizer.js");
+const { assertProjectScope } = require("./project-scope.js");
 
 const DEFAULT_MAX_LINES = 2000;
 const DEFAULT_MAX_BYTES = 50 * 1024;
@@ -51,9 +52,7 @@ function resolveProjectPath(ctx, inputPath, config = configFromEnv()) {
   const raw = stripAt(inputPath) || ".";
   const cwd = path.resolve(ctx.cwd || process.cwd());
   const absolute = path.resolve(cwd, raw);
-  if (!config.allowOutsideCwd && (!isInside(cwd, absolute) || !isInside(fs.realpathSync(cwd), fs.realpathSync(absolute)))) {
-    throw new Error(`LSP project path must stay inside cwd (${cwd}). Set PI_LSP_ALLOW_OUTSIDE=1 to allow ${absolute}.`);
-  }
+  assertProjectScope(cwd, absolute, { label: "LSP", envVar: "PI_LSP_ALLOW_OUTSIDE", allowOutside: config.allowOutsideCwd });
   return absolute;
 }
 function normalizeProjectFile(projectPath, file) {

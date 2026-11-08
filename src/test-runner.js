@@ -12,6 +12,7 @@ const { isTestPath: centralizedTestPath, testCommandsForPaths } = require("./tes
 const { buildImportGraph, affectedTestFiles } = require("./test-selection.js");
 const { normalizeOperation, normalizeStringList } = require("./extension-args.js");
 const { withNodeTestCoverage } = require("./node-test-coverage.js");
+const { assertProjectScope } = require("./project-scope.js");
 
 const TEST_RUNNER_OPERATIONS = ["status", "listProfiles", "infer", "run", "rerunFailures"];
 const TEST_RUNNER_PROFILES = ["quick", "changed", "full", "live", "unit", "integration", "lint", "typecheck"];
@@ -77,7 +78,9 @@ function resolveProjectPath(ctx, inputPath) {
   const raw = stripAt(inputPath) || ".";
   const cwd = path.resolve(ctx.cwd || process.cwd());
   const absolute = path.resolve(cwd, raw);
-  if (!isInside(cwd, absolute)) throw new Error(`test_runner project path must stay inside cwd (${cwd}).`);
+  // A second project directory in the session scope is a real working project:
+  // its own .pi/test-runner state is used because stateRoot() keys off this path.
+  assertProjectScope(cwd, absolute, { label: "test_runner" });
   return absolute;
 }
 function normalizeProjectFile(projectPath, file) {
