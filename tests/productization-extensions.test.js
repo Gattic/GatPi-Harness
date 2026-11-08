@@ -181,7 +181,9 @@ for (const command of ["output-compact", "output-compactor-status"]) assertConta
 assertContains(outputCompactor, "name: \"output_compactor\"");
 assertContains(outputCompactor, "PI_OUTPUT_COMPACTOR_MODE");
 assertContains(outputCompactor, "PI_OUTPUT_COMPACTOR_CANARY_TOOLS");
-for (const tool of ["evidence_binder", "run_deck", "verification_center"]) assertContains(outputCompactor, tool);
+assertContains(outputCompactor, "src\", \"tool-output-bounds.js");
+assertContains(outputCompactor, "boundToolResult");
+for (const tool of ["read", "bash", "roadmap_update", "bg_run", "debug_ledger", "docs_lookup"]) assertContains("src/tool-output-bounds.js", tool);
 assertContains(outputCompactor, "featureSignal(\"output-compactor\"");
 assertContains("src/result-rendering.js", "compactToolContent");
 

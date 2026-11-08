@@ -71,4 +71,29 @@ assert.ok(!openThreadsSummary(cwd).includes("models-bouncing"));
 // Unknown thread errors clearly.
 assert.throws(() => recordAttempt(cwd, "nope", { observation: "x" }), /not found/i);
 
+// Bounded rendering: recent attempts only, clipped fields, explicit omission count.
+const bulk = tmpFixture("pi-debug-ledger-bulk-");
+const bulkThread = openThread(bulk, "Many attempts bug");
+for (let index = 0; index < 20; index++) {
+  recordAttempt(bulk, bulkThread.threadId, {
+    hypothesis: `hypothesis ${index} ${"h".repeat(300)}`,
+    change: `change ${index} ${"c".repeat(300)}`,
+    observation: `observed ${index}`,
+    verdict: "no-change",
+  });
+}
+const bounded = formatThread(showThread(bulk, bulkThread.threadId));
+assert.match(bounded, /12 earlier attempt\(s\) omitted; call show with attemptLimit=20/);
+assert.equal(bounded.split("\n").filter((line) => /^#\d+ \[/.test(line)).length, 8, "only the most recent attempts are rendered");
+assert(!bounded.includes("c".repeat(250)), "attempt fields are clipped to the configured width");
+assert(bounded.length < 8000, "the bounded thread stays small regardless of attempt count");
+const full = formatThread(showThread(bulk, bulkThread.threadId), { attemptLimit: 20 });
+assert.equal(full.split("\n").filter((line) => /^#\d+ \[/.test(line)).length, 20);
+assert.match(full, /^#1 \[/m, "full rendering keeps the original attempt numbering");
+
+// The injectable summary clips each tried change instead of replaying whole attempts.
+const summaryBulk = openThreadsSummary(bulk);
+assert(!summaryBulk.includes("c".repeat(220)), "the summary clips each tried change");
+assert(summaryBulk.length < 4000, "the injectable summary stays bounded");
+
 console.log("debug-ledger tests passed");

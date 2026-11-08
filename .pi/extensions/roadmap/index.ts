@@ -649,7 +649,7 @@ export default function roadmapExtension(pi: ExtensionAPI) {
         if (action === "report") {
           const report = createRoadmapFieldReport({ events: readRoadmapTelemetry(ctx.cwd), excludeSessionToken: sessionToken, cohortVersion });
           const details = { ok: true, outcome: "succeeded", operation: action, roadmap: finalReportSummary(state), field: report };
-          const text = JSON.stringify(details, null, 2);
+          const text = JSON.stringify(details);
           emitRoadmapTelemetry(ctx, action, "succeeded", text, 0);
           return { content: [{ type: "text", text }], details };
         }
@@ -703,7 +703,7 @@ export default function roadmapExtension(pi: ExtensionAPI) {
         const code = Object.values(ROADMAP_ERROR_CODES).includes(error?.code) ? error.code : ROADMAP_ERROR_CODES.PERSISTENCE_FAILED;
         const outcome = code === ROADMAP_ERROR_CODES.PERSISTENCE_FAILED ? "infrastructure-failed" : "domain-negative";
         const details = { ok: false, outcome, operation: action, error: { code, message: code === ROADMAP_ERROR_CODES.PERSISTENCE_FAILED ? "Roadmap persistence failed." : error?.message || "Roadmap operation failed." } };
-        const text = JSON.stringify(details, null, 2);
+        const text = `roadmap ${action} failed: ${details.error.code} ${details.error.message}`;
         emitRoadmapTelemetry(ctx, action, outcome, text, 0, code);
         return { content: [{ type: "text", text }], details };
       }

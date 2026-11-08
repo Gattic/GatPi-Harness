@@ -1124,6 +1124,28 @@ function publicChangedItem(row) {
     evidenceBindings: currentEvidenceBindings(row.item).length,
   };
 }
+/** Compact text for the model: the same fields as the envelope, without JSON indentation or repeated keys. */
+function roadmapMutationText(envelope) {
+  const delta = envelope.delta || {};
+  const progress = envelope.progress || {};
+  const outcomes = progress.outcomes || {};
+  const target = envelope.roadmap ? `${envelope.roadmap.id} (${envelope.roadmap.lifecycle})` : "no active roadmap";
+  const lines = [`roadmap ${envelope.operation}: ${target}`];
+  const ids = Array.isArray(delta.appliedIds) && delta.appliedIds.length ? ` · ids ${delta.appliedIds.join(", ")}` : "";
+  lines.push(`delta: ${delta.changedCount || 0} changed, ${delta.removedCount || 0} removed${ids}`);
+  for (const item of delta.changed || []) lines.push(`- ${item.path} ${item.status}${item.title ? ` ${item.title}` : ""}${item.evidenceBindings ? ` evidence=${item.evidenceBindings}` : ""}`);
+  if (delta.changedRoadmap) lines.push(`roadmap ${delta.changedRoadmap.id} nested=${Boolean(delta.changedRoadmap.nested)}${delta.changedRoadmap.parentItemId ? ` parent=${delta.changedRoadmap.parentItemId}` : ""}`);
+  const extras = [];
+  if (progress.blocked) extras.push(`blocked ${progress.blocked}`);
+  if (progress.nonActionable) extras.push(`non-actionable ${progress.nonActionable}`);
+  if (progress.unsupportedVerification) extras.push(`unsubstantiated ${progress.unsupportedVerification}`);
+  if (progress.evidenceBindings) extras.push(`evidence ${progress.evidenceBindings}`);
+  lines.push(`progress: ${progress.complete ?? 0}/${progress.total ?? 0} complete · outcomes ${outcomes.complete ?? 0}/${outcomes.total ?? 0} · unresolved ${progress.unresolved ?? 0} · actionable ${progress.actionable ?? 0}${extras.length ? ` · ${extras.join(" · ")}` : ""}`);
+  if (Array.isArray(envelope.activePath) && envelope.activePath.length) lines.push(`active: ${envelope.activePath.map((entry) => `${entry.path} ${entry.status}${entry.title ? ` ${entry.title}` : ""}`).join(" > ")}`);
+  if (envelope.hint) lines.push(`hint: ${envelope.hint}`);
+  return lines.join("\n");
+}
+
 function roadmapMutationEnvelope(previous, next, operation = "update", options = {}) {
   const before = normalizeRoadmap(previous);
   const after = normalizeRoadmap(next);
@@ -1163,14 +1185,19 @@ function roadmapMutationEnvelope(previous, next, operation = "update", options =
     fullState: false,
     hint: "Use action=show with focusId/offset/limit for bounded detail.",
   };
-  let text = JSON.stringify(envelope, null, 2);
+  let text = roadmapMutationText(envelope);
   const maxChars = Math.min(2500, Math.max(800, Number(options.maxChars || 2500)));
   if (text.length > maxChars) {
     envelope.delta.changed = envelope.delta.changed.map(({ id, path, status, evidenceBindings }) => ({ id, path, status, evidenceBindings }));
     envelope.activePath = envelope.activePath.map(({ id, path, status }) => ({ id, path, status }));
-    text = JSON.stringify(envelope, null, 2);
+    text = roadmapMutationText(envelope);
   }
-  if (text.length > maxChars) text = JSON.stringify({ ...envelope, delta: { ...envelope.delta, changed: [] }, activePath: envelope.activePath.slice(-3) });
+  if (text.length > maxChars) {
+    envelope.delta.changed = [];
+    envelope.activePath = envelope.activePath.slice(-3);
+    text = roadmapMutationText(envelope);
+  }
+  if (text.length > maxChars) text = `${text.slice(0, Math.max(0, maxChars - 80)).replace(/\n[^\n]*$/, "")}\n… output truncated at ${maxChars} characters; use action=show for detail`;
   return { envelope, text, resultChars: text.length, deltaChars: JSON.stringify(envelope.delta).length };
 }
 function finalReportSummary(state) {

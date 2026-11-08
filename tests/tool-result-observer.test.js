@@ -16,6 +16,9 @@ if (!process.argv[2]) {
 } else {
   (async () => {
     process.env.PI_OUTPUT_COMPACTOR_MODE = process.argv[2];
+    // Pin the canary set so this test exercises the outside-canary path rather
+    // than depending on which tools the policy table happens to cover.
+    if (process.argv[2] === "canary") process.env.PI_OUTPUT_COMPACTOR_CANARY_TOOLS = "read,bash,roadmap_update";
     process.env.PI_OUTPUT_COMPACTOR = "1";
     process.env.PI_EXTENSION_TELEMETRY = "1";
     const globalRoot = execFileSync("npm", ["root", "-g"], { encoding: "utf8" }).trim();

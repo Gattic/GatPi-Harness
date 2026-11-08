@@ -70,6 +70,7 @@ export default function debugLedger(pi: ExtensionAPI) {
       recallId: Type.Optional(Type.String({ description: "Optional fix_recall retrieval id that informed this attempt" })),
       note: Type.Optional(Type.String({ description: "Resolution note (resolve)" })),
       status: Type.Optional(Type.String({ description: "Filter for list: open|resolved" })),
+      attemptLimit: Type.Optional(Type.Number({ minimum: 1, maximum: 50, description: "Attempts to render for show/resolve (default 8); every attempt stays in details and the ledger file" })),
     }),
     async execute(_id: string, params: any, _signal: any, _update: any, ctx: any) {
       const op = params.operation;
@@ -81,7 +82,7 @@ export default function debugLedger(pi: ExtensionAPI) {
       else details = listThreads(ctx.cwd, { status: params.status });
       const text = Array.isArray(details)
         ? details.map((t: any) => `${t.threadId} [${t.status}] ${t.attempts.length} attempts - ${t.title}`).join("\n") || "No debug threads"
-        : formatThread(details);
+        : formatThread(details, { attemptLimit: params.attemptLimit });
       return { content: [{ type: "text", text }], details };
     },
   });

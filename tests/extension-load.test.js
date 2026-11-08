@@ -191,6 +191,25 @@ if (process.argv[2] === 'scan' && !process.argv.includes('--validate')) {
           fs.rmSync(fixture, { recursive: true, force: true });
         }
       }
+      if (name === ".pi/extensions/output-compactor") {
+        // The compactor must actually rewrite oversized builtin-tool results,
+        // not merely carry a policy table.
+        const fixture = tmpFixture("pi-output-compactor-");
+        const ctx = { cwd: fixture, hasUI: false, ui: { notify: () => {} }, sessionManager: { getSessionId: () => "fixture-session" } };
+        const hook = registered.hooks.find((row) => row.event === "tool_result").handler;
+        const readText = Array.from({ length: 400 }, (_, index) => `line ${index + 1} ${"x".repeat(80)}`).join("\n");
+        const readResult = await hook({ toolName: "read", toolCallId: "call-1", input: { path: "src/big.js", offset: 1 }, content: [{ type: "text", text: readText }], details: {}, isError: false }, ctx);
+        assert(readResult?.content?.[0]?.text?.length < readText.length, "oversized read output is bounded");
+        assert.match(readResult.content[0].text, /continue with read path=src\/big\.js offset=/);
+        const bashText = `${"noise\n".repeat(2000)}ERROR: real failure`;
+        const bashResult = await hook({ toolName: "bash", toolCallId: "call-2", input: { command: "make" }, content: [{ type: "text", text: bashText }], details: {}, isError: false }, ctx);
+        assert(bashResult?.content?.[0]?.text?.trimEnd().endsWith("ERROR: real failure"), "tail bounding keeps the failure");
+        const exempt = await hook({ toolName: "read", toolCallId: "call-3", input: { path: "src/big.js", verbose: true }, content: [{ type: "text", text: readText }], details: {}, isError: false }, ctx);
+        assert.equal(exempt, undefined, "explicit verbose requests are never rewritten");
+        const nested = await hook({ toolName: "read", toolCallId: "call-4", parentToolCallId: "parent", input: { path: "src/big.js" }, content: [{ type: "text", text: readText }], details: {}, isError: false }, ctx);
+        assert.equal(nested, undefined, "nested codemode calls keep canonical data");
+        fs.rmSync(fixture, { recursive: true, force: true });
+      }
       if (name === "extensions/policy-enforcer") {
         const fixture = tmpFixture("pi-policy-directory-command-");
         const cwd = path.join(fixture, "source");

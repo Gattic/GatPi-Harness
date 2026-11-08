@@ -15,6 +15,13 @@ const { sanitizeManagedStateValue } = require("./managed-state-sanitizer");
 const STATE_DIR = ".pi/debug-ledger";
 const MAX_SUMMARY_THREADS = 10;
 const MAX_SUMMARY_ATTEMPTS = 6;
+// A thread can accumulate dozens of attempts; the model only needs the recent
+// dead ends plus a pointer to the rest. Full attempts stay in `details` and the
+// ledger file, so bounding the rendered view loses no durable evidence.
+const DEFAULT_SHOW_ATTEMPTS = 8;
+const MAX_SHOW_ATTEMPTS = 50;
+const ATTEMPT_FIELD_CHARS = 240;
+const SUMMARY_CHANGE_CHARS = 200;
 
 function ledgerDir(cwd) {
   return path.join(cwd, STATE_DIR);
@@ -134,22 +141,33 @@ function listThreadSummaries(cwd, options = {}) {
   });
 }
 
-function formatAttempt(attempt, index) {
+function clip(value, max) {
+  const text = String(value == null ? "" : value);
+  return text.length <= max ? text : `${text.slice(0, Math.max(0, max - 1))}…`;
+}
+
+function formatAttempt(attempt, index, options = {}) {
+  const fieldChars = Number(options.fieldChars) > 0 ? Number(options.fieldChars) : ATTEMPT_FIELD_CHARS;
   const parts = [
     `#${index + 1} [${attempt.verdict}]`,
-    attempt.hypothesis ? `hypothesis: ${attempt.hypothesis}` : null,
-    attempt.change ? `change: ${attempt.change}` : null,
-    attempt.observation ? `observed: ${attempt.observation}` : null,
-    attempt.evidence?.length ? `evidence: ${attempt.evidence.join(", ")}` : null,
+    attempt.hypothesis ? `hypothesis: ${clip(attempt.hypothesis, fieldChars)}` : null,
+    attempt.change ? `change: ${clip(attempt.change, fieldChars)}` : null,
+    attempt.observation ? `observed: ${clip(attempt.observation, fieldChars)}` : null,
+    attempt.evidence?.length ? `evidence: ${clip(attempt.evidence.join(", "), fieldChars)}` : null,
     attempt.fixRecallId ? `fix recall: ${attempt.fixRecallId}` : null,
   ].filter(Boolean);
   return parts.join(" | ");
 }
 
-function formatThread(thread) {
+function formatThread(thread, options = {}) {
+  const attempts = Array.isArray(thread.attempts) ? thread.attempts : [];
+  const requested = Number(options.attemptLimit ?? DEFAULT_SHOW_ATTEMPTS);
+  const attemptLimit = Math.min(MAX_SHOW_ATTEMPTS, Math.max(1, Number.isFinite(requested) ? Math.floor(requested) : DEFAULT_SHOW_ATTEMPTS));
+  const omitted = Math.max(0, attempts.length - attemptLimit);
   const lines = [`Debug thread ${thread.threadId} [${thread.status}]: ${thread.title}`];
-  for (const [index, attempt] of thread.attempts.entries()) lines.push(formatAttempt(attempt, index));
-  if (!thread.attempts.length) lines.push("(no attempts recorded yet)");
+  if (omitted) lines.push(`(${omitted} earlier attempt(s) omitted; call show with attemptLimit=${Math.min(attempts.length, MAX_SHOW_ATTEMPTS)} for the full ledger)`);
+  for (let index = omitted; index < attempts.length; index++) lines.push(formatAttempt(attempts[index], index, options));
+  if (!attempts.length) lines.push("(no attempts recorded yet)");
   if (thread.resolution?.note) lines.push(`resolved: ${thread.resolution.note}`);
   return lines.join("\n");
 }
@@ -162,10 +180,10 @@ function openThreadsSummary(cwd) {
   for (const thread of open) {
     lines.push(`- ${thread.threadId}: ${thread.title} (${thread.attempts.length} attempts)`);
     const tried = thread.attempts.filter((attempt) => attempt.change && attempt.verdict !== "fixed").slice(-MAX_SUMMARY_ATTEMPTS);
-    if (tried.length) lines.push(`  already tried: ${tried.map((attempt) => `${attempt.change} (${attempt.verdict})`).join("; ")}`);
+    if (tried.length) lines.push(`  already tried: ${tried.map((attempt) => `${clip(attempt.change, SUMMARY_CHANGE_CHARS)} (${attempt.verdict})`).join("; ")}`);
   }
   if (allOpen.length > MAX_SUMMARY_THREADS) lines.push(`(+${allOpen.length - MAX_SUMMARY_THREADS} more open threads: use debug-list with status=open)`);
   return lines.join("\n");
 }
 
-module.exports = { openThread, recordAttempt, linkExperiment, resolveThread, listThreads, listThreadSummaries, showThread, formatThread, openThreadsSummary, STATE_DIR };
+module.exports = { openThread, recordAttempt, linkExperiment, resolveThread, listThreads, listThreadSummaries, showThread, formatThread, openThreadsSummary, STATE_DIR, DEFAULT_SHOW_ATTEMPTS, MAX_SHOW_ATTEMPTS, ATTEMPT_FIELD_CHARS, SUMMARY_CHANGE_CHARS };

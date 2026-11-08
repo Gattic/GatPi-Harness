@@ -105,6 +105,17 @@ assert.equal(boundedPage.returnedEntries, 50);
 assert.equal(boundedPage.nextOffset, 250);
 assert(boundedPage.text.length <= 5000);
 
+// Ordinary mutations render as compact text lines, not pretty-printed JSON.
+const textBefore = createRoadmap("Text plan", ["A", "B"]);
+const textAfter = setStatus(textBefore, "1", "done");
+const textMutation = roadmapMutationEnvelope(textBefore, textAfter, "set_status");
+assert(!textMutation.text.trimStart().startsWith("{"), "mutations render as text, not JSON");
+assert.match(textMutation.text, /^roadmap set_status: /);
+assert.match(textMutation.text, /^delta: \d+ changed, 0 removed · ids item-1/m);
+assert.match(textMutation.text, /^progress: /m);
+assert.equal(textMutation.resultChars, textMutation.text.length);
+assert(textMutation.text.length < JSON.stringify(textMutation.envelope, null, 2).length, "compact text is smaller than the pretty-printed envelope");
+
 let blockedOnly = createRoadmap("Blocked-only", [{ title: "Umbrella", subtasks: [{ title: "Goals", items: ["External dependency"] }] }]);
 blockedOnly = setStatus(blockedOnly, "1.1.1", "blocked", { note: "Waiting", autoAdvance: true });
 const blockedProgress = getProgress(blockedOnly);

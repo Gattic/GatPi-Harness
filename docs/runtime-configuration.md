@@ -210,16 +210,16 @@ The same extension registers `activate_tools`, one baseline model tool that answ
 
 ### Output-compactor canary
 
-Automatic compaction now defaults to a narrow selected-tool canary while the manual compatibility model tool remains command-only:
+Automatic bounding now defaults to the reviewed policy tool set while the manual compatibility model tool remains command-only:
 
 ```text
 PI_OUTPUT_COMPACTOR_MODE=off|canary|all       default: canary
-PI_OUTPUT_COMPACTOR_CANARY_TOOLS=evidence_binder,extension_ops,learning_loop,run_deck,run_topology,runtime_doctor,verification_center
-PI_OUTPUT_COMPACTOR_MAX_CHARS=2400
+PI_OUTPUT_COMPACTOR_CANARY_TOOLS=ast_refactor,ast_search,bash,bg_run,code_context,codegraph_context,codegraph_query,create_subagent,debug_ledger,docs_lookup,lsp,memory_curator,memory_explorer,read,roadmap_update,semgrep_codegraph,specialist_tasks,test_gap_planner,test_runner
+PI_OUTPUT_COMPACTOR_MAX_CHARS=2400            manual tool / bypass-observation threshold; per-tool caps come from src/tool-output-bounds.js
 PI_OUTPUT_COMPACTOR_MODEL_TOOL=0              default; set 1 only for manual compatibility testing
 ```
 
-Only results above the character threshold are eligible. `canary` modifies results from the reviewed tool set; other oversized structured results produce a bypass observation. Metadata-only feature signals store tool identifier, input/output/saved character counts, duration, coarse session kind, and a local-salt HMAC session token—never result content, details, paths, prompts, or arguments. `off` disables the hook without removing `/output-compact`; `all` is an explicit broad trial, not the default.
+Only results above their tool's cap are eligible. `canary` bounds results from the reviewed tool set; other oversized results produce a bypass observation. Head caps keep the start plus a continuation pointer (`read offset=`, docs/debug/roadmap paging); tail caps keep the end so failures and pi's truncation footer survive; structured caps compact JSON field-first. `verbose=true`, caller `maxChars`, already-budgeted native views, and results carrying image blocks are never rewritten. Metadata-only feature signals store tool identifier, input/output/saved character counts, duration, coarse session kind, and a local-salt HMAC session token—never result content, details, paths, prompts, or arguments. `off` disables the hook without removing `/output-compact`; `all` is an explicit broad trial, not the default.
 
 ## Automation loop
 
