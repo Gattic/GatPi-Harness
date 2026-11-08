@@ -40,7 +40,7 @@ assert.ok(!text(lib).includes("details.parsed ="), "parsed provider JSON is repl
 assert.ok(!text(lib).includes('["context", "-p"'), "adapter must not invoke the removed CodeGraph context command");
 assertContains(ext, "maxFiles");
 for (const obsolete of ["maxNodes", "maxCode", "noCode"]) assert.ok(!text(ext).includes(obsolete), `${ext} should not expose obsolete ${obsolete}`);
-for (const file of [lib, ext, "README.md", "docs/runtime-configuration.md", "docs/workflow-pack.md"]) {
+for (const file of [lib, ext, "wiki/extensions-and-commands.md", "docs/runtime-configuration.md", "docs/workflow-pack.md"]) {
   assert.ok(!text(file).includes("--no-code"), `${file} should not retain the removed CodeGraph context option`);
 }
 assert.ok(!text(lib).includes("--markdown"), `${lib} should not parse the removed CodeGraph context format option`);

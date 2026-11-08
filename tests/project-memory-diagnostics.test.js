@@ -75,10 +75,18 @@ try {
   const reviewState = path.join(root, "review", ".pi", "project-memory");
   fs.mkdirSync(reviewState, { recursive: true });
   const reviewFile = path.join(reviewState, "diagnostics.jsonl");
+  // Fixture timestamps are relative to this run: the diagnostic stream retains
+  // only the last 30 days, so hard-coded dates silently expire mid-test and
+  // make the resolution accounting depend on the wall clock.
+  const reviewNow = Date.now();
+  const reviewAt = (daysAgo) => new Date(reviewNow - daysAgo * 86400000).toISOString();
+  const oldestRequestAt = reviewAt(9);
+  const middleRequestAt = reviewAt(3);
+  const newestRequestAt = reviewAt(1);
   const reviewRows = [
-    { schemaVersion: 1, kind: "history", at: "2026-10-09T11:52:13.805Z", status: "requires-explicit-curator-review", sourceHash: "sha256:a" },
-    { schemaVersion: 1, kind: "procedure", at: "2026-10-15T18:17:32.466Z", status: "requires-explicit-curator-review", sourceHash: "sha256:b" },
-    { schemaVersion: 1, kind: "explicit-request", at: "2026-10-18T12:39:27.547Z", status: "requires-explicit-curator", promptHash: "sha256:c" },
+    { schemaVersion: 1, kind: "history", at: oldestRequestAt, status: "requires-explicit-curator-review", sourceHash: "sha256:a" },
+    { schemaVersion: 1, kind: "procedure", at: middleRequestAt, status: "requires-explicit-curator-review", sourceHash: "sha256:b" },
+    { schemaVersion: 1, kind: "explicit-request", at: newestRequestAt, status: "requires-explicit-curator", promptHash: "sha256:c" },
   ];
   fs.writeFileSync(reviewFile, `${reviewRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
   assert.deepEqual({ rows: diagnosticReviewSummary(reviewState).rows, unresolved: diagnosticReviewSummary(reviewState).unresolved }, { rows: 3, unresolved: 3 });
@@ -93,7 +101,7 @@ try {
   assert.equal(applied.resolved, 1);
   const after = diagnosticReviewSummary(reviewState);
   assert.deepEqual({ rows: after.rows, resolved: after.resolved, unresolved: after.unresolved }, { rows: 3, resolved: 1, unresolved: 2 });
-  assert.equal(after.oldestUnresolvedAt, "2026-10-15T18:17:32.466Z", "the oldest unresolved request moves forward after resolution");
+  assert.equal(after.oldestUnresolvedAt, middleRequestAt, "the oldest unresolved request moves forward after resolution");
   assert.equal(after.unresolvedByKind.history, undefined);
   const repeat = resolveDiagnosticReview({ stateDir: reviewState, keys: [pending.requests[0].key], apply: true });
   assert.equal(repeat.outcome, "not-applicable");

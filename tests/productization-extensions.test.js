@@ -330,7 +330,7 @@ assertContains("src/multi-agent-topologies.js", "compactToolContent");
 for (const recipe of ["refactor-with-safety-net", "dependency-upgrade", "failing-ci-triage", "performance-regression", "release-prep"]) assertContains("src/role-topologies.js", recipe);
 
 for (const heading of ["Recurring cross-agent session miner", "Rollout Center", "Ralph-style Automation Loop", "Run Monitor", "Session Stabilizer", "Privacy Guard", "Memory Explorer", "Project Profiler", "Test Gap Planner", "Memory Curator", "Policy Gate", "Performance Optimizer", "Code Context", "General Coding Workflow Tools", "Output Compactor", "Context Overflow Recovery", "Policy Enforcer", "Project Intelligence", "Evidence Binder", "Extension Ops Center", "Tool Surface Router", "Tool Churn Guard", "Roadmap", "Learning Loop Coordinator", "Expanded Topology Workflow Pack"]) assertContains("docs/productization-extensions.md", heading);
-for (const tool of ["lsp", "test_runner", "ast_search", "ast_refactor", "docs_lookup"]) assertContains("README.md", tool);
+for (const tool of ["lsp", "test_runner", "ast_search", "ast_refactor", "docs_lookup"]) assertContains("wiki/extensions-and-commands.md", tool);
 for (const stateDir of [".pi/code-context/", ".pi/test-runner/", ".pi/ast-refactor/"]) assertContains(".gitignore", stateDir);
 assertContains("scripts/check-extensions-smoke.sh", "node scripts/extension-smoke-runner.js all");
 assertContains("scripts/extension-smoke-runner.js", "discoverExtensionEntries");
