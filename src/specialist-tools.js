@@ -32,6 +32,9 @@ async function runDomain(input) {
   const addon = dispatch ? require("./specialist-blenderai").blenderAiBinding(contract.settings.blenderAi, cwd) : {};
   if (!Array.isArray(outputs) || !outputs.length || outputs.length > 4 || new Set(outputs).size !== outputs.length || outputs.some(name => safeRelative(name) !== name || pathForbidden(name) || !/\.(blend|glb|png|json)$/.test(name) || !policy.writeZones.some(zone => name === zone || (zone.endsWith("/") && name.startsWith(zone))))) throw new Error("SPECIALIST_OUTPUT_PATH_DENIED");
   const quota = Math.min(contract.settings.domainInput.maxBytes, policy.storageBytes, 16777216);
+  // Admit the minimum output allocation before containment so a storage-budget
+  // failure is reported even when the containment backend is unavailable.
+  assertWriteAllocation(cwd, policy, outputs.map(name => ({ name, size: 1 })));
   const script = [
     "import runpy, os, json, base64, pathlib",
     "os.environ['PI_ASSET_OUTPUT_DIR'] = '/output'",
