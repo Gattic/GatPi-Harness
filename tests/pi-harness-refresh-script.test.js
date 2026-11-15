@@ -101,6 +101,8 @@ fi
     AGENT_SKILLS_DIR: agentSkills,
     PI_REFRESH_TEST_LOG: log,
   };
+  // The fixture config, not the caller's shell environment, must select the Pi source.
+  delete env.PI_SOURCE_ROOT;
   return {
     root: fixtureRoot,
     script: path.join(scriptsDir, "pi-harness-refresh.sh"),
