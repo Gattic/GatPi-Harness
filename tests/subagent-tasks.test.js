@@ -14,7 +14,7 @@ const { MemoryJsonStorage, MemoryEvidenceStore, MultiAgentTopologyAdapter } = re
 const { SubagentService, SubagentRunner } = require("../src/subagents");
 const { createRoleResultEnvelope } = require("../src/role-result-schemas");
 const { selectSeedPatches } = require("../src/subagent-workspaces");
-const { capabilityStatus, sandboxCommand, runContained, executable, executableFingerprint } = require("../src/specialist-tools");
+const { capabilityStatus, sandboxCommand, runContained, executable, executableFingerprint, containmentProbe } = require("../src/specialist-tools");
 const { tmpFixture } = require("./helpers/tmp-fixture");
 
 const roles = DEFAULT_ROLE_CONTRACTS;
@@ -262,7 +262,7 @@ function git(cwd, args) { return execFileSync("git", args, { cwd, encoding: "utf
     assert.equal(cancelled.status, "cancelled");
     assert.equal(cancelled.tasks.tasks[0].attempts.length, 1);
     assert.deepEqual(baseline(cwd), inheritedBase);
-    if (executable("bwrap")) {
+    if (containmentProbe().available) {
       const localTool = path.join(cwd, ".pi", "unreviewed-runtime", "bin", "tool");
       fs.mkdirSync(path.dirname(localTool), { recursive: true });
       fs.writeFileSync(localTool, "#!/bin/sh\ntrue\n", { mode: 0o700 });

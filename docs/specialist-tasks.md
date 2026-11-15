@@ -43,6 +43,35 @@ arbitrary skills.
 The Linux containment path requires usable bubblewrap and system-runtime tools
 (or the explicitly reviewed private Blender/Lean/REA runtimes described below). It confines filesystem visibility and disables network access; target binaries are
 never executed by static analysis. Ordinary worktrees alone are not a sandbox.
+
+### Unprivileged namespace probe and net-unshare fallback
+
+A gbig01 probe (Ubuntu 24.04.4, kernel 6.8.0-147, user `rob`) found bubblewrap
+0.9.0 installed at `/usr/bin/bwrap` but not setuid. `kernel.unprivileged_userns_clone=1`
+and `user.max_user_namespaces=313622`, but `kernel.apparmor_restrict_unprivileged_userns=1`.
+`unshare -Ur`, `unshare -Urn`, `unshare -Urn --mount-proc`, and bwrap
+`--unshare-user`, `--unshare-all`, `--unshare-user-try`, and
+`--unshare-all --share-net` all fail; bwrap reports
+`loopback: Failed RTM_NEWADDR: Operation not permitted` and
+`setting up uid map: Permission denied`. The containment probe therefore reports
+`bwrap-unusable`. `sudo -n` requires a password, so a privileged bwrap fallback
+is not available on this host.
+
+The probe tries full bwrap containment first, then a net-shared (`--share-net`)
+fallback when network unsharing is the only unavailable layer. If neither works,
+`containmentProbe()` returns unavailable and includes the failing bwrap stderr in
+its reason (for example `bwrap-unusable: loopback: Failed RTM_NEWADDR: Operation
+not permitted`).
+
+Specialist task RPC then falls back to the non-namespaced direct transport. The
+sidecar still runs in a harness-owned process group with cancellation, RSS and
+output bounds, but PID-namespace parent-death cleanup is unavailable. The
+fallback is reported as `transport=direct` and `containment=unavailable`, with
+the probe reason retained. Preflight blocks tasks whose acceptance criteria or
+domain execution require contained commands; fixtures with their own verifier
+runner remain runnable. Contained-command fixtures skip without claiming a pass.
+These host results are environment evidence, not proof that another host supports
+namespaces.
 User-wide cooperative worker leases cap specialist-task RPC, contained-command and
 build runners at two concurrent workers. Nested approved tools reuse their owned
 worker slot. Unmanaged host processes are outside this admission mechanism.

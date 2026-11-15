@@ -159,7 +159,15 @@ class SubagentTaskService {
     const reasons = [];
     if (!this.topologies.enabled) reasons.push("task-topologies-disabled");
     const containment = containmentProbe();
-    if (!containment.available) reasons.push(containment.reason);
+    // Task RPC can fall back to the non-namespaced direct transport, but
+    // contained command and domain execution cannot. Block only the tasks that
+    // actually require bwrap; a fixture or custom verifier with its own runner
+    // remains executable under the degraded transport.
+    if (!containment.available && graph.tasks.some(spec =>
+      spec.acceptanceCriteria.some(criterion => criterion.required && criterion.kind === "executable" && !this.verifiers.get(criterion.verifierId)?.run) ||
+      Boolean(spec.domainInput) ||
+      ["reverse-engineer", "3d-modeler"].includes(spec.roleId)
+    )) reasons.push(containment.reason);
     const current = baseline(this.cwd);
     const inventory = this.storage.readJson("specialist-task-index", []);
     if (!resumeRunId && inventory.length >= this.retentionRuns) reasons.push("retained-run-limit");

@@ -27,6 +27,7 @@ const { ROLE_RESULT_SCHEMA_VERSION, ROLE_CONTRACT_VERSION, RESULT_STATUSES, crea
 const { SubagentWorkspaceManager } = require("./subagent-workspaces");
 const { SubagentPatchService } = require("./subagent-patches");
 const { createDiagnosticEvidenceCollector } = require("./diagnostic-evidence");
+const { containmentProbe } = require("./specialist-tools");
 const { resolveRoleRuntimeConfig, assertRoleRuntimeExecutionAllowed } = require("./role-runtime-rollout");
 const { SKILL_AWARENESS_MARKER, skillAwarenessPrompt } = require("./skill-awareness");
 const { processIdentity } = require("./resource-guard");
@@ -610,14 +611,16 @@ class SubagentRunner {
     const messagesId = `subagent_messages_${record.id}`;
     const visionStateId = `subagent_vision_${record.id}`;
     let visionReady = images.length === 0;
-    const taskContained = Boolean(record.roleContract?.settings?.taskPolicy);
+    const taskRpc = Boolean(record.roleContract?.settings?.taskPolicy);
+    const containment = taskRpc ? containmentProbe() : null;
+    const taskContained = taskRpc && containment.available;
     const executable = taskContained ? require("./specialist-tools").executable("bwrap") : command;
     if (!executable) throw new Error("task RPC parent-death containment is unavailable");
     // The root bind is nodev, so ignored stdio needs a usable /dev/null.
     // Bind only that device: retain other device paths for explicitly granted
     // inner --dev-bind operations without enabling host-device access here.
     const launchArgs = taskContained ? ["--die-with-parent", "--unshare-pid", "--new-session", "--bind", "/", "/", "--proc", "/proc", "--dev-bind", "/dev/null", "/dev/null", "--chdir", cwd, "--", command, ...args] : args;
-    const worker = taskContained ? await acquireManagedWorker() : null;
+    const worker = taskRpc ? await acquireManagedWorker() : null;
     let child;
     try { child = spawn(executable, launchArgs, { cwd, env: { ...env, ...worker?.environment }, detached: true, stdio: ["pipe", "pipe", "pipe"] }); }
     catch (error) { await worker?.release(); throw error; }
@@ -641,7 +644,7 @@ class SubagentRunner {
     let stderr = "";
     let agentEnd = null;
     let agentSettled = false;
-    const configurationCommands = taskContained ? ["set_auto_retry"] : [];
+    const configurationCommands = taskRpc ? ["set_auto_retry"] : [];
     let configurationIndex = 0;
     let state = null;
     let messages = null;
@@ -747,13 +750,13 @@ class SubagentRunner {
         else send({ id: promptId, type: "prompt", message: prompt, ...(images.length ? { images } : {}) });
       };
       const requestCompletionSnapshot = () => {
-        if (snapshotRequested || !agentEnd || (taskContained && !agentSettled)) return;
+        if (snapshotRequested || !agentEnd || (taskRpc && !agentSettled)) return;
         snapshotRequested = true;
         send({ id: stateId, type: "get_state" });
         send({ id: messagesId, type: "get_messages" });
       };
       const maybeResolve = () => {
-        if (settled || promptAcceptedMs === null || !agentEnd || !stateDone || !messagesDone || (taskContained && !agentSettled)) return;
+        if (settled || promptAcceptedMs === null || !agentEnd || !stateDone || !messagesDone || (taskRpc && !agentSettled)) return;
         const effectiveModel = modelPattern(state?.model);
         const effectiveThinkingLevel = state?.thinkingLevel || null;
         if (record.roleContract && (effectiveModel !== launch.provenance?.selectedModel || effectiveThinkingLevel !== launch.provenance?.selectedThinkingLevel)) {
@@ -784,6 +787,9 @@ class SubagentRunner {
           thinking_policy_source: launch.provenance?.thinkingPolicySource || null,
           pi_session_file: noSession ? null : state?.sessionFile || null,
           rpc_session_dir: noSession ? null : sessionDir,
+          transport: taskContained ? "bwrap-pid-namespace" : "direct",
+          containment: taskRpc ? (taskContained ? "bwrap" : "unavailable") : null,
+          containment_reason: taskRpc && !taskContained ? containment.reason : null,
           ...validation.diagnostics,
         });
       };
@@ -793,7 +799,7 @@ class SubagentRunner {
         interrupt: (reason) => { if (settled) return false; const error = abortError(String(reason || "subagent interrupted").slice(0, 240)); error.code = "SUBAGENT_INTERRUPTED"; error.termination = { code: "interrupted", stopReason: "interrupted", messageCode: "interrupted" }; fail(error); return true; },
       });
       rssMonitor = watchOwnedProcessGroupRss(ownership, {
-        includeDescendants: taskContained,
+        includeDescendants: taskRpc,
         limitBytes: guardConfig.rssLimitBytes,
         pollMs: guardConfig.rssPollMs,
         onExceeded: (usage) => {

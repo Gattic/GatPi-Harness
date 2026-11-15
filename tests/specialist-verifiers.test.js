@@ -8,7 +8,7 @@ const { acquireManagedWorker } = require("../src/resource-guard");
 const { digest } = require("../src/subagent-task-contracts");
 const { validateRoleSubmission } = require("../src/role-result-schemas");
 const { DEFAULT_ROLE_CONTRACTS } = require("../src/role-contracts");
-const { runContained, runDomain, domainCommand, executable, guardMutation } = require("../src/specialist-tools");
+const { runContained, runDomain, domainCommand, executable, guardMutation, containmentProbe } = require("../src/specialist-tools");
 const { tmpFixture } = require("./helpers/tmp-fixture");
 function glb({ nonfinite = false, external = false, asset = { version: "2.0", extras: { sourceUnits: "meters", sourceAxes: "Z-up" } } } = {}) {
   const vertices = Buffer.alloc(36); if (nonfinite) vertices.writeFloatLE(NaN, 0); else { vertices.writeFloatLE(1, 12); vertices.writeFloatLE(1, 28); }
@@ -79,7 +79,7 @@ function glb({ nonfinite = false, external = false, asset = { version: "2.0", ex
     const first = await acquireManagedWorker({ root: lockRoot }), second = await acquireManagedWorker({ root: lockRoot });
     await assert.rejects(() => acquireManagedWorker({ root: lockRoot }), /capacity exhausted/);
     await first.release(); const third = await acquireManagedWorker({ root: lockRoot }); await second.release(); await third.release();
-    if (executable("bwrap") && executable("readelf")) {
+    if (containmentProbe().available && executable("readelf")) {
       fs.copyFileSync("/usr/bin/true", path.join(cwd, "target.elf"));
       const sha256 = digest(fs.readFileSync(path.join(cwd, "target.elf"))).slice(7);
       const check = staticElfVerifier({ target: "target.elf", sha256, roundTripSection: ".interp" });

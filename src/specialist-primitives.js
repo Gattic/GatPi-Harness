@@ -64,11 +64,13 @@ function confinedFile(cwd, relative) {
   if (!file.startsWith(`${root}${path.sep}`) || !fs.statSync(file).isFile()) throw new Error("SPECIALIST_PATH_DENIED");
   return file;
 }
-function sandboxCommand({ cwd, command, args = [], writable = false, runtimeRoot, addonRoot, readZones, writeZones = [], outputBytes, gpuDevices = [], hardwareMetadata = false, privateShm = false, env = process.env }) {
+let containmentMode = null;
+function sandboxCommand({ cwd, command, args = [], writable = false, runtimeRoot, addonRoot, readZones, writeZones = [], outputBytes, gpuDevices = [], hardwareMetadata = false, privateShm = false, netUnshare = containmentMode?.netUnshare ?? true, env = process.env }) {
   const bwrap = executable("bwrap", env), binary = executable(command, env);
   if (!bwrap || !binary) throw new Error("SPECIALIST_TOOL_UNAVAILABLE");
   const root = fs.realpathSync(cwd);
   const argv = ["--die-with-parent", "--unshare-all", "--new-session", "--clearenv", "--proc", "/proc", "--dev", "/dev", "--size", String(privateShm ? 15728640 : 16777216), "--tmpfs", "/tmp", "--dir", "/home", "--setenv", "HOME", "/tmp", "--setenv", "PATH", "/usr/bin:/bin:/runtime/bin", "--setenv", "LANG", "C.UTF-8"];
+  if (!netUnshare) argv.push("--share-net");
   // Nsight's process waiter needs POSIX semaphores. Carve private shared memory
   // out of the existing scratch allowance; never bind the host's /dev/shm.
   if (privateShm) argv.push("--size", "1048576", "--tmpfs", "/dev/shm");
@@ -222,12 +224,24 @@ function guardMutation({ cwd, contract, tool, input }) {
   const size = tool === "write" ? Buffer.byteLength(content) : fs.lstatSync(path.join(cwd, name)).size + Math.max(0, Buffer.byteLength(String(input.newText || "")) - Buffer.byteLength(String(input.oldText || "")));
   assertWriteAllocation(cwd, policy, [{ name, size }]);
 }
-function containmentProbe() {
-  const binary = executable("bwrap");
-  if (!binary) return { available: false, reason: "bwrap-unavailable" };
-  const launch = sandboxCommand({ cwd: process.cwd(), command: "/usr/bin/true" });
+function probeContainment(netUnshare) {
+  const launch = sandboxCommand({ cwd: process.cwd(), command: "/usr/bin/true", netUnshare });
   const result = spawnSync(launch.command, launch.args, { timeout: 3000, encoding: "utf8", env: launch.env });
-  return { available: result.status === 0, reason: result.status === 0 ? null : "bwrap-unusable" };
+  if (result.status === 0) return { ok: true };
+  const detail = String(result.stderr || result.stdout || result.error?.message || "").trim().slice(0, 300);
+  return { ok: false, reason: detail || `exit-${result.status ?? "unknown"}` };
+}
+function containmentProbe() {
+  if (containmentMode) return containmentMode;
+  const binary = executable("bwrap");
+  if (!binary) { containmentMode = { available: false, reason: "bwrap-unavailable" }; return containmentMode; }
+  const full = probeContainment(true);
+  if (full.ok) { containmentMode = { available: true, reason: null, netUnshare: true }; return containmentMode; }
+  const fallback = probeContainment(false);
+  if (fallback.ok) { containmentMode = { available: true, reason: null, netUnshare: false, degraded: "net-unshare-skipped" }; return containmentMode; }
+  const detail = fallback.reason || full.reason;
+  containmentMode = { available: false, reason: detail ? `bwrap-unusable: ${detail}` : "bwrap-unusable" };
+  return containmentMode;
 }
 
 module.exports = { executable, executableFingerprint, inSystemRuntime, blenderRuntimeBinding, confinedFile, sandboxCommand, runContained, assertWriteAllocation, guardMutation, containmentProbe };
