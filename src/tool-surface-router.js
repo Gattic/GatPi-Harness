@@ -143,6 +143,52 @@ const GROUPS = Object.freeze([
     ],
     tools: ["evidence_binder", "evidence_inbox", "test_gap_planner", "verification_center"],
   },
+  {
+    id: "structural-edit",
+    pattern: /\b(ast_refactor|ast_search|structural (?:edit|refactor)|mechanical refactor|lexical (?:search|rename)|declaration (?:search|outline))\b/i,
+    primary: "ast_search",
+    selectors: [
+      { tool: "ast_refactor", pattern: /\b(ast_refactor|structural (?:edit|refactor)|mechanical refactor|rename (?:a )?symbol)\b/i },
+    ],
+    tools: ["ast_search", "ast_refactor"],
+  },
+  {
+    id: "code-intelligence",
+    pattern: /\b(lsp|compiler|type[- ]?check(?:er)?|language server|go to definition|find references|symbol rename)\b/i,
+    primary: "lsp",
+    selectors: [],
+    tools: ["lsp"],
+  },
+  {
+    id: "project-scope",
+    pattern: /\b(project_scope|other project|another (?:project|repo|repository|directory)|cross[- ]project|\.pi state)\b/i,
+    primary: "project_scope",
+    selectors: [],
+    tools: ["project_scope"],
+  },
+  {
+    id: "background-run",
+    pattern: /\b(bg_run|detached|background (?:job|run)|full (?:build|test )?suite|dev server)\b/i,
+    primary: "bg_run",
+    selectors: [],
+    tools: ["bg_run"],
+  },
+  {
+    id: "build-test",
+    pattern: /\b(build_project|test_project|compile|cmake|ninja|configure the build|run the build|build fails?|test suite)\b/i,
+    primary: "build_project",
+    selectors: [
+      { tool: "test_project", pattern: /\b(test_project|test suite|run (?:the )?test suite)\b/i },
+    ],
+    tools: ["build_project", "test_project"],
+  },
+  {
+    id: "specialists",
+    pattern: /\b(specialist_tasks|specialist task|task graph|executable acceptance)\b/i,
+    primary: "specialist_tasks",
+    selectors: [],
+    tools: ["specialist_tasks"],
+  },
 ]);
 
 const MANAGED_TOOL_NAMES = Object.freeze(Array.from(new Set(GROUPS.flatMap((group) => group.tools))).sort());

@@ -13,6 +13,8 @@ const {
 
 const all = [
   "read", "bash", "edit", "write", "test_runner", "repo_context",
+  "lsp", "ast_search", "ast_refactor", "docs_lookup", "project_scope", "bg_run",
+  "build_project", "test_project", "specialist_tasks", "codemode",
   "debug_ledger", "fix_recall", "safe_try", "evidence_inbox",
   "create_subagent", "run_topology", "skill_synthesis", "automation_loop",
   "codegraph_status", "codegraph_query", "codegraph_context", "codegraph_affected", "codegraph_sync", "codegraph_doctor",
@@ -56,6 +58,22 @@ assert.deepEqual(baseline.selectedTools, []);
 assert(baseline.activeTools.includes("read") && baseline.activeTools.includes("test_runner"));
 assert(!baseline.activeTools.includes("run_topology"));
 assert(!Object.prototype.hasOwnProperty.call(baseline, "prompt"), "router does not return or persist prompt text");
+// Task-scoped tools stay off the startup surface so their schemas and guidance
+// are not resent on every turn; each remains reachable by intent or activation.
+for (const tool of ["lsp", "ast_search", "ast_refactor", "project_scope", "bg_run", "build_project", "test_project", "specialist_tasks"]) {
+  assert(MANAGED_TOOL_NAMES.includes(tool), `${tool} is task-routed, not baseline`);
+  assert(!baseline.activeTools.includes(tool), `${tool} stays off the startup surface`);
+}
+assert(baseline.activeTools.includes("docs_lookup") && baseline.activeTools.includes("codemode"), "docs_lookup and codemode stay baseline for the native hybrid surface");
+assert.deepEqual(route("Check the language server diagnostics for the edit").selectedTools, ["lsp"]);
+assert.deepEqual(route("Run a structural refactor on this helper").selectedTools, ["ast_refactor"]);
+assert.deepEqual(route("Do a lexical search for the declaration").selectedTools, ["ast_search"]);
+assert.deepEqual(route("Read the .pi state of another project").selectedTools, ["project_scope"]);
+assert.deepEqual(route("Start a detached full suite run").selectedTools, ["bg_run"]);
+assert.deepEqual(route("Compile the project with cmake").selectedTools, ["build_project"]);
+assert.deepEqual(route("Run the test suite").selectedTools, ["test_project"]);
+assert.deepEqual(route("Create a specialist task graph").selectedTools, ["specialist_tasks"]);
+assert.deepEqual(route("Attach this screenshot to a proof packet").selectedTools, ["evidence_binder"]);
 for (const prompt of ["", "Investigate and fix the flaky cache invalidation", "Review then commit our changes", "Continue", "Explain this local function"]) {
   const routed = route(prompt, { env: { PI_TOPOLOGY_AUTO_ROUTE: "off" } });
   assert(routed.baselineTools.includes("roadmap_update"), "startup and ordinary tasks retain proactive planning without requesting a roadmap");

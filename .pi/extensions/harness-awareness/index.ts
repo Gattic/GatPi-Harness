@@ -61,7 +61,7 @@ const AWARENESS = [
   },
 ];
 
-const ACTIVATION_HINT = "More optional harness tools (debug ledger, fix recall, safe try, evidence inbox, run deck, run monitor, experiment ledger, automation loop, commit plan, delegation/topology, memory/vault, codegraph, semgrep, evidence, CI, queue, extension governance) activate when a request matches their task or by name with activate_tools({ tools: [names] }); activate_tools with no arguments lists them with current state and blockers.";
+const ACTIVATION_HINT = "More optional harness tools (structural edit/AST, LSP diagnostics, project scope, long runs, build/test, specialist tasks, debug ledger, fix recall, safe try, evidence inbox, run deck, run monitor, experiment ledger, automation loop, commit plan, delegation/topology, memory/vault, codegraph, semgrep, evidence, CI, queue, extension governance) activate when a request matches their task or by name with activate_tools({ tools: [names] }); activate_tools with no arguments lists them with current state and blockers.";
 
 const HELP_TEXT = `${AWARENESS.map((entry) => entry.text).join("\n")}\n\n${ACTIVATION_HINT}\n\nHuman commands: /build /test /bg /bg-status /run-status /runs /run-launch /run-attach /monitor-start /monitor-status /monitors /exp-open /exp-gate /exp-list /loop /loop-status /loop-pause /loop-resume /loop-stop /debug-open /debug-list /fix-recall /try /try-revert /repo-context /project-scope /commit-plan /subagent-fanout /evidence /harness-metrics`;
 

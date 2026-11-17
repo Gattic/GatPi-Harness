@@ -103,7 +103,7 @@ export default function toolSurfaceRouter(pi: ExtensionAPI) {
   pi.registerTool({
     name: "activate_tools",
     label: "Activate optional tools",
-    description: "Activate optional harness tools that the task router keeps off the default tool surface (debug ledger, fix recall, safe try, evidence inbox, run deck, run monitor, experiment ledger, automation loop, commit plan, delegation/topology, memory/vault, codegraph, semgrep, evidence, CI, queue, extension governance). Call with no arguments to list every optional tool with its state and blockers; pass tools: [names] to activate them for this session. Activation is additive and session-scoped; configuration and provider gates still apply.",
+    description: "Activate optional harness tools that the task router keeps off the default tool surface (structural edit/AST, LSP diagnostics, project scope, long runs, build/test, specialist tasks, debug ledger, fix recall, safe try, evidence inbox, run deck, run monitor, experiment ledger, automation loop, commit plan, delegation/topology, memory/vault, codegraph, semgrep, evidence, CI, queue, extension governance). Call with no arguments to list every optional tool with its state and blockers; pass tools: [names] to activate them for this session. Activation is additive and session-scoped; configuration and provider gates still apply.",
     parameters: Type.Object({
       tools: Type.Optional(Type.Array(Type.String(), { description: "Optional tool names to activate; omit to list the catalog" })),
     }),
