@@ -2,7 +2,7 @@
 
 Generated from portfolio schema 4.
 
-- Extensions: 53
+- Extensions: 54
 - Tool decisions: 72
 - Default active model tools: 67 -> 66 (reduction 1)
 - Observation: 0.48 days / 30 required (insufficient-data; source=classified-interactive-audit-unavailable)
@@ -59,6 +59,7 @@ Generated from portfolio schema 4.
 - [runtime-doctor](./runtime-doctor.md) — enabled; model exposure=default
 - [safe-try](./safe-try.md) — enabled; model exposure=default
 - [semgrep](./semgrep.md) — enabled; model exposure=default
+- [skill-lazy](./skill-lazy.md) — enabled; model exposure=none
 - [test-gap-planner](./test-gap-planner.md) — enabled; model exposure=default
 - [test-runner](./test-runner.md) — enabled; model exposure=default
 - [tool-churn-guard](./tool-churn-guard.md) — enabled; model exposure=none

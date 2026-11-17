@@ -202,6 +202,8 @@ The consolidated portfolio has 65 parent-visible tool decisions before model-exp
 
 The same extension registers `activate_tools`, one baseline model tool that answers what prompt routing alone cannot: which optional tools exist, which are blocked by configuration or a missing provider, and which are ineligible in a restricted session. Activation is additive and session-scoped, and it applies the router's eligibility and readiness gates, so it cannot widen a child-role surface or bypass `PI_*=0`/provider checks. Advisory context follows the same rule: the harness-awareness block names only tools that are declared and points at `activate_tools` for the rest, while the debug, experiment and run-deck summaries keep their durable state but name the activation path instead of claiming a tool the model may not have. This matters because the router strips optional groups at session start: a prompt that does not match any task group (for example a fleet migration request) previously left injected text naming `debug_ledger`, `experiment_ledger` and `run_deck` while none of them was declared.
 
+`extensions/skill-lazy/index.ts` keeps project-scope skills fully described and replaces the user-scope skill catalog with a compact index of names grouped by skill directory. Pi otherwise advertises every discovered skill name, description and path on every request; with the installed global library that is the largest fixed prompt section. The model reads `<dir>/<name>/SKILL.md` when a task matches a name, so bodies stay out of context until needed. Skills hidden by `disable-model-invocation` stay unadvertised. The hook mutates the mutable `before_agent_start` prompt options, so the reduction is persisted in the structured sections, and it rewrites an already-forced prompt text when another extension ran first. Disable with `PI_SKILL_LAZY=0`; project skills are unaffected.
+
 `extensions/tool-churn-guard/index.ts` observes tool lifecycle metadata and appends one result advisory after repeated process polls, unchanged Git checks, Roadmap status churn, policy approval churn, or identical failed calls. Persisted entries contain tool, operation, count, timestamp, and fixed reason only. Disable either hook with `PI_TOOL_SURFACE_ROUTER=0` or `PI_TOOL_CHURN_GUARD=0`.
 
 ### Exact-source telemetry and operation canaries
@@ -314,6 +316,7 @@ PI_TOPOLOGY_AUTO_ROUTE_COOLDOWN_MS=5000 debounce automatic run starts
 PI_SKILL_INTAKE_ENABLED=0               disable explicit local governed skill intake
 PI_SKILL_INJECT_MAX=1                   maximum hot-path skill suggestion count
 PI_SKILL_INJECT_MIN_SCORE=0.5           fixed relevance floor; lower-scoring skills stay out of prompt context
+PI_SKILL_LAZY=0                        keep full user-scope skill descriptions in the system prompt instead of the lazy name index
 PI_SKILL_GOVERNANCE_V2=0               rollback ranking only; v2 evidence/approval status remains visible
 PI_SUBAGENT_STATE_ROOT=/tmp/pi-subagents override direct role-state storage (primarily for isolated smoke tests)
 # Nested delegation is fixed off; live subagent depth is one.

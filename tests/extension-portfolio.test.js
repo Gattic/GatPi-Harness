@@ -28,7 +28,7 @@ const inventory = scanExtensionRegistry({
 const telemetry = { eventCount: 90, firstAt: "2026-07-25T20:58:38.186Z", lastAt: "2026-07-26T08:30:45.132Z" };
 const report = portfolioReport(inventory, telemetry);
 assert.equal(PORTFOLIO_SCHEMA_VERSION, 4);
-assert.equal(report.summary.extensions, 53);
+assert.equal(report.summary.extensions, 54);
 assert.equal(report.summary.tools, 72);
 assert.equal(report.summary.defaultActiveToolsBefore, 67, "parent-visible baseline includes native codemode, the optional-tool activation control, project_scope, the sectioned-write append tool, and excludes child-only role tools");
 assert.equal(report.summary.defaultActiveToolsAfter, 66, "the manual output compactor remains command-only");
