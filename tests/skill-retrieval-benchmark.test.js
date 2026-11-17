@@ -3,7 +3,9 @@
 const assert = require("node:assert/strict");
 const { createPiIntegrationBoundary, MemoryJsonStorage } = require("../src/integration-boundary");
 
-const boundary = createPiIntegrationBoundary({ storage: new MemoryJsonStorage() });
+// Fixed fixture: exclude ambient native skills (~/.agents/skills) and the repo
+// curated pack so retrieval depends only on the providers registered below.
+const boundary = createPiIntegrationBoundary({ storage: new MemoryJsonStorage(), skills: { options: { loadNative: false, loadCurated: false } } });
 boundary.skills.registerProvider({ providerId: "bench", skills: [
   { name: "Debug failing tests", description: "Inspect failure, patch code, run targeted tests", category: "debugging", triggerConditions: ["failing tests", "test failure"], requiredTools: ["read", "edit", "bash"], workflowSteps: [{ description: "Inspect failing test" }, { description: "Patch root cause" }, { description: "Run tests" }], validationStrategy: { kind: "command", commands: ["npm test"] }, confidenceScore: 0.91 },
   { name: "Documentation update", description: "Update README and verify examples", category: "documentation", triggerConditions: ["docs", "readme"], requiredTools: ["read", "edit"], workflowSteps: [{ description: "Edit docs" }, { description: "Run example" }], validationStrategy: { kind: "evidence", requiredEvidence: ["example output"] }, confidenceScore: 0.86 },
