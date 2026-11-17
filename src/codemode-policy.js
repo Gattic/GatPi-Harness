@@ -9,9 +9,9 @@ const CODEMODE_OPERATIONS = Object.freeze({
   docs_lookup: ["status", "search", "read", "package"],
   test_runner: ["status", "listProfiles", "infer"],
 });
-const GUIDANCE = "Harness CodeMode: only read/grep/find/ls, code_context, docs_lookup and test_runner status/listProfiles/infer are callable when eligible. ALL_TOOLS, searchTools and describeTool cover only those CodeMode-callable tools, not the session's declared tool surface; optional harness tools stay direct and activate through activate_tools or an explicit request. Shell, mutations, verification execution, approvals, delegation and supervision stay direct. models and persistent store writes are disabled. Limits: 60s, 32 calls, 4 in flight, 2000 output tokens. Nested outcomes remain authoritative even if caught or omitted from output; script completion is not verification.";
+const GUIDANCE = "Harness CodeMode: when eligible, only read/grep/find/ls, code_context, docs_lookup and test_runner status/listProfiles/infer are callable. ALL_TOOLS, searchTools and describeTool cover only those CodeMode-callable tools, not the session's declared tool surface; optional harness tools stay direct and activate through activate_tools. Shell, mutations, verification execution, approvals, delegation and supervision stay direct; models and persistent store writes are disabled. Limits: 60s, 32 calls, 4 in flight, 2000 output tokens. Nested outcomes remain authoritative even if caught or omitted; script completion is not verification.";
 
-const OUTPUT_CONTRACT = "When using CodeMode, finish deterministic selection and aggregation inside the script. Return only the requested result and source paths; do not emit intermediate tool outputs or collections when the requested answer is small.";
+const OUTPUT_CONTRACT = "When using CodeMode, finish selection and aggregation inside the script; return only the requested result and source paths.";
 
 function callableTool(tool) { return Object.hasOwn(CODEMODE_OPERATIONS, tool.name); }
 function scriptTool(tool) {

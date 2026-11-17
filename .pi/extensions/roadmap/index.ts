@@ -53,9 +53,9 @@ const {
 } = require("../../../src/roadmap-telemetry.js");
 
 const ENABLED = process.env.PI_ROADMAP !== "0";
-const ROADMAP_USAGE_GUIDELINE = "Use roadmap_update proactively for substantive multi-step work (investigation, implementation, and verification), even when topology routing is off; do not wait for an explicit tracking request. Simple answers and one-step tasks do not need a roadmap.";
-const ROADMAP_PROGRESS_GUIDELINE = "Keep roadmap_update current within the current task's scope at material transitions and before the final response: mark completed work done; leave unstarted work pending and mark blocked/paused only for actual blockers or pauses. Use verified only with current evidenceId. Do not infer completion from a plan or a delegated result alone. Continue the canonical parent after passing increments; report root required outcomes separately from recursive workflow counts.";
-const ROADMAP_BATCH_GUIDELINE = "Settle several items in one call instead of one call per item: set_status accepts itemIds, and cascade=true also marks pending/active nested descendants deepest-first, so a finished milestone and its goals complete together.";
+const ROADMAP_USAGE_GUIDELINE = "Use roadmap_update proactively for substantive multi-step work (investigation, implementation, verification); do not wait for an explicit tracking request. Simple answers and one-step tasks need no roadmap.";
+const ROADMAP_PROGRESS_GUIDELINE = "Keep roadmap_update current within the current task's scope at material transitions and before the final response: mark completed work done; leave unstarted work pending and mark blocked/paused only for actual blockers or pauses. Use verified only with current evidenceId; never infer completion from a plan or delegated result. Continue the canonical parent and report root outcomes separately from recursive workflow counts.";
+const ROADMAP_BATCH_GUIDELINE = "Settle several items per call: set_status accepts itemIds and cascade=true completes pending/active nested descendants deepest-first.";
 const rawWidgetMaxItems = Number(process.env.PI_ROADMAP_WIDGET_ITEMS || 6);
 const WIDGET_MAX_ITEMS = Number.isFinite(rawWidgetMaxItems) ? Math.max(1, rawWidgetMaxItems) : 6;
 const STATUS_VALUES = ["pending", "active", "done", "verified", "verified-unsubstantiated", "blocked", "paused", "shelved", "skipped", "archived"] as const;
@@ -604,12 +604,12 @@ export default function roadmapExtension(pi: ExtensionAPI) {
       ROADMAP_USAGE_GUIDELINE,
       ROADMAP_PROGRESS_GUIDELINE,
       ROADMAP_BATCH_GUIDELINE,
-      "Roadmaps are bound to the session that owns them, so concurrent sessions in one directory keep independent plans. When no roadmap is active, action=show lists earlier roadmaps in the directory and action=adopt roadmapId=<id> continues one instead of starting a duplicate.",
-      "Before executing a genuinely new plan, call start or explicitly authorized replace with milestones; each phase/milestone must be a roadmap task and each milestone's goals must be items in its nested subtask roadmap. A continuation or compaction is not a new plan: show the canonical root and resume existing item IDs with active/resume. Keep permanent tracking at milestone/goal depth; ordinary inspect/build/test steps belong in notes and evidence, not another implementation wrapper.",
-      "Report stable root required outcomes completed/total and blocked outcomes separately from recursive workflow counts. Only an explicit scope decision changes the outcome inventory. A passing phase is progress, not completion of the parent plan; continue dependency-ready authorized outcomes.",
-      "Use roadmap_update action=add_subtask for temporary workflows such as committing or verification only when separately tracked, close the helper after reporting its evidence, and resume the parent item without completing it; provide parentId when active scope is absent or ambiguous, and never use action=replace unless the user explicitly wants the full roadmap discarded.",
-      "Use verified only with current evidenceId; use allowUnsubstantiated only for an explicit override, which is reported separately and is not substantiated proof.",
-      "Ordinary mutations return compact deltas. Use show/export with focusId, offset, and limit for bounded full rendering; use close/shelve/resume/archive for lifecycle decisions.",
+      "Roadmaps are session-bound; with none active, action=show lists earlier roadmaps in the directory and action=adopt roadmapId=<id> continues one instead of starting a duplicate.",
+      "Before executing a genuinely new plan, call start (or explicitly authorized replace) with milestones; each phase/milestone must be a roadmap task and each milestone's goals must be items in its nested subtask roadmap. A continuation or compaction is not a new plan: resume the canonical root. Keep permanent tracking at milestone/goal depth; inspect/build/test steps belong in notes and evidence.",
+      "Report root outcomes completed/total and blocked outcomes separately from recursive workflow counts; a passing phase is progress, not completion. Only an explicit scope decision changes the outcome inventory.",
+      "Use add_subtask only for separately tracked helpers (commit, verification): close it after reporting evidence and resume the parent without completing it. Provide parentId when scope is ambiguous; never use action=replace unless the user explicitly wants the roadmap discarded.",
+      "Use verified only with current evidenceId; allowUnsubstantiated only for an explicit override, which is reported separately and is not proof.",
+      "Mutations return compact deltas; use show/export with focusId/offset/limit for full rendering and close/shelve/resume/archive for lifecycle.",
     ],
     parameters: Type.Object({
       action: StringEnum(ACTION_VALUES),
