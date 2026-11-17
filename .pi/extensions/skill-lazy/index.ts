@@ -8,13 +8,14 @@ const LIB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", ".
 const { reduceSkillsOptions, applySkillsReduction, rewriteSkillsBlock } = require(
   join(LIB_ROOT, "src", "skill-lazy.js"),
 );
-const { notify } = require(join(LIB_ROOT, "src", "pi-extension-kit.js"));
+const { instrumentExtensionCommands, notify } = require(join(LIB_ROOT, "src", "pi-extension-kit.js"));
 
 // The user-scope skill catalog is advertised by Pi with a full description and
 // path per skill on every request. Project skills belong to the current
 // repository and stay fully described; the global catalog is reduced to a name
 // index that points at each SKILL.md. Disable with PI_SKILL_LAZY=0.
 export default function skillLazy(pi: ExtensionAPI) {
+  pi = instrumentExtensionCommands(pi) as ExtensionAPI;
   let lastIndex = "";
 
   // The model never pays for the full catalog; the user can still inspect it.
