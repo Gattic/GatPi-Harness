@@ -1,5 +1,23 @@
 # Changelog
 
+## lazy-global-skills - 2026-11-17
+
+- `skill-lazy` stops advertising user-scope skill descriptions in the startup
+prompt. Project-scope skills keep their full entries; the global catalog becomes
+a `<global_skills>` index of 129 names grouped by skill directory with the
+`<dir>/<name>/SKILL.md` read path. `disable-model-invocation` skills stay
+unadvertised, `/skill-catalog` prints the index (including before the first
+turn), and `PI_SKILL_LAZY=0` restores the full catalog.
+- **Outcome:** System prompt sections dropped from 85,035 to 25,050 chars; the
+skills section is 0 chars and the lazy index is 3,576 chars for 129 names; the
+15 tool schemas are unchanged at 19,511 chars. Fixed prefix fell from 28,554 to
+11,140 estimated tokens. A fresh session's model located `change-verify` from
+the index and read its SKILL.md body, and `/skill-catalog` printed the index in
+a fresh session.
+- Verified with `skill-lazy`, `extension-load`, `extension-portfolio`,
+`harness-awareness`, `tool-surface-router`, `codemode`, `npm run lint`, and
+`npm run typecheck`.
+
 ## delegation-model-and-tool-aliases - 2026-11-05
 
 - Delegation resolves to `local/DeepSeek-V4.1-Flash-1017` instead of
