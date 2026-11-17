@@ -1,6 +1,6 @@
 ---
 name: cryptography-protocol-review
-description: "Use when choosing encryption, signatures, password storage, key exchange or cryptographic storage design. Review cryptographic workflows for correct threat coverage and safe algorithm/API choices. Do not use when task has no confidentiality, integrity or authenticity requirements."
+description: "Use when choosing encryption, signatures, password storage, key exchange or cryptographic storage design. Do not use when task has no confidentiality, integrity or authenticity requirements."
 license: MIT
 metadata:
   version: "1.0.0"

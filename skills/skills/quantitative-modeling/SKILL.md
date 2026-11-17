@@ -1,6 +1,6 @@
 ---
 name: quantitative-modeling
-description: "Use when building statistical, physical, financial or optimization models. Create reproducible mathematical or simulation models with explicit assumptions and numerical checks. Do not use when a basic arithmetic answer with no reusable model needed."
+description: "Use when building statistical, physical, financial or optimization models. Do not use when a basic arithmetic answer with no reusable model needed."
 license: MIT
 metadata:
   version: "1.0.0"

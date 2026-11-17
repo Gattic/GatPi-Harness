@@ -1,6 +1,6 @@
 ---
 name: ad-creative-testing
-description: "Use when testing image/video/copy variations for paid or organic ads. Generate distinct advertisement hypotheses and evaluate creative lift without confirmation bias. Do not use when a fixed approved ad needs no experimentation."
+description: "Use when testing image/video/copy variations for paid or organic ads. Do not use when a fixed approved ad needs no experimentation."
 license: MIT
 metadata:
   version: "1.0.0"

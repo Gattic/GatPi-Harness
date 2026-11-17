@@ -1,6 +1,6 @@
 ---
 name: landing-page-conversion
-description: "Use when product landing page, lead generation, signup or paid traffic destination. Design and test conversion-focused pages with honest claims and friction control. Do not use when information-only internal documentation without conversion objective."
+description: "Use when product landing page, lead generation, signup or paid traffic destination. Do not use when information-only internal documentation without conversion objective."
 license: MIT
 metadata:
   version: "1.0.0"

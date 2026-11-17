@@ -1,6 +1,6 @@
 ---
 name: image-quality-upscale
-description: "Use when upscaling, restoration, denoising or artifact removal from supplied imagery. Improve image resolution/noise while protecting detail and avoiding hallucinated facts. Do not use when original resolution is sufficient and no quality improvement requested."
+description: "Use when upscaling, restoration, denoising or artifact removal from supplied imagery. Do not use when original resolution is sufficient and no quality improvement requested."
 license: MIT
 metadata:
   version: "1.0.0"

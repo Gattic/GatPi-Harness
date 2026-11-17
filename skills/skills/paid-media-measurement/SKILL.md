@@ -1,6 +1,6 @@
 ---
 name: paid-media-measurement
-description: "Use when analyzing campaign ROAS, CAC, incremental lift, channel budget or conversion tracking. Evaluate paid acquisition efficiency with transparent attribution and uncertainty. Do not use when only creating ad copy with no media data."
+description: "Use when analyzing campaign ROAS, CAC, incremental lift, channel budget or conversion tracking. Do not use when only creating ad copy with no media data."
 license: MIT
 metadata:
   version: "1.0.0"

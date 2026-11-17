@@ -1,6 +1,6 @@
 ---
 name: rea-capability-routing
-description: "Use when a user asks to inspect a shipped application, binary, recorded runtime, or captured web behavior and the available agent must decide how to connect REA. Select the narrowest evidence-producing REA workflow for a specified shipped artifact without unnecessary setup or unsafe execution. Do not use when a user only needs a source repository explanation, ordinary code generation, or a general comparison of software products."
+description: "Use when a user asks to inspect a shipped application, binary, recorded runtime, or captured web behavior and the available agent must decide how to connect REA. Do not use when a user only needs a source repository explanation, ordinary code generation, or a general comparison of software products."
 license: MIT
 metadata:
   version: "2.0.0"

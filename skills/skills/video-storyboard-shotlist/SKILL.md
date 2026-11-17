@@ -1,6 +1,6 @@
 ---
 name: video-storyboard-shotlist
-description: "Use when preproduction for commercials, explainers, social shorts or narrative video. Plan shootable or generatable video sequences with continuity and edit-ready timing. Do not use when a single static image without motion output."
+description: "Use when preproduction for commercials, explainers, social shorts or narrative video. Do not use when a single static image without motion output."
 license: MIT
 metadata:
   version: "1.0.0"

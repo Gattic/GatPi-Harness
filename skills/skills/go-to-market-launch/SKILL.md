@@ -1,6 +1,6 @@
 ---
 name: go-to-market-launch
-description: "Use when launching a product, feature, startup service or major campaign. Coordinate positioning, release readiness, enablement, demand and postlaunch learning. Do not use when a private internal code change with no users."
+description: "Use when launching a product, feature, startup service or major campaign. Do not use when a private internal code change with no users."
 license: MIT
 metadata:
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: domain-driven-architecture
-description: "Use when modeling business concepts or choosing service/module boundaries. Design cohesive modules around domain language and stable boundaries. Do not use when tiny local changes with a clear existing seam."
+description: "Use when modeling business concepts or choosing service/module boundaries. Do not use when tiny local changes with a clear existing seam."
 license: MIT
 metadata:
   version: "1.0.0"

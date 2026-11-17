@@ -1,6 +1,6 @@
 ---
 name: android-apk-code-audit
-description: "Use when a locally supplied APK requires static Android package, permissions, classes or method analysis for security or interoperability. Trace authorized Android APK code from component declarations to selected methods and external effects. Do not use when the user wants Play Store recommendations or ordinary Kotlin source review without an APK artifact."
+description: "Use when a locally supplied APK requires static Android package, permissions, classes or method analysis for security or interoperability. Do not use when the user wants Play Store recommendations or ordinary Kotlin source review without an APK artifact."
 license: MIT
 metadata:
   version: "2.0.0"

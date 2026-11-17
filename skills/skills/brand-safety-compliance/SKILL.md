@@ -1,6 +1,6 @@
 ---
 name: brand-safety-compliance
-description: "Use when publishing ads, influencer content or sensitive public marketing claims. Review campaigns for platform policy, consumer trust, accessibility and regulatory risk. Do not use when nonpublic purely technical artifact with no promotional communication."
+description: "Use when publishing ads, influencer content or sensitive public marketing claims. Do not use when nonpublic purely technical artifact with no promotional communication."
 license: MIT
 metadata:
   version: "1.0.0"

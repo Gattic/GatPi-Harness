@@ -1,6 +1,6 @@
 ---
 name: technical-documentation-investigation
-description: "Use when implementation needs current exact API signatures, tool flags or protocol semantics. Resolve unfamiliar APIs, language versions and library behavior from maintained primary sources. Do not use when established local behavior already proven by tests and no external dependency is changing."
+description: "Use when implementation needs current exact API signatures, tool flags or protocol semantics. Do not use when established local behavior already proven by tests and no external dependency is changing."
 license: MIT
 metadata:
   version: "1.1.0"

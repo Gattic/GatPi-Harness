@@ -1,6 +1,6 @@
 ---
 name: evidence-led-research
-description: "Use when factual research, technology comparisons, current specifications or contentious evidence. Answer an uncertain question with a source-linked claim ledger and calibrated conclusions. Do not use when user asks for creative fiction or an opinion without factual claims."
+description: "Use when factual research, technology comparisons, current specifications or contentious evidence. Do not use when user asks for creative fiction or an opinion without factual claims."
 license: MIT
 metadata:
   version: "1.1.0"

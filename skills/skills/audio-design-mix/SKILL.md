@@ -1,6 +1,6 @@
 ---
 name: audio-design-mix
-description: "Use when podcast, video, interactive media or advertisement audio production. Deliver clear, balanced sound design and mixes for speech, music and effects. Do not use when no audio is part of the requested deliverable."
+description: "Use when podcast, video, interactive media or advertisement audio production. Do not use when no audio is part of the requested deliverable."
 license: MIT
 metadata:
   version: "1.0.0"

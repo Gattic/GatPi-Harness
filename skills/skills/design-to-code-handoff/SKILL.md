@@ -1,6 +1,6 @@
 ---
 name: design-to-code-handoff
-description: "Use when handing off visuals or prototypes to frontend implementation. Convert design intent into testable engineering contracts without losing responsive and accessible behavior. Do not use when user is not moving a design into production code."
+description: "Use when handing off visuals or prototypes to frontend implementation. Do not use when user is not moving a design into production code."
 license: MIT
 metadata:
   version: "1.0.0"

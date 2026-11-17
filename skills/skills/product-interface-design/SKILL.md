@@ -1,6 +1,6 @@
 ---
 name: product-interface-design
-description: "Use when product feature design, multi-screen experience or high-fidelity interaction specification. Translate flows and constraints into polished implementable UI screens and interactions. Do not use when only writing backend code with no UI impact."
+description: "Use when product feature design, multi-screen experience or high-fidelity interaction specification. Do not use when only writing backend code with no UI impact."
 license: MIT
 metadata:
   version: "1.0.0"

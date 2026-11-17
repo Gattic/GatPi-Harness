@@ -12,7 +12,7 @@ skills/<slug>/
   assets/            # optional: licensed, explicitly tracked inputs
 ```
 
-The YAML frontmatter needs `name` (matching directory name), `description` (what it delivers and when it should and should not trigger), `license` and version/category metadata. See the actual skill files for generated examples. Keep activation metadata concise and search-friendly; detailed recipes belong in the body or optional references.
+The YAML frontmatter needs `name` (matching directory name), `description`, `license` and version/category metadata. See the actual skill files for generated examples. The description is model-visible on every turn, so it carries only the routing triggers (when to use and when not to use the skill); the delivered outcome lives in the body's Outcome line, where it costs no context until the skill is loaded. Keep activation metadata concise and search-friendly; detailed recipes belong in the body or optional references.
 
 ## Required behavioral contract
 

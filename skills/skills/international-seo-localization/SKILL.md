@@ -1,6 +1,6 @@
 ---
 name: international-seo-localization
-description: "Use when launching multilingual/multi-region URLs, translations or international SEO. Coordinate locale architecture, international indexing and culturally appropriate site variants. Do not use when content intended for one language and market only."
+description: "Use when launching multilingual/multi-region URLs, translations or international SEO. Do not use when content intended for one language and market only."
 license: MIT
 metadata:
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: ux-research-usability
-description: "Use when evaluating user needs, task confusion, onboarding or product usability. Plan and synthesize user research without mistaking anecdotes for population facts. Do not use when the user supplied complete specifications and does not need discovery."
+description: "Use when evaluating user needs, task confusion, onboarding or product usability. Do not use when the user supplied complete specifications and does not need discovery."
 license: MIT
 metadata:
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: seo-content-brief
-description: "Use when planning an article, comparison page, documentation guide or product content for organic search. Develop search-intent-aligned content that adds evidence and original value. Do not use when user asks for unrelated ad copy with no organic discovery goal."
+description: "Use when planning an article, comparison page, documentation guide or product content for organic search. Do not use when user asks for unrelated ad copy with no organic discovery goal."
 license: MIT
 metadata:
   version: "1.0.0"

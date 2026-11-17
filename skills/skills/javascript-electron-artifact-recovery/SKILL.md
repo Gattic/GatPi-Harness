@@ -1,6 +1,6 @@
 ---
 name: javascript-electron-artifact-recovery
-description: "Use when an ASAR or extracted production JavaScript/Electron application is supplied without suitable source-level architecture documentation. Recover a shipped Electron/JavaScript application graph and trace a feature across modules, IPC and native handoffs. Do not use when the user already has complete first-party source and wants normal refactoring, tests, or feature implementation."
+description: "Use when an ASAR or extracted production JavaScript/Electron application is supplied without suitable source-level architecture documentation. Do not use when the user already has complete first-party source and wants normal refactoring, tests, or feature implementation."
 license: MIT
 metadata:
   version: "2.0.0"

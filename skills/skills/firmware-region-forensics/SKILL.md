@@ -1,6 +1,6 @@
 ---
 name: firmware-region-forensics
-description: "Use when the user supplies a firmware image for security review, vulnerability remediation, interoperability or preservation. Identify container and code regions in an authorized firmware image while preserving offsets and extraction provenance. Do not use when the user requests a firmware exploit or only needs to compile supplied embedded source code."
+description: "Use when the user supplies a firmware image for security review, vulnerability remediation, interoperability or preservation. Do not use when the user requests a firmware exploit or only needs to compile supplied embedded source code."
 license: MIT
 metadata:
   version: "2.0.0"

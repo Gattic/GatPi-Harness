@@ -1,6 +1,6 @@
 ---
 name: web-security-headers
-description: "Use when reviewing CSP, HSTS, CORS, cookies, iframe policy or cross-origin isolation. Configure secure browser-facing behavior without breaking legitimate site features. Do not use when the task is unrelated to browser HTTP behavior."
+description: "Use when reviewing CSP, HSTS, CORS, cookies, iframe policy or cross-origin isolation. Do not use when the task is unrelated to browser HTTP behavior."
 license: MIT
 metadata:
   version: "1.0.0"

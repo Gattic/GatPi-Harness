@@ -1,6 +1,6 @@
 ---
 name: durable-bug-hunt
-description: "Use when a bug, crash, regression or flaky failure needs evidence-driven diagnosis and repair in a harness with `debug_ledger` attempt tracking, especially when it is intermittent, resurfaced or earlier fixes failed. Diagnose and repair an observed defect with a durable cross-session record of hypotheses, attempts and verdicts so failed fixes are never repeated. Do not use when no defect has been observed, or the task is feature work, a broad audit, routine verification, or performance tuning without a correctness symptom."
+description: "Use when a bug, crash, regression or flaky failure needs evidence-driven diagnosis and repair in a harness with `debug_ledger` attempt tracking, especially when it is intermittent, resurfaced or earlier fixes failed. Do not use when no defect has been observed, or the task is feature work, a broad audit, routine verification, or performance tuning without a correctness symptom."
 license: MIT
 metadata:
   version: "1.0.0"

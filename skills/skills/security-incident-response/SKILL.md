@@ -1,6 +1,6 @@
 ---
 name: security-incident-response
-description: "Use when credential compromise, breach indicators, malicious dependency or production intrusion. Handle confirmed/suspected security incidents with evidence preservation and contained actions. Do not use when routine bug with no credible security impact."
+description: "Use when credential compromise, breach indicators, malicious dependency or production intrusion. Do not use when routine bug with no credible security impact."
 license: MIT
 metadata:
   version: "1.0.0"

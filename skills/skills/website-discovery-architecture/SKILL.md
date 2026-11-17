@@ -1,6 +1,6 @@
 ---
 name: website-discovery-architecture
-description: "Use when planning a new site, large redesign, sitemap or navigation model. Turn a website business goal into a navigable, measurable information architecture. Do not use when request is for one self-contained UI element."
+description: "Use when planning a new site, large redesign, sitemap or navigation model. Do not use when request is for one self-contained UI element."
 license: MIT
 metadata:
   version: "1.1.0"

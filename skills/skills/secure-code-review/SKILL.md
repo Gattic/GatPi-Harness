@@ -1,6 +1,6 @@
 ---
 name: secure-code-review
-description: "Use when reviewing authentication, authorization, input handling, serialization or sensitive code changes. Identify exploitable code paths and unsafe assumptions with concrete evidence and fixes. Do not use when only reviewing visual spacing or unrelated non-executable text."
+description: "Use when reviewing authentication, authorization, input handling, serialization or sensitive code changes. Do not use when only reviewing visual spacing or unrelated non-executable text."
 license: MIT
 metadata:
   version: "1.1.0"

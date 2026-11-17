@@ -1,6 +1,6 @@
 ---
 name: multi-agent-delegation
-description: "Use when a project supports parallel research, code, design or evaluation tasks. Break large bounded projects into reviewable independent contributions with clear ownership. Do not use when single tightly coupled tasks where delegation adds more overhead than value."
+description: "Use when a project supports parallel research, code, design or evaluation tasks. Do not use when single tightly coupled tasks where delegation adds more overhead than value."
 license: MIT
 metadata:
   version: "1.0.0"

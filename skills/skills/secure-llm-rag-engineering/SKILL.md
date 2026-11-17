@@ -1,6 +1,6 @@
 ---
 name: secure-llm-rag-engineering
-description: "Use when building assistants over internal docs, retrieval, agents or user-specific private knowledge. Engineer grounded retrieval-augmented assistants with access controls and evaluable answer quality. Do not use when general prompt writing with no retrieval or sensitive data."
+description: "Use when building assistants over internal docs, retrieval, agents or user-specific private knowledge. Do not use when general prompt writing with no retrieval or sensitive data."
 license: MIT
 metadata:
   version: "1.0.0"

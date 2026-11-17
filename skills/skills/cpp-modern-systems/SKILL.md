@@ -1,6 +1,6 @@
 ---
 name: cpp-modern-systems
-description: "Use when writing or reviewing C++20/23 systems, libraries or performance-critical code. Implement robust modern C++ components with explicit ownership, numerical and concurrency semantics. Do not use when no C++ source or ABI is involved."
+description: "Use when writing or reviewing C++20/23 systems, libraries or performance-critical code. Do not use when no C++ source or ABI is involved."
 license: MIT
 metadata:
   version: "1.0.0"

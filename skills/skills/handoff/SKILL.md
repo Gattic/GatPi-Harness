@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: "Use when the user asks to hand off or transfer the session to another agent, checkpoint the session, or save its context or continuation notes for later. Write a durable, self-contained handoff file that lets a fresh agent resume this session's work without chat history. Do not use when the user only wants a plan, notes or other content saved to a project file, or a deliverable's next-owner summary within another workflow."
+description: "Use when the user asks to hand off or transfer the session to another agent, checkpoint the session, or save its context or continuation notes for later. Do not use when the user only wants a plan, notes or other content saved to a project file, or a deliverable's next-owner summary within another workflow."
 license: MIT
 metadata:
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: model-file-metadata-forensics
-description: "Use when a local GGUF or safetensors checkpoint needs identification, interoperability planning or packaging integrity inspection. Inspect local model file declarations, tensors and header provenance without inferring generation quality or model safety from metadata alone. Do not use when the task is generating an image or evaluating a hosted model without access to its weights file."
+description: "Use when a local GGUF or safetensors checkpoint needs identification, interoperability planning or packaging integrity inspection. Do not use when the task is generating an image or evaluating a hosted model without access to its weights file."
 license: MIT
 metadata:
   version: "2.0.0"

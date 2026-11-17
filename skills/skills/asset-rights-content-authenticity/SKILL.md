@@ -1,6 +1,6 @@
 ---
 name: asset-rights-content-authenticity
-description: "Use when using generated, stock, third-party or user-supplied media in publishable work. Document creative media origin and rights while preventing misleading provenance claims. Do not use when completely internal original text with no external media."
+description: "Use when using generated, stock, third-party or user-supplied media in publishable work. Do not use when completely internal original text with no external media."
 license: MIT
 metadata:
   version: "1.0.0"

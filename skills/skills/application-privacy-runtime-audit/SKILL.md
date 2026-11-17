@@ -1,6 +1,6 @@
 ---
 name: application-privacy-runtime-audit
-description: "Use when the user authorizes inspecting their own app or consented test instance for data collection, transmission, retention or third-party SDK behavior. Identify verified personal-data flows across a user-owned app and its network traffic with strict capture minimization and uncertainty accounting. Do not use when the user asks for an invasive audit of strangers accounts or only needs a written privacy-policy summary."
+description: "Use when the user authorizes inspecting their own app or consented test instance for data collection, transmission, retention or third-party SDK behavior. Do not use when the user asks for an invasive audit of strangers accounts or only needs a written privacy-policy summary."
 license: MIT
 metadata:
   version: "2.0.0"

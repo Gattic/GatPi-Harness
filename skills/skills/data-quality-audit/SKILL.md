@@ -1,6 +1,6 @@
 ---
 name: data-quality-audit
-description: "Use when ingesting unfamiliar datasets, designing metrics or investigating data anomalies. Verify dataset integrity, semantic meaning and reproducibility before analysis or modeling. Do not use when a confirmed clean single scalar with no transformations."
+description: "Use when ingesting unfamiliar datasets, designing metrics or investigating data anomalies. Do not use when a confirmed clean single scalar with no transformations."
 license: MIT
 metadata:
   version: "1.0.0"

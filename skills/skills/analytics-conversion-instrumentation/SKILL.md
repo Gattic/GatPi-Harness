@@ -1,6 +1,6 @@
 ---
 name: analytics-conversion-instrumentation
-description: "Use when tracking funnel behavior, product events or campaign conversions. Implement trusted event analytics, attribution boundaries and privacy-aware conversion measurement. Do not use when pure UI styling with no measurement need."
+description: "Use when tracking funnel behavior, product events or campaign conversions. Do not use when pure UI styling with no measurement need."
 license: MIT
 metadata:
   version: "1.0.0"

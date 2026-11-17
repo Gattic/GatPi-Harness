@@ -1,6 +1,6 @@
 ---
 name: openproject-delivery
-description: "Use when managing work packages, dependencies, milestones or releases in OpenProject. Operate OpenProject work packages with clear ownership, constraints and acceptance criteria. Do not use when user does not use OpenProject or need work management."
+description: "Use when managing work packages, dependencies, milestones or releases in OpenProject. Do not use when user does not use OpenProject or need work management."
 license: MIT
 metadata:
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: rea-evidence-lineage-review
-description: "Use when the user needs an evidence-backed analysis report or wants to compare results collected from two REA sessions or artifacts. Audit and compare REA Evidence claims across multiple tools or captures with explicit authority, subject binding and uncertainty. Do not use when only a quick prose summary of known, already cited source code is needed and there are no REA Evidence records."
+description: "Use when the user needs an evidence-backed analysis report or wants to compare results collected from two REA sessions or artifacts. Do not use when only a quick prose summary of known, already cited source code is needed and there are no REA Evidence records."
 license: MIT
 metadata:
   version: "2.0.0"

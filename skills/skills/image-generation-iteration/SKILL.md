@@ -1,6 +1,6 @@
 ---
 name: image-generation-iteration
-description: "Use when creating a new raster illustration, concept image or generative campaign visual. Produce and refine generated images through controlled, reproducible changes. Do not use when user requested an editable vector or 3D scene rather than a raster image."
+description: "Use when creating a new raster illustration, concept image or generative campaign visual. Do not use when user requested an editable vector or 3D scene rather than a raster image."
 license: MIT
 metadata:
   version: "1.0.0"

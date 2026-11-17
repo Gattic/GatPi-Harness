@@ -1,6 +1,6 @@
 ---
 name: rigging-animation-retarget
-description: "Use when character rigging, mocap retargeting, motion cleanup or animation export. Create or validate character rigs and retarget motion while protecting anatomical constraints. Do not use when a static prop mesh with no moving components."
+description: "Use when character rigging, mocap retargeting, motion cleanup or animation export. Do not use when a static prop mesh with no moving components."
 license: MIT
 metadata:
   version: "1.0.0"

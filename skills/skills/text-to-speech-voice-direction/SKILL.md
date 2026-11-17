@@ -1,6 +1,6 @@
 ---
 name: text-to-speech-voice-direction
-description: "Use when narration, accessibility audio, explainer voiceover or synthetic speech generation. Produce natural synthetic voice using pronunciation, pacing and reproducible voice settings. Do not use when user asks for a written script only."
+description: "Use when narration, accessibility audio, explainer voiceover or synthetic speech generation. Do not use when user asks for a written script only."
 license: MIT
 metadata:
   version: "1.0.0"

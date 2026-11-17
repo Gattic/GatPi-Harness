@@ -1,6 +1,6 @@
 ---
 name: internal-link-strategy
-description: "Use when fixing orphan pages, topic clusters, navigational bottlenecks or migration linking. Build semantic internal links that improve user pathways and page discovery. Do not use when an isolated landing page with no linked site structure."
+description: "Use when fixing orphan pages, topic clusters, navigational bottlenecks or migration linking. Do not use when an isolated landing page with no linked site structure."
 license: MIT
 metadata:
   version: "1.0.0"

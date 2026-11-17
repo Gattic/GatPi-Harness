@@ -1,6 +1,6 @@
 ---
 name: accessible-interface-build
-description: "Use when building or refactoring interactive web UI, components, forms or navigation. Ship keyboard-operable, semantically correct web interfaces with tested accessible behavior. Do not use when pure graphic mockup with no intended interaction."
+description: "Use when building or refactoring interactive web UI, components, forms or navigation. Do not use when pure graphic mockup with no intended interaction."
 license: MIT
 metadata:
   version: "1.0.0"

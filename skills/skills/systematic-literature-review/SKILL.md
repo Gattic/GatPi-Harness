@@ -1,6 +1,6 @@
 ---
 name: systematic-literature-review
-description: "Use when reviewing academic literature across multiple studies, methods or findings. Build a reproducible research synthesis with explicit inclusion rules and bias assessment. Do not use when simple factual lookup that requires only a primary reference."
+description: "Use when reviewing academic literature across multiple studies, methods or findings. Do not use when simple factual lookup that requires only a primary reference."
 license: MIT
 metadata:
   version: "1.0.0"

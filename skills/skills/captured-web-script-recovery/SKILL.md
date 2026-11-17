@@ -1,6 +1,6 @@
 ---
 name: captured-web-script-recovery
-description: "Use when the user has web capture Evidence and needs to understand the JavaScript modules behind an observed browser feature. Convert authorized captured browser JavaScript into a provenance-preserving static application analysis. Do not use when a normal owned source checkout already establishes relevant code locations or only a simple HTML page needs explanation."
+description: "Use when the user has web capture Evidence and needs to understand the JavaScript modules behind an observed browser feature. Do not use when a normal owned source checkout already establishes relevant code locations or only a simple HTML page needs explanation."
 license: MIT
 metadata:
   version: "2.0.0"

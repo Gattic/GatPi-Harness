@@ -1,6 +1,6 @@
 ---
 name: ci-release-engineering
-description: "Use when creating or updating CI/CD, packaging, deployment or release automation. Build reproducible CI, supply-chain checks and staged delivery with rollback readiness. Do not use when pure planning without actual build or release process."
+description: "Use when creating or updating CI/CD, packaging, deployment or release automation. Do not use when pure planning without actual build or release process."
 license: MIT
 metadata:
   version: "1.0.0"

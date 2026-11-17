@@ -1,6 +1,6 @@
 ---
 name: native-binary-behavior-analysis
-description: "Use when the user supplies an authorized native ELF, PE, Mach-O, or analysis database and asks how a function or behavior is implemented. Explain the implemented structure of a native program using disassembly, cross-references and bounded Evidence without pretending static analysis observed execution. Do not use when the user provides only a source repository with straightforward source-level answers, or only wants package member inventory."
+description: "Use when the user supplies an authorized native ELF, PE, Mach-O, or analysis database and asks how a function or behavior is implemented. Do not use when the user provides only a source repository with straightforward source-level answers, or only wants package member inventory."
 license: MIT
 metadata:
   version: "2.0.0"

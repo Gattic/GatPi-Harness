@@ -1,6 +1,6 @@
 ---
 name: voice-clone-consent
-description: "Use when cloning or reproducing a specific speaker’s voice in a workflow. Establish authorization and quality controls for permitted personalized voice synthesis. Do not use when generic non-identifying synthetic voice is sufficient."
+description: "Use when cloning or reproducing a specific speaker’s voice in a workflow. Do not use when generic non-identifying synthetic voice is sufficient."
 license: MIT
 metadata:
   version: "1.0.0"

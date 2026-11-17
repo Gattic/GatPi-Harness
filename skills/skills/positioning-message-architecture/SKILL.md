@@ -1,6 +1,6 @@
 ---
 name: positioning-message-architecture
-description: "Use when brand positioning, messaging framework, homepage or product launch strategy. Translate competitive differentiation into provable audience-specific value propositions. Do not use when only proofreading existing approved copy."
+description: "Use when brand positioning, messaging framework, homepage or product launch strategy. Do not use when only proofreading existing approved copy."
 license: MIT
 metadata:
   version: "1.0.0"

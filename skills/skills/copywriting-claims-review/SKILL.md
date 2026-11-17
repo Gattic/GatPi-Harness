@@ -1,6 +1,6 @@
 ---
 name: copywriting-claims-review
-description: "Use when marketing site, ad, brochure, email or product claim writing. Create persuasive truthful copy with explicit verification for quantitative and sensitive assertions. Do not use when purely technical text with no persuasive or public-facing claim."
+description: "Use when marketing site, ad, brochure, email or product claim writing. Do not use when purely technical text with no persuasive or public-facing claim."
 license: MIT
 metadata:
   version: "1.0.0"

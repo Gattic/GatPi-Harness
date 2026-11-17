@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: "Use when unexpected output, crash, flaky test, performance regression or failing build. Find root cause from reproducible evidence rather than symptom-level patches. Do not use when no failure has been observed and the user only wants a design exploration."
+description: "Use when unexpected output, crash, flaky test, performance regression or failing build. Do not use when no failure has been observed and the user only wants a design exploration."
 license: MIT
 metadata:
   version: "1.1.0"

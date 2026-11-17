@@ -1,6 +1,6 @@
 ---
 name: secrets-iam-hardening
-description: "Use when hardening service accounts, API keys, IAM roles or developer secrets. Audit credential exposure, identity permissions and rotation with least-privilege guarantees. Do not use when no credential or cloud/application authorization exists."
+description: "Use when hardening service accounts, API keys, IAM roles or developer secrets. Do not use when no credential or cloud/application authorization exists."
 license: MIT
 metadata:
   version: "1.0.0"

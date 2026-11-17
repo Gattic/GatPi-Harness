@@ -1,6 +1,6 @@
 ---
 name: shipped-artifact-provenance
-description: "Use when a packaged executable, app archive, ASAR, firmware image, or release file must be inventoried and attributed before analysis. Establish byte-accurate identity, composition, and provenance before investigating an externally supplied application artifact. Do not use when the task concerns only a trusted source repository already mapped to its build outputs, with no packaged binary to inspect."
+description: "Use when a packaged executable, app archive, ASAR, firmware image, or release file must be inventoried and attributed before analysis. Do not use when the task concerns only a trusted source repository already mapped to its build outputs, with no packaged binary to inspect."
 license: MIT
 metadata:
   version: "2.0.0"

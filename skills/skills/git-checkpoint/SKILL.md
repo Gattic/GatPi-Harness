@@ -1,6 +1,6 @@
 ---
 name: git-checkpoint
-description: "Use when the user explicitly asks to commit, create a local Git checkpoint, or prepare focused local commits from an existing working tree. Turn already-completed work into reviewable local Git commits without absorbing unrelated changes, bypassing hooks or pushing. Do not use when the user has not asked for a commit, wants a session continuation file rather than a Git commit, or asks to push, publish, merge, amend, rebase or release."
+description: "Use when the user explicitly asks to commit, create a local Git checkpoint, or prepare focused local commits from an existing working tree. Do not use when the user has not asked for a commit, wants a session continuation file rather than a Git commit, or asks to push, publish, merge, amend, rebase or release."
 license: MIT
 metadata:
   version: "1.0.0"

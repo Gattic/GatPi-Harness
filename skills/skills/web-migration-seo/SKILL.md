@@ -1,6 +1,6 @@
 ---
 name: web-migration-seo
-description: "Use when domain changes, CMS migration, large route redesign or website consolidation. Migrate site routes/platforms while preserving content equivalence and search discovery. Do not use when only adding a new isolated route."
+description: "Use when domain changes, CMS migration, large route redesign or website consolidation. Do not use when only adding a new isolated route."
 license: MIT
 metadata:
   version: "1.0.0"

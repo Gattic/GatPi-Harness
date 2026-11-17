@@ -1,6 +1,6 @@
 ---
 name: browser-scenario-evidence
-description: "Use when the user needs to observe what a live site actually does after specific browser interactions, especially when source and behavior differ. Capture a deterministic and authorized browser journey with action-level, DOM and network evidence for a concrete UI behavior question. Do not use when only a screenshot of a supplied design or a source-only frontend review is requested, with no live journey needed."
+description: "Use when the user needs to observe what a live site actually does after specific browser interactions, especially when source and behavior differ. Do not use when only a screenshot of a supplied design or a source-only frontend review is requested, with no live journey needed."
 license: MIT
 metadata:
   version: "2.0.0"

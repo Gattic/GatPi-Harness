@@ -1,6 +1,6 @@
 ---
 name: experiment-design-analysis
-description: "Use when a/B tests, scientific trials, product experiments or causal measurement. Design and interpret experiments with valid estimands, randomization and guardrails. Do not use when purely descriptive metrics without a causal comparison."
+description: "Use when a/B tests, scientific trials, product experiments or causal measurement. Do not use when purely descriptive metrics without a causal comparison."
 license: MIT
 metadata:
   version: "1.0.0"

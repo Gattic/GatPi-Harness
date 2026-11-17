@@ -1,6 +1,6 @@
 ---
 name: structured-data-schema
-description: "Use when implementing product, article, organization, local business, breadcrumb or other markup. Add accurate schema.org structured data eligible for applicable rich-result types. Do not use when page has no relevant supported entity or user does not need metadata."
+description: "Use when implementing product, article, organization, local business, breadcrumb or other markup. Do not use when page has no relevant supported entity or user does not need metadata."
 license: MIT
 metadata:
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: task-skill-router
-description: "Use when a request spans disciplines, multiple possible workflows, or a broad project. Select the minimum set of compatible skills for a multi-domain request without duplicating instructions. Do not use when a single unambiguous skill already covers the deliverable."
+description: "Use when a request spans disciplines, multiple possible workflows, or a broad project. Do not use when a single unambiguous skill already covers the deliverable."
 license: MIT
 metadata:
   version: "1.1.0"

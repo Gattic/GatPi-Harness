@@ -1,6 +1,6 @@
 ---
 name: market-segmentation
-description: "Use when audience research, ICP selection, product targeting or marketing prioritization. Segment real audiences by needs, behavior and reachability rather than unsupported personas. Do not use when a fully specified audience only needs a single ad asset."
+description: "Use when audience research, ICP selection, product targeting or marketing prioritization. Do not use when a fully specified audience only needs a single ad asset."
 license: MIT
 metadata:
   version: "1.0.0"

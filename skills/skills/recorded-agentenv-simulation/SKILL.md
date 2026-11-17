@@ -1,6 +1,6 @@
 ---
 name: recorded-agentenv-simulation
-description: "Use when the user has a HAR or a permitted test web application and needs an AgentEnv sandbox to evaluate agents on recorded API workflows. Turn an authorized observed web workflow into a local, limited agent evaluation environment whose simulated effects never exceed the capture evidence. Do not use when the user needs a general browser automation script or assumes an environment can faithfully emulate all unseen server behavior."
+description: "Use when the user has a HAR or a permitted test web application and needs an AgentEnv sandbox to evaluate agents on recorded API workflows. Do not use when the user needs a general browser automation script or assumes an environment can faithfully emulate all unseen server behavior."
 license: MIT
 metadata:
   version: "2.0.0"

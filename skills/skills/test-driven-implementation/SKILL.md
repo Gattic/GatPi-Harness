@@ -1,6 +1,6 @@
 ---
 name: test-driven-implementation
-description: "Use when adding behavior, fixing bugs or changing interfaces in code. Implement behavior in small red-green-refactor cycles with meaningful assertions. Do not use when visual exploration where no stable executable behavior is specified yet."
+description: "Use when adding behavior, fixing bugs or changing interfaces in code. Do not use when visual exploration where no stable executable behavior is specified yet."
 license: MIT
 metadata:
   version: "1.1.0"

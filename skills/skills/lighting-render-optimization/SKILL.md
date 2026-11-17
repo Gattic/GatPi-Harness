@@ -1,6 +1,6 @@
 ---
 name: lighting-render-optimization
-description: "Use when rendering scenes, path-trace tuning or lighting a product/character/environment. Design readable 3D lighting and optimize renders without unacceptable quality loss. Do not use when a nonrendered mesh-only export."
+description: "Use when rendering scenes, path-trace tuning or lighting a product/character/environment. Do not use when a nonrendered mesh-only export."
 license: MIT
 metadata:
   version: "1.0.0"

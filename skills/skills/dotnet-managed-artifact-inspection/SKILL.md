@@ -1,6 +1,6 @@
 ---
 name: dotnet-managed-artifact-inspection
-description: "Use when a managed PE or CLI assembly is supplied and the user needs an implementation map without source code. Recover evidence-backed types, entry points and call relationships from an authorized managed .NET artifact. Do not use when the input is .NET NativeAOT machine code or an ordinary editable C# source project."
+description: "Use when a managed PE or CLI assembly is supplied and the user needs an implementation map without source code. Do not use when the input is .NET NativeAOT machine code or an ordinary editable C# source project."
 license: MIT
 metadata:
   version: "2.0.0"

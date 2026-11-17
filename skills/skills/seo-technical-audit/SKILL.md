@@ -1,6 +1,6 @@
 ---
 name: seo-technical-audit
-description: "Use when technical SEO audit, traffic/indexing drop or prelaunch indexability review. Find and prioritize crawl, indexation, rendering and discoverability defects using evidence. Do not use when only writing an isolated piece of marketing copy."
+description: "Use when technical SEO audit, traffic/indexing drop or prelaunch indexability review. Do not use when only writing an isolated piece of marketing copy."
 license: MIT
 metadata:
   version: "1.0.0"

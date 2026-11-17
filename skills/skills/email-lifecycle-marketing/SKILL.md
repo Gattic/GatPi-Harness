@@ -1,6 +1,6 @@
 ---
 name: email-lifecycle-marketing
-description: "Use when welcome series, onboarding, activation, win-back, retention or transactional emails. Engineer compliant lifecycle messaging tied to user value and consent. Do not use when no email communication or user lifecycle exists."
+description: "Use when welcome series, onboarding, activation, win-back, retention or transactional emails. Do not use when no email communication or user lifecycle exists."
 license: MIT
 metadata:
   version: "1.0.0"

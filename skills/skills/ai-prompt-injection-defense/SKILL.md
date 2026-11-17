@@ -1,6 +1,6 @@
 ---
 name: ai-prompt-injection-defense
-description: "Use when agents read websites, documents, repositories, email or tool outputs and can take actions. Harden agent workflows against instruction smuggling through untrusted content and tools. Do not use when a fixed offline model with no external text and no actions."
+description: "Use when agents read websites, documents, repositories, email or tool outputs and can take actions. Do not use when a fixed offline model with no external text and no actions."
 license: MIT
 metadata:
   version: "1.1.0"

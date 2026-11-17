@@ -1,6 +1,6 @@
 ---
 name: requirements-to-roadmap
-description: "Use when turning goals into programs, roadmaps, multi-team plans or delivery portfolios. Convert ambitions into prioritized deliverable milestones with dependencies and verifiable outcomes. Do not use when an isolated task can be executed immediately with no coordination."
+description: "Use when turning goals into programs, roadmaps, multi-team plans or delivery portfolios. Do not use when an isolated task can be executed immediately with no coordination."
 license: MIT
 metadata:
   version: "1.0.0"

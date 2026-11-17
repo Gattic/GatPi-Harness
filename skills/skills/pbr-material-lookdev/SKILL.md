@@ -1,6 +1,6 @@
 ---
 name: pbr-material-lookdev
-description: "Use when 3D look development, game-engine materials or texturing. Create calibrated physically based materials and texture sets for consistent rendering. Do not use when object has no material or rendering requirement."
+description: "Use when 3D look development, game-engine materials or texturing. Do not use when object has no material or rendering requirement."
 license: MIT
 metadata:
   version: "1.0.0"

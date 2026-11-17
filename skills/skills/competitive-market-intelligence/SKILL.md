@@ -1,6 +1,6 @@
 ---
 name: competitive-market-intelligence
-description: "Use when evaluating competitors, substitutes, positioning or category whitespace. Compare a competitive landscape using verifiable claims and a decision framework. Do not use when an internal product critique with no market context."
+description: "Use when evaluating competitors, substitutes, positioning or category whitespace. Do not use when an internal product critique with no market context."
 license: MIT
 metadata:
   version: "1.0.0"

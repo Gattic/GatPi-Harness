@@ -1,6 +1,6 @@
 ---
 name: privacy-data-minimization
-description: "Use when handling personal data, tracking, model inputs, user records or analytics. Design data collection, sharing, retention and deletion around clear user purposes. Do not use when only public nonsensitive data with no personal identifiers."
+description: "Use when handling personal data, tracking, model inputs, user records or analytics. Do not use when only public nonsensitive data with no personal identifiers."
 license: MIT
 metadata:
   version: "1.1.0"

@@ -1,6 +1,6 @@
 ---
 name: security-threat-model
-description: "Use when new architecture, sensitive feature, third-party integration or security design review. Prioritize credible system threats from trust boundaries, assets and realistic attacker capabilities. Do not use when low-risk local prototype with no external data or execution surface."
+description: "Use when new architecture, sensitive feature, third-party integration or security design review. Do not use when low-risk local prototype with no external data or execution surface."
 license: MIT
 metadata:
   version: "1.1.0"

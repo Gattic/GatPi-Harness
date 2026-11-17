@@ -1,6 +1,6 @@
 ---
 name: closed-app-feature-reimplementation
-description: "Use when the user supplies an authorized closed-source app, binary or captured behavior and requests a similar feature in their own software. Build an independently implemented, lawful feature analogue from observed behavior and documented requirements without copying protected assets or undocumented assumptions. Do not use when the user asks to copy proprietary code, circumvent access controls, or when an ordinary open-source implementation is already supplied."
+description: "Use when the user supplies an authorized closed-source app, binary or captured behavior and requests a similar feature in their own software. Do not use when the user asks to copy proprietary code, circumvent access controls, or when an ordinary open-source implementation is already supplied."
 license: MIT
 metadata:
   version: "2.0.0"

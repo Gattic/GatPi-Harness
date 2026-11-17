@@ -1,6 +1,6 @@
 ---
 name: organic-content-strategy
-description: "Use when social, blog, newsletter or community content planning over multiple weeks. Develop a sustainable editorial program with distinct audience value and measurable distribution. Do not use when one isolated piece with no editorial system."
+description: "Use when social, blog, newsletter or community content planning over multiple weeks. Do not use when one isolated piece with no editorial system."
 license: MIT
 metadata:
   version: "1.0.0"

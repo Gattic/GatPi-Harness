@@ -1,6 +1,6 @@
 ---
 name: skill-factory
-description: "Use when creating a new SKILL.md or improving an existing agent skill. Author or refactor reusable Agent Skills with measurable quality gates and narrow activation criteria. Do not use when writing ordinary product documentation without agent-invocable behavior."
+description: "Use when creating a new SKILL.md or improving an existing agent skill. Do not use when writing ordinary product documentation without agent-invocable behavior."
 license: MIT
 metadata:
   version: "1.1.0"

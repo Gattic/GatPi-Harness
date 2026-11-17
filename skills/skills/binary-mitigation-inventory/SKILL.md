@@ -1,6 +1,6 @@
 ---
 name: binary-mitigation-inventory
-description: "Use when a supplied ELF or PE binary must be statically assessed for hardening or release compliance. Produce an evidence-backed inventory of declared native binary defenses and risky dependency surfaces without treating flags as runtime enforcement. Do not use when the task is source-code linting alone, penetration of an unauthorized system, or a runtime exploit demonstration."
+description: "Use when a supplied ELF or PE binary must be statically assessed for hardening or release compliance. Do not use when the task is source-code linting alone, penetration of an unauthorized system, or a runtime exploit demonstration."
 license: MIT
 metadata:
   version: "2.0.0"

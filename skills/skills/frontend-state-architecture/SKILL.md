@@ -1,6 +1,6 @@
 ---
 name: frontend-state-architecture
-description: "Use when a UI has complex shared state, async data or reusable component contracts. Design predictable frontend state and component boundaries without excess complexity. Do not use when a small static page with no interactive state."
+description: "Use when a UI has complex shared state, async data or reusable component contracts. Do not use when a small static page with no interactive state."
 license: MIT
 metadata:
   version: "1.0.0"

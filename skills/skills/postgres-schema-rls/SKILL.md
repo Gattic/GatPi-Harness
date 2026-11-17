@@ -1,6 +1,6 @@
 ---
 name: postgres-schema-rls
-description: "Use when supabase/Postgres data modeling, slow queries, RLS or schema migrations. Design PostgreSQL schemas, indexes and row-level security from explicit access contracts. Do not use when data is stored in a different engine and Postgres semantics are irrelevant."
+description: "Use when supabase/Postgres data modeling, slow queries, RLS or schema migrations. Do not use when data is stored in a different engine and Postgres semantics are irrelevant."
 license: MIT
 metadata:
   version: "1.0.0"

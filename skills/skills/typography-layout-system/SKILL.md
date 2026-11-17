@@ -1,6 +1,6 @@
 ---
 name: typography-layout-system
-description: "Use when publication, app, website or brand design with complex typesetting and information hierarchy. Construct readable typographic hierarchy and layout grids across sizes and content extremes. Do not use when a task with no text or layout requirements."
+description: "Use when publication, app, website or brand design with complex typesetting and information hierarchy. Do not use when a task with no text or layout requirements."
 license: MIT
 metadata:
   version: "1.0.0"

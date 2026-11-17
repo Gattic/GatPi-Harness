@@ -1,6 +1,6 @@
 ---
 name: text-to-video-production
-description: "Use when creating AI-assisted footage from a script, shot or reference image. Generate controlled short-form video shots with reference continuity and technical QC. Do not use when user requested still images or editable 3D rigs only."
+description: "Use when creating AI-assisted footage from a script, shot or reference image. Do not use when user requested still images or editable 3D rigs only."
 license: MIT
 metadata:
   version: "1.0.0"

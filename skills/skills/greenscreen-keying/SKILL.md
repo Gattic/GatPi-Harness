@@ -1,6 +1,6 @@
 ---
 name: greenscreen-keying
-description: "Use when compositing green-screen/blue-screen footage or configuring a neural keying workflow. Create clean transparent mattes with realistic edges, hair detail and spill suppression. Do not use when background replacement is not requested and footage is already final."
+description: "Use when compositing green-screen/blue-screen footage or configuring a neural keying workflow. Do not use when background replacement is not requested and footage is already final."
 license: MIT
 metadata:
   version: "1.0.0"

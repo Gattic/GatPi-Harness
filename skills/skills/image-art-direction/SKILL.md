@@ -1,6 +1,6 @@
 ---
 name: image-art-direction
-description: "Use when developing a visual concept for illustrations, photography, product imagery or campaigns. Convert a visual objective into a coherent art direction brief before asset generation. Do not use when user wants fact-only text with no image output."
+description: "Use when developing a visual concept for illustrations, photography, product imagery or campaigns. Do not use when user wants fact-only text with no image output."
 license: MIT
 metadata:
   version: "1.0.0"

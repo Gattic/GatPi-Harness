@@ -1,6 +1,6 @@
 ---
 name: native-runtime-evidence
-description: "Use when static analysis cannot answer a specific behavior question and the user explicitly authorizes running or observing the supplied native program. Observe narrowly authorized native execution and trace a concrete behavior while preserving cleanup and static-versus-dynamic distinctions. Do not use when read-only inspection is sufficient or the user has not authorized target execution, attach, instrumentation or modification."
+description: "Use when static analysis cannot answer a specific behavior question and the user explicitly authorizes running or observing the supplied native program. Do not use when read-only inspection is sufficient or the user has not authorized target execution, attach, instrumentation or modification."
 license: MIT
 metadata:
   version: "2.0.0"

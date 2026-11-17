@@ -1,6 +1,6 @@
 ---
 name: change-verify
-description: "Use when a code or documentation change already exists and must be verified before claiming completion, committing, publishing or handing work off. Prove with repository-defined, risk-proportionate checks what an existing code or documentation change does and does not establish, without repairing it. Do not use when the task is to implement or repair code, design a new test strategy, troubleshoot build infrastructure, review a diff for findings, or sign off a product release."
+description: "Use when a code or documentation change already exists and must be verified before claiming completion, committing, publishing or handing work off. Do not use when the task is to implement or repair code, design a new test strategy, troubleshoot build infrastructure, review a diff for findings, or sign off a product release."
 license: MIT
 metadata:
   version: "1.0.0"

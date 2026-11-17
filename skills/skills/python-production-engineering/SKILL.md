@@ -1,6 +1,6 @@
 ---
 name: python-production-engineering
-description: "Use when developing Python code, packaging, performance work or maintaining Python services. Build and harden Python libraries, services and scientific modules with modern tooling. Do not use when the deliverable is not Python and has no Python dependency."
+description: "Use when developing Python code, packaging, performance work or maintaining Python services. Do not use when the deliverable is not Python and has no Python dependency."
 license: MIT
 metadata:
   version: "1.0.0"

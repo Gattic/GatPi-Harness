@@ -1,6 +1,6 @@
 ---
 name: typesafe-ai
-description: "Use when the user names TypeSafe or Jev, or a project using or evaluating TypeSafe needs programmable common sense for routing, ranking, extraction, verification or interactive decisions, or an LLM prompt-and-parse step to become a typed judgment. Build AI-powered features with TypeSafe System One models such as Jev, turning natural language and application state into typed judgments and probabilities that code composes. Do not use when the task needs free-form text generation, retrieval-augmented chat over private documents, or a vendor-neutral comparison of generative models, or TypeSafe is neither named nor in use."
+description: "Use when the user names TypeSafe or Jev, or a project using or evaluating TypeSafe needs programmable common sense for routing, ranking, extraction, verification or interactive decisions, or an LLM prompt-and-parse step to become a typed judgment. Do not use when the task needs free-form text generation, retrieval-augmented chat over private documents, or a vendor-neutral comparison of generative models, or TypeSafe is neither named nor in use."
 license: MIT
 metadata:
   version: "1.0.0"

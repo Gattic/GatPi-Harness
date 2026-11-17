@@ -1,6 +1,6 @@
 ---
 name: cloud-infrastructure-security
-description: "Use when hardening AWS/Azure/GCP/Kubernetes/IaC deployments or cloud architecture. Review cloud networks, workloads and data controls against stated threats and availability needs. Do not use when entirely offline software with no cloud or remote infrastructure."
+description: "Use when hardening AWS/Azure/GCP/Kubernetes/IaC deployments or cloud architecture. Do not use when entirely offline software with no cloud or remote infrastructure."
 license: MIT
 metadata:
   version: "1.0.0"

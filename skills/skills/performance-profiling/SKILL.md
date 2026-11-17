@@ -1,6 +1,6 @@
 ---
 name: performance-profiling
-description: "Use when slow services, hot functions, high resource usage or performance regressions. Optimize a measured application bottleneck while preserving correctness. Do not use when premature optimization without a target or observed problem."
+description: "Use when slow services, hot functions, high resource usage or performance regressions. Do not use when premature optimization without a target or observed problem."
 license: MIT
 metadata:
   version: "1.0.0"

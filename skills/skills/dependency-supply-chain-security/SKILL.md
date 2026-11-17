@@ -1,6 +1,6 @@
 ---
 name: dependency-supply-chain-security
-description: "Use when auditing npm/PyPI/Cargo/Maven packages, CI actions, containers or model dependencies. Reduce third-party package and build risks with verified provenance and staged upgrades. Do not use when a project has no external components or build pipeline."
+description: "Use when auditing npm/PyPI/Cargo/Maven packages, CI actions, containers or model dependencies. Do not use when a project has no external components or build pipeline."
 license: MIT
 metadata:
   version: "1.1.0"

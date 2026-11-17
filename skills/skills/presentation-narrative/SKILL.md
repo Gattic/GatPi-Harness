@@ -1,6 +1,6 @@
 ---
 name: presentation-narrative
-description: "Use when slides for pitches, leadership updates, education or strategy briefings. Design persuasive factual presentations with a coherent evidence-to-decision arc. Do not use when a quick text-only answer without deck intent."
+description: "Use when slides for pitches, leadership updates, education or strategy briefings. Do not use when a quick text-only answer without deck intent."
 license: MIT
 metadata:
   version: "1.0.0"

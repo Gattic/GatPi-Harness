@@ -1,6 +1,6 @@
 ---
 name: python-frozen-app-inventory
-description: "Use when a PyInstaller executable or related Python application archive is supplied for authorized compatibility, investigation or preservation. Inventory and explain the packaged Python application layer without mistaking its native bootloader for application code. Do not use when a normal Python project with source and requirements files can be analyzed directly."
+description: "Use when a PyInstaller executable or related Python application archive is supplied for authorized compatibility, investigation or preservation. Do not use when a normal Python project with source and requirements files can be analyzed directly."
 license: MIT
 metadata:
   version: "2.0.0"

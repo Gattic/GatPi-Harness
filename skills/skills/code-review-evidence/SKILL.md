@@ -1,6 +1,6 @@
 ---
 name: code-review-evidence
-description: "Use when before merging a PR or after a nontrivial code change. Review a change for correctness, security, maintainability and scope fit with reproducible findings. Do not use when pure copy editing with no executable code or system behavior."
+description: "Use when before merging a PR or after a nontrivial code change. Do not use when pure copy editing with no executable code or system behavior."
 license: MIT
 metadata:
   version: "1.0.0"

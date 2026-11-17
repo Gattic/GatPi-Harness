@@ -1,6 +1,6 @@
 ---
 name: campaign-strategy
-description: "Use when planning multi-channel marketing, seasonal promotion or demand-generation program. Design integrated campaigns around a measurable business objective and cross-channel constraints. Do not use when user only needs a one-line slogan."
+description: "Use when planning multi-channel marketing, seasonal promotion or demand-generation program. Do not use when user only needs a one-line slogan."
 license: MIT
 metadata:
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: technical-specification
-description: "Use when new feature, non-trivial bug fix, migration or integration needs shared acceptance criteria. Turn a product or engineering request into a testable implementation contract. Do not use when a single mechanical edit with fully explicit acceptance criteria."
+description: "Use when new feature, non-trivial bug fix, migration or integration needs shared acceptance criteria. Do not use when a single mechanical edit with fully explicit acceptance criteria."
 license: MIT
 metadata:
   version: "1.1.0"

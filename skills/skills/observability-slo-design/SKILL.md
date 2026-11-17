@@ -1,6 +1,6 @@
 ---
 name: observability-slo-design
-description: "Use when shipping production services or diagnosing poor production visibility. Instrument services for actionable reliability signals and low-noise incident response. Do not use when throwaway local scripts with no operations lifecycle."
+description: "Use when shipping production services or diagnosing poor production visibility. Do not use when throwaway local scripts with no operations lifecycle."
 license: MIT
 metadata:
   version: "1.1.0"

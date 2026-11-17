@@ -1,6 +1,6 @@
 ---
 name: multilingual-dubbing-localization
-description: "Use when localizing narration, interviews, training video or advertising audio. Adapt speech and timing to another language without mistranslating meaning or mismatching lip timing. Do not use when simple text-only translation with no audio/video synchronization."
+description: "Use when localizing narration, interviews, training video or advertising audio. Do not use when simple text-only translation with no audio/video synchronization."
 license: MIT
 metadata:
   version: "1.0.0"

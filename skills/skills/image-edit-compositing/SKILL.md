@@ -1,6 +1,6 @@
 ---
 name: image-edit-compositing
-description: "Use when removing/adding elements, background replacement, inpainting or photographic composites. Modify existing imagery while preserving protected content, masks and believable visual integration. Do not use when no source image exists and the goal is purely textual."
+description: "Use when removing/adding elements, background replacement, inpainting or photographic composites. Do not use when no source image exists and the goal is purely textual."
 license: MIT
 metadata:
   version: "1.0.0"

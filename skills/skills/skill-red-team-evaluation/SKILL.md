@@ -1,6 +1,6 @@
 ---
 name: skill-red-team-evaluation
-description: "Use when reviewing skill quality prior to publication or after a bad agent run. Stress-test a skill for false activation, instruction conflicts, impossible claims and unsafe tool usage. Do not use when a normal code review without behavior-oriented skill evaluation."
+description: "Use when reviewing skill quality prior to publication or after a bad agent run. Do not use when a normal code review without behavior-oriented skill evaluation."
 license: MIT
 metadata:
   version: "1.1.0"

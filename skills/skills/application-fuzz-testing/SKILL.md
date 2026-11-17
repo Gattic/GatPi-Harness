@@ -1,6 +1,6 @@
 ---
 name: application-fuzz-testing
-description: "Use when complex input parsers, native code, network protocol handlers or serialization attack surfaces. Find parser/state-machine bugs through controlled fuzzing and minimized regression inputs. Do not use when input space is trivial and conventional tests suffice."
+description: "Use when complex input parsers, native code, network protocol handlers or serialization attack surfaces. Do not use when input space is trivial and conventional tests suffice."
 license: MIT
 metadata:
   version: "1.1.0"

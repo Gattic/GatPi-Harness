@@ -1,6 +1,6 @@
 ---
 name: 3d-modeling-topology
-description: "Use when asset modeling for games, animation, product visualization, AR or 3D printing. Produce 3D meshes with correct scale, topology and downstream deformation/render use. Do not use when 2D illustration without actual scene/mesh deliverables."
+description: "Use when asset modeling for games, animation, product visualization, AR or 3D printing. Do not use when 2D illustration without actual scene/mesh deliverables."
 license: MIT
 metadata:
   version: "1.0.0"

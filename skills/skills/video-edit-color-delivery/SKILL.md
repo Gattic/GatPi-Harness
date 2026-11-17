@@ -1,6 +1,6 @@
 ---
 name: video-edit-color-delivery
-description: "Use when editing clips into final video, grading, captioning or mastering delivery. Finish multi-shot video with coherent pacing, color, audio and platform-specific exports. Do not use when only requesting a raw unedited capture."
+description: "Use when editing clips into final video, grading, captioning or mastering delivery. Do not use when only requesting a raw unedited capture."
 license: MIT
 metadata:
   version: "1.0.0"

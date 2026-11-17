@@ -1,6 +1,6 @@
 ---
 name: acceptance-quality-release
-description: "Use when preparing launch sign-off, QA handoff, publication or production rollout. Provide a cross-functional release gate based on evidence instead of subjective readiness. Do not use when exploratory brainstorming with no output being released."
+description: "Use when preparing launch sign-off, QA handoff, publication or production rollout. Do not use when exploratory brainstorming with no output being released."
 license: MIT
 metadata:
   version: "1.0.0"

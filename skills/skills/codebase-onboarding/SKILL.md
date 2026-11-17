@@ -1,6 +1,6 @@
 ---
 name: codebase-onboarding
-description: "Use when joining a project or receiving a task in an unfamiliar codebase. Build a navigable map of an unfamiliar repository before proposing edits. Do not use when the task is unrelated to existing project code."
+description: "Use when joining a project or receiving a task in an unfamiliar codebase. Do not use when the task is unrelated to existing project code."
 license: MIT
 metadata:
   version: "1.1.0"

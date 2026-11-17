@@ -1,6 +1,6 @@
 ---
 name: implementation-plan
-description: "Use when a reviewed spec requires execution tasks. Produce dependency-aware tasks small enough to verify and merge safely. Do not use when the user asks directly for a trivial one-file change."
+description: "Use when a reviewed spec requires execution tasks. Do not use when the user asks directly for a trivial one-file change."
 license: MIT
 metadata:
   version: "1.0.0"

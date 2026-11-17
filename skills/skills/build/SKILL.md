@@ -1,6 +1,6 @@
 ---
 name: build
-description: "Use when a configure, compile, link, dependency-resolution, sanitizer, static-analysis or CI build step fails, or compiler, toolchain or build-system settings must change, in CMake, npm, Cargo, Python or mixed-language repositories. Diagnose and fix repository build, toolchain, dependency, sanitizer, static-analysis and CI failures from the repository's own build contract without hiding failures. Do not use when the task is designing release, packaging or deployment pipelines, merely running a long build, verifying a finished change, or debugging runtime behavior of a program that already builds."
+description: "Use when a configure, compile, link, dependency-resolution, sanitizer, static-analysis or CI build step fails, or compiler, toolchain or build-system settings must change, in CMake, npm, Cargo, Python or mixed-language repositories. Do not use when the task is designing release, packaging or deployment pipelines, merely running a long build, verifying a finished change, or debugging runtime behavior of a program that already builds."
 license: MIT
 metadata:
   version: "1.0.0"

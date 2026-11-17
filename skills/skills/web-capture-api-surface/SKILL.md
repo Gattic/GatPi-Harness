@@ -1,6 +1,6 @@
 ---
 name: web-capture-api-surface
-description: "Use when a saved HAR, SAZ or other supported network capture needs endpoint discovery, privacy review, or response classification. Extract an observation-bounded API surface from recorded HAR or supported web captures without replaying requests or inventing endpoint semantics. Do not use when the user wants an OpenAPI design based solely on a known backend source, with no capture to inspect."
+description: "Use when a saved HAR, SAZ or other supported network capture needs endpoint discovery, privacy review, or response classification. Do not use when the user wants an OpenAPI design based solely on a known backend source, with no capture to inspect."
 license: MIT
 metadata:
   version: "2.0.0"

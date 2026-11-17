@@ -1,6 +1,6 @@
 ---
 name: customer-support-knowledge-base
-description: "Use when shipping help-center articles, onboarding support, runbooks or support agents. Build accurate support documentation and triage flows for user-facing systems. Do not use when internal speculative product with no users yet."
+description: "Use when shipping help-center articles, onboarding support, runbooks or support agents. Do not use when internal speculative product with no users yet."
 license: MIT
 metadata:
   version: "1.0.0"

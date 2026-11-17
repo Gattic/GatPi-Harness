@@ -1,6 +1,6 @@
 ---
 name: brand-identity-system
-description: "Use when new or refreshed brand identity, creative system, logo usage rules or templates. Create a coherent, accessible visual identity with usage rules across channels. Do not use when user needs an unrelated one-off illustration."
+description: "Use when new or refreshed brand identity, creative system, logo usage rules or templates. Do not use when user needs an unrelated one-off illustration."
 license: MIT
 metadata:
   version: "1.0.0"

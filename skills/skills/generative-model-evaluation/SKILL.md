@@ -1,6 +1,6 @@
 ---
 name: generative-model-evaluation
-description: "Use when choosing among image, video, speech or other generative models for production. Benchmark creative AI models for quality, latency, cost, controls and policy fit using blind tests. Do not use when no model comparison or model-dependent decision exists."
+description: "Use when choosing among image, video, speech or other generative models for production. Do not use when no model comparison or model-dependent decision exists."
 license: MIT
 metadata:
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: responsive-design-system
-description: "Use when multiple pages or products need coherent responsive components and patterns. Create a reusable responsive component system with predictable tokens and states. Do not use when one-off graphic or single nonreusable visual."
+description: "Use when multiple pages or products need coherent responsive components and patterns. Do not use when one-off graphic or single nonreusable visual."
 license: MIT
 metadata:
   version: "1.0.0"

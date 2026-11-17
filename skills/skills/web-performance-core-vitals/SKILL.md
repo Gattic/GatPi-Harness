@@ -1,6 +1,6 @@
 ---
 name: web-performance-core-vitals
-description: "Use when optimizing loading, INP, LCP, CLS, bundle weight or caching. Improve real-user web experience by tracing render, network and interaction bottlenecks. Do not use when no observed web performance issue and no target measurement."
+description: "Use when optimizing loading, INP, LCP, CLS, bundle weight or caching. Do not use when no observed web performance issue and no target measurement."
 license: MIT
 metadata:
   version: "1.0.0"

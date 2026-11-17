@@ -1,6 +1,6 @@
 ---
 name: recorded-crash-evidence-analysis
-description: "Use when the user provides a Linux ELF core, Apple IPS crash report or authorized dump and needs reproducible crash triage. Analyze a supplied crash/core artifact with lossless architecture context and cautious cause attribution. Do not use when only a stack trace pasted into chat is supplied and ordinary debugging would suffice."
+description: "Use when the user provides a Linux ELF core, Apple IPS crash report or authorized dump and needs reproducible crash triage. Do not use when only a stack trace pasted into chat is supplied and ordinary debugging would suffice."
 license: MIT
 metadata:
   version: "2.0.0"

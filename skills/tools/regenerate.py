@@ -23,9 +23,11 @@ def yaml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+# Pi advertises every installed skill's description in the system prompt on every
+# turn, so this string carries only the routing triggers. The delivered outcome
+# stays in the body's Outcome line (and CATALOG.md) until the skill is loaded.
 def description(skill: dict) -> str:
     return ("Use when " + (skill["when"][0].lower() + skill["when"][1:]).rstrip(". ") + ". "
-            + skill["goal"].rstrip(". ") + ". "
             + "Do not use when " + (skill["not_when"][0].lower() + skill["not_when"][1:]).rstrip(". ") + ".")
 
 

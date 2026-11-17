@@ -1,6 +1,6 @@
 ---
 name: artifact-version-delta-analysis
-description: "Use when two authorized shipped releases, captured sessions or binary artifacts must be compared for regression analysis or compatibility. Identify verifiable implementation and behavior differences between two supplied builds or Evidence bundles. Do not use when only a normal Git source diff and release notes are available and sufficiently answer the question."
+description: "Use when two authorized shipped releases, captured sessions or binary artifacts must be compared for regression analysis or compatibility. Do not use when only a normal Git source diff and release notes are available and sufficiently answer the question."
 license: MIT
 metadata:
   version: "2.0.0"

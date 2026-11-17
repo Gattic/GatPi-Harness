@@ -1,6 +1,6 @@
 ---
 name: api-contract-engineering
-description: "Use when introducing or changing endpoints, schemas, SDKs or service contracts. Design evolvable HTTP/RPC/event interfaces with explicit failures and safe compatibility. Do not use when purely internal function with no client contract."
+description: "Use when introducing or changing endpoints, schemas, SDKs or service contracts. Do not use when purely internal function with no client contract."
 license: MIT
 metadata:
   version: "1.1.0"

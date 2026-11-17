@@ -1,6 +1,6 @@
 ---
 name: source-license-provenance
-description: "Use when pulling patterns, scripts, models, images or documents from repositories or providers. Track origin, permissions and source trust for third-party material used in a skill or project. Do not use when all inputs were authored locally and have no external dependency."
+description: "Use when pulling patterns, scripts, models, images or documents from repositories or providers. Do not use when all inputs were authored locally and have no external dependency."
 license: MIT
 metadata:
   version: "1.1.0"

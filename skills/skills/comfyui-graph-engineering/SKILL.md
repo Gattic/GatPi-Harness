@@ -1,6 +1,6 @@
 ---
 name: comfyui-graph-engineering
-description: "Use when creating or debugging ComfyUI pipelines for images, video, audio or 3D. Design portable, efficient ComfyUI node graphs with validated input/output contracts. Do not use when no ComfyUI runtime and user does not need a graph."
+description: "Use when creating or debugging ComfyUI pipelines for images, video, audio or 3D. Do not use when no ComfyUI runtime and user does not need a graph."
 license: MIT
 metadata:
   version: "1.0.0"

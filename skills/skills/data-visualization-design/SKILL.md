@@ -1,6 +1,6 @@
 ---
 name: data-visualization-design
-description: "Use when creating dashboards, plots, explanatory figures or statistical visualizations. Select and engineer honest charts with explicit semantics and accessibility. Do not use when only performing calculations with no visual output requested."
+description: "Use when creating dashboards, plots, explanatory figures or statistical visualizations. Do not use when only performing calculations with no visual output requested."
 license: MIT
 metadata:
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: growth-experimentation
-description: "Use when optimizing activation, acquisition, retention or referral with A/B experiments. Run ethical growth experiments with clean hypotheses and valid inference. Do not use when a decision has no measurable behavior or experimental population."
+description: "Use when optimizing activation, acquisition, retention or referral with A/B experiments. Do not use when a decision has no measurable behavior or experimental population."
 license: MIT
 metadata:
   version: "1.0.0"

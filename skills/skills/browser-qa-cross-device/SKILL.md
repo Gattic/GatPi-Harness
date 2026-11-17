@@ -1,6 +1,6 @@
 ---
 name: browser-qa-cross-device
-description: "Use when web app release QA, flaky UI, responsive regressions or browser-specific failures. Evaluate browser behavior through reproducible end-to-end tests and visual regression evidence. Do not use when only unit-level business logic changes with no browser behavior."
+description: "Use when web app release QA, flaky UI, responsive regressions or browser-specific failures. Do not use when only unit-level business logic changes with no browser behavior."
 license: MIT
 metadata:
   version: "1.1.0"

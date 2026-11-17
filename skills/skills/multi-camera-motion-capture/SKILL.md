@@ -1,6 +1,6 @@
 ---
 name: multi-camera-motion-capture
-description: "Use when using FreeMoCap or camera-based capture to generate human motion data. Design and validate multi-camera motion capture with calibrated geometry and uncertainty. Do not use when producing hand-keyframed animation without cameras."
+description: "Use when using FreeMoCap or camera-based capture to generate human motion data. Do not use when producing hand-keyframed animation without cameras."
 license: MIT
 metadata:
   version: "1.0.0"

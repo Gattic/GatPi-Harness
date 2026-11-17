@@ -1,6 +1,6 @@
 ---
 name: competitive-ad-intelligence
-description: "Use when investigating competitor creative, channel posture or market messaging. Analyze public competitor advertising and positioning without assuming private performance data. Do not use when user has no competitors or marketing decisions to compare."
+description: "Use when investigating competitor creative, channel posture or market messaging. Do not use when user has no competitors or marketing decisions to compare."
 license: MIT
 metadata:
   version: "1.0.0"

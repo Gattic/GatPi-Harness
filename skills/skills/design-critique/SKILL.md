@@ -1,6 +1,6 @@
 ---
 name: design-critique
-description: "Use when reviewing a website, visual design, brand asset or UI for improvement. Critique creative or interface work using prioritized evidence-based criteria. Do not use when creating a new artifact without any existing design to assess."
+description: "Use when reviewing a website, visual design, brand asset or UI for improvement. Do not use when creating a new artifact without any existing design to assess."
 license: MIT
 metadata:
   version: "1.0.0"

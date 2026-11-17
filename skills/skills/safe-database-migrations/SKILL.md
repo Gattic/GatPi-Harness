@@ -1,6 +1,6 @@
 ---
 name: safe-database-migrations
-description: "Use when schema evolution, backfills, production migrations or data retention changes. Plan and execute backward-compatible data changes with reversible checkpoints. Do not use when ephemeral development database reset with no preserved data."
+description: "Use when schema evolution, backfills, production migrations or data retention changes. Do not use when ephemeral development database reset with no preserved data."
 license: MIT
 metadata:
   version: "1.0.0"

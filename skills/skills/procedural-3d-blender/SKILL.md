@@ -1,6 +1,6 @@
 ---
 name: procedural-3d-blender
-description: "Use when blender Python modeling, repeatable scenes or scalable geometry generation. Build parameterized 3D content with reproducible Blender scripts and non-destructive controls. Do not use when manual sculpting is the only requested method and scripts are not desired."
+description: "Use when blender Python modeling, repeatable scenes or scalable geometry generation. Do not use when manual sculpting is the only requested method and scripts are not desired."
 license: MIT
 metadata:
   version: "1.0.0"

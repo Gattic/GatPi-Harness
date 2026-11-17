@@ -1,6 +1,6 @@
 ---
 name: long-run
-description: "Use when a build, full test suite, server, training run, download, generation or pretokenization job may outlive a normal tool call or needs readiness or progress milestones. Own one long-running process from launch or attachment to a clear milestone or terminal verdict through managed jobs instead of ad hoc sleep and tail polling. Do not use when the command finishes within a normal tool call, or the task is application logging or production observability design, experiment-hypothesis design, or fixing a build system."
+description: "Use when a build, full test suite, server, training run, download, generation or pretokenization job may outlive a normal tool call or needs readiness or progress milestones. Do not use when the command finishes within a normal tool call, or the task is application logging or production observability design, experiment-hypothesis design, or fixing a build system."
 license: MIT
 metadata:
   version: "1.0.0"

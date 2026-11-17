@@ -1,6 +1,6 @@
 ---
 name: risk-register-governance
-description: "Use when complex projects, vendor reliance, security review or high-impact launch readiness. Maintain actionable project and operational risk decisions with early-warning indicators. Do not use when tiny reversible task with no nontrivial uncertainty."
+description: "Use when complex projects, vendor reliance, security review or high-impact launch readiness. Do not use when tiny reversible task with no nontrivial uncertainty."
 license: MIT
 metadata:
   version: "1.0.0"

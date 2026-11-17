@@ -1,6 +1,6 @@
 ---
 name: speech-transcription-diarization
-description: "Use when transcribing meetings, interviews, voice notes or multilingual recordings. Produce high-fidelity timestamped transcripts with speaker boundaries and privacy safeguards. Do not use when generating new speech rather than transcribing existing audio."
+description: "Use when transcribing meetings, interviews, voice notes or multilingual recordings. Do not use when generating new speech rather than transcribing existing audio."
 license: MIT
 metadata:
   version: "1.0.0"

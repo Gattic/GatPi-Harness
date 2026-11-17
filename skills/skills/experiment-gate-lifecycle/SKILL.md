@@ -1,6 +1,6 @@
 ---
 name: experiment-gate-lifecycle
-description: "Use when a research or engineering experiment, A/B arm, field cohort, prototype, benchmark or falsification loop must be pre-registered and gated with `experiment_ledger`, or an open experiment record needs its next gate or closure. Run a pre-registered experiment through validity gates, managed runs, recorded verdicts and an explicit ship, no-go or shelved decision without losing bars, null results or cost history. Do not use when the task only designs an experiment's statistics or sampling, manages a process without pass bars, selects among generative models, or is still inventing the hypothesis or framework."
+description: "Use when a research or engineering experiment, A/B arm, field cohort, prototype, benchmark or falsification loop must be pre-registered and gated with `experiment_ledger`, or an open experiment record needs its next gate or closure. Do not use when the task only designs an experiment's statistics or sampling, manages a process without pass bars, selects among generative models, or is still inventing the hypothesis or framework."
 license: MIT
 metadata:
   version: "1.0.0"
