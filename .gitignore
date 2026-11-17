@@ -68,6 +68,7 @@ summaryexample.html
 summaryexample_files/
 
 # Pi runtime state. Tracked source under .pi/ is re-included explicitly.
+# Roadmap and fleet/verification evidence stay local-only: never force-add them.
 .pi/*
 !.pi/extensions/
 !.pi/entropy/
