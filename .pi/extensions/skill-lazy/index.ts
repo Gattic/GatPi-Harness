@@ -20,8 +20,12 @@ export default function skillLazy(pi: ExtensionAPI) {
   // The model never pays for the full catalog; the user can still inspect it.
   pi.registerCommand("skill-catalog", {
     description: "Show the lazy global skill index (names grouped by skill directory)",
-    handler: async (_args: string, ctx: any) =>
-      notify(ctx, lastIndex || "No user-scope skills are lazy-loaded in this session.", "info"),
+    handler: async (_args: string, ctx: any) => {
+      // A fresh session has not run before_agent_start yet; derive the index
+      // from the base prompt options so the command works before the first turn.
+      const reduction = reduceSkillsOptions(ctx.getSystemPromptOptions?.() ?? {});
+      notify(ctx, reduction?.section || lastIndex || "No user-scope skills are lazy-loaded in this session.", "info");
+    },
   });
 
   pi.on("before_agent_start" as any, async (event: any) => {

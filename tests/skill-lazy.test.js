@@ -139,8 +139,20 @@ assert.equal(rewriteSkillsBlock("<skills>\nunknown format\n</skills>", applied),
   const jiti = createJiti(extensionFile, { interopDefault: true, alias: { "@earendil-works/pi-coding-agent": piPackageRoot } });
   const mod = await jiti.import(extensionFile);
   const handlers = [];
-  (mod.default || mod)({ on: (event, handler) => handlers.push({ event, handler }), registerCommand: () => {} });
+  const commands = [];
+  (mod.default || mod)({
+    on: (event, handler) => handlers.push({ event, handler }),
+    registerCommand: (name, definition) => commands.push({ name, definition }),
+  });
   const handler = handlers.find((row) => row.event === "before_agent_start").handler;
+  const catalog = commands.find((row) => row.name === "skill-catalog");
+  assert.ok(catalog, "the catalog command is registered");
+  const logged = [];
+  const originalLog = console.log;
+  console.log = (value) => logged.push(String(value));
+  await catalog.definition.handler("", { getSystemPromptOptions: () => options([globalOne, globalTwo, project]) });
+  console.log = originalLog;
+  assert.match(logged.join("\n"), /- \/home\/u\/\.agents\/skills: build, long-run/, "the command derives the index before the first turn");
 
   const eventOptions = options([globalOne, project]);
   assert.equal(await handler({ systemPromptOptions: eventOptions }), undefined);
