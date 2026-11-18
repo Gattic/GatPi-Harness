@@ -195,6 +195,34 @@ const archiveIndexText = fs.readFileSync(archiveIndexFile(persistenceRoot), "utf
 assert(!archiveIndexText.includes("FORBIDDEN_ARCHIVE_REASON"), "archive index stores only a fixed reason category");
 assert.equal(JSON.parse(archiveIndexText.trim().split(/\n/).at(-1)).reasonCategory, "other");
 
+// Archiving the same roadmap twice keeps both packets. `new Date()` is pinned
+// so both writes fall in one millisecond and the collision path runs;
+// Date.now() stays real for storage temp names and lock timeouts.
+const archiveTwiceRoot = tmpFixture("pi-roadmap-archive-twice-");
+const archiveTwiceDir = path.dirname(archiveIndexFile(archiveTwiceRoot));
+const archivedRoadmap = createRoadmap("Archived twice", ["Persist both"]);
+const RealDate = Date;
+const pinnedAt = "2026-01-02T03:04:05.678Z";
+global.Date = class extends RealDate { constructor(...args) { super(...(args.length ? args : [pinnedAt])); } };
+let firstArchive;
+let secondArchive;
+try {
+  firstArchive = archiveRoadmapPacket(archiveTwiceRoot, archivedRoadmap, "manual-archive");
+  secondArchive = archiveRoadmapPacket(archiveTwiceRoot, setStatus(archivedRoadmap, "1", "done"), "manual-archive");
+} finally { global.Date = RealDate; }
+assert.equal(firstArchive.archiveKey, `archive/${archivedRoadmap.id}--20260102T030405678Z`);
+assert.equal(secondArchive.archiveKey, `${firstArchive.archiveKey}-2`, "a second archive in the same millisecond gets its own file");
+const firstPacket = JSON.parse(fs.readFileSync(path.join(archiveTwiceDir, `${firstArchive.archiveKey}.json`), "utf8"));
+const secondPacket = JSON.parse(fs.readFileSync(path.join(archiveTwiceDir, `${secondArchive.archiveKey}.json`), "utf8"));
+assert.equal(firstPacket.items[0].status, "active", "the first archive survives the second");
+assert.equal(secondPacket.items[0].status, "done");
+for (const [row, packet] of [[firstArchive, firstPacket], [secondArchive, secondPacket]]) {
+  assert.equal(packet.lifecycle.changedAt, pinnedAt);
+  assert.equal(row.archivedAt, pinnedAt, "a file and its index row share one timestamp");
+}
+const archiveTwiceRows = fs.readFileSync(archiveIndexFile(archiveTwiceRoot), "utf8").trim().split(/\n/).map((line) => JSON.parse(line));
+assert.deepEqual(archiveTwiceRows.map((row) => [row.schemaVersion, row.archiveKey]), [[2, firstArchive.archiveKey], [2, secondArchive.archiveKey]], "the index names both files");
+
 const symlinkRoot = tmpFixture("pi-roadmap-symlink-");
 fs.mkdirSync(path.dirname(stateFile(symlinkRoot)), { recursive: true, mode: 0o700 });
 const victim = path.join(symlinkRoot, "victim.json");

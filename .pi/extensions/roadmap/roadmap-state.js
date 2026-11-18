@@ -246,14 +246,25 @@ function archiveReasonCategory(reason) {
   const value = cleanText(reason, "archived");
   return ["root-replaced", "cleared", "completed-on-next-input", "manual-archive", "tool-archive", "tool-clear", "archived"].includes(value) ? value : "other";
 }
+// A roadmap can be archived more than once (adopted again, then archived), so
+// every archive write gets its own file and the index row names it.
+function uniqueArchiveKey(storage, safeId, archivedAt) {
+  const stem = `archive/${safeId}--${archivedAt.replace(/[-:.]/g, "")}`;
+  const taken = (key) => fs.existsSync(storage.jsonPath(key)) || fs.existsSync(storage.chunkManifestPath(key));
+  let key = stem;
+  for (let suffix = 2; taken(key); suffix++) key = `${stem}-${suffix}`;
+  return key;
+}
 function archiveRoadmapPacket(cwd, state, reason = "replaced", options = {}) {
   const normalized = normalizeRoadmap(state);
   if (!normalized) return null;
   const storage = roadmapStorage(cwd, options);
   const progress = getProgress(normalized);
   const safeId = String(normalized.id).replace(/[^A-Za-z0-9_.-]/g, "_");
-  storage.writeJson(`archive/${safeId}`, { ...normalized, lifecycle: { status: "archived", changedAt: nowIso(), reason: cleanText(reason, "archived") } });
-  const row = { schemaVersion: 1, roadmapId: safeId, archivedAt: nowIso(), reasonCategory: archiveReasonCategory(reason), itemCount: progress.total, completeCount: progress.complete, unresolvedCount: progress.unresolved };
+  const archivedAt = nowIso();
+  const archiveKey = uniqueArchiveKey(storage, safeId, archivedAt);
+  storage.writeJson(archiveKey, { ...normalized, lifecycle: { status: "archived", changedAt: archivedAt, reason: cleanText(reason, "archived") } });
+  const row = { schemaVersion: 2, roadmapId: safeId, archiveKey, archivedAt, reasonCategory: archiveReasonCategory(reason), itemCount: progress.total, completeCount: progress.complete, unresolvedCount: progress.unresolved };
   const rows = [...storage.readJsonl("archive-index"), row].slice(-500);
   storage.writeJsonl("archive-index", rows);
   return row;
