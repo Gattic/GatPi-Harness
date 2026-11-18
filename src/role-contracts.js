@@ -11,6 +11,9 @@ const ROLE_CONTRACT_SCHEMA_VERSION = 2;
 // launch path resolves a configured provider and falls back to the parent's
 // resolved model when the id is unavailable.
 const DEFAULT_DELEGATE_MODEL = "DeepSeek-V4.1-Flash-1017";
+// Legacy placeholder provider: role pins used to say local/<model>; the launch
+// path must remap that to a provider the session actually configured.
+const PLACEHOLDER_MODEL_PROVIDERS = Object.freeze(["local"]);
 const WORKSPACE_POLICIES = Object.freeze(["handler-only", "shared-readonly", "isolated-worktree"]);
 const MUTATION_POLICIES = Object.freeze(["forbidden", "proposed-patch", "isolated-only"]);
 const MODEL_POLICY_MODES = Object.freeze(["inherit", "preferred", "fixed"]);
@@ -69,7 +72,48 @@ function validateModelPattern(value, name) {
   const pattern = String(value || "").trim();
   if (!pattern) throw new Error(`${name} requires a model`);
   if (THINKING_SUFFIX.test(pattern)) throw new Error(`${name} must declare thinkingLevel separately from the model`);
+  if (!splitModelPattern(pattern).id) throw new Error(`${name} requires a model id`);
   return pattern;
+}
+
+// Split a role model reference (string "provider/id" or { provider, id }) into
+// its raw parts without interpreting the provider.
+function splitModelPattern(value) {
+  if (value && typeof value === "object") return { provider: value.provider ?? null, id: value.id ?? "" };
+  const pattern = String(value ?? "").trim();
+  const slash = pattern.indexOf("/");
+  if (slash <= 0) return { provider: null, id: pattern };
+  return { provider: pattern.slice(0, slash), id: pattern.slice(slash + 1) };
+}
+function modelPatternOf(provider, id) { return id ? (provider ? `${provider}/${id}` : id) : ""; }
+
+// Normalize a role model reference for lookup. The legacy "local" placeholder
+// carries no provider information, so it becomes a provider-neutral id; an empty
+// id is unresolved rather than a bare id.
+function normalizeModelPattern(value) {
+  const { provider, id } = splitModelPattern(value);
+  const resolvedProvider = provider && !PLACEHOLDER_MODEL_PROVIDERS.includes(provider) ? provider : null;
+  return { provider: resolvedProvider, id, model: modelPatternOf(resolvedProvider, id) };
+}
+
+// RPC sidecars split the expected model on "/", so a provider-neutral id arrives
+// back as { provider: <bare id>, id: "" }. Recover that bare id before comparing
+// the launch policy with the model the child actually reports.
+function observedModelPattern(value) {
+  const normalized = normalizeModelPattern(value);
+  if (normalized.id || !value || typeof value !== "object") return normalized;
+  const provider = typeof value.provider === "string" ? value.provider.trim() : "";
+  if (!provider || PLACEHOLDER_MODEL_PROVIDERS.includes(provider)) return normalized;
+  return { provider: null, id: provider, model: provider };
+}
+
+// A provider-neutral expectation accepts any configured provider that offers the
+// same model id; a provider-qualified expectation must match both parts.
+function roleModelsMatch(expected, observed) {
+  const want = normalizeModelPattern(expected);
+  const got = observedModelPattern(observed);
+  if (!want.id || !got.id) return false;
+  return want.id === got.id && (!want.provider || want.provider === got.provider);
 }
 function ownEnvironmentValue(env, name) { return Object.prototype.hasOwnProperty.call(env || {}, name); }
 
@@ -392,4 +436,8 @@ module.exports = {
   selectRoleInferenceProfile,
   roleModelEnvName,
   roleThinkingEnvName,
+  splitModelPattern,
+  normalizeModelPattern,
+  observedModelPattern,
+  roleModelsMatch,
 };
