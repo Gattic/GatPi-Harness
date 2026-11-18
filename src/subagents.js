@@ -22,7 +22,7 @@ const {
   errorFromValidation,
   terminalAssistantMessage,
 } = require("./subagent-result-validator");
-const { DEFAULT_ROLE_CONTRACTS, DEFAULT_DELEGATE_MODEL, validateRoleContract, resolveRequiredTools, selectRoleInferenceProfile, THINKING_LEVELS, ACTUAL_CHILD_TOOLS } = require("./role-contracts");
+const { DEFAULT_ROLE_CONTRACTS, DEFAULT_DELEGATE_MODEL, validateRoleContract, resolveRequiredTools, selectRoleInferenceProfile, THINKING_LEVELS, ACTUAL_CHILD_TOOLS, splitModelPattern, normalizeModelPattern, observedModelPattern, roleModelsMatch } = require("./role-contracts");
 const { ROLE_RESULT_SCHEMA_VERSION, ROLE_CONTRACT_VERSION, RESULT_STATUSES, createRoleResultEnvelope, validateRoleResultEnvelope } = require("./role-result-schemas");
 const { SubagentWorkspaceManager } = require("./subagent-workspaces");
 const { SubagentPatchService } = require("./subagent-patches");
@@ -366,17 +366,11 @@ function modelPattern(model) {
   return model.provider ? `${model.provider}/${model.id}` : String(model.id);
 }
 function modelPatternFromContext(context = {}) { return modelPattern(context.model || context.ctx?.model); }
-function parseModelPattern(value) {
-  const pattern = String(value || "").trim();
-  const slash = pattern.indexOf("/");
-  if (slash <= 0) return { provider: null, id: pattern };
-  return { provider: pattern.slice(0, slash), id: pattern.slice(slash + 1) };
-}
 function configuredModelEntries(availableModels) {
   const rows = [];
   const seen = new Set();
   for (const entry of availableModels) {
-    const parsed = typeof entry === "string" ? parseModelPattern(entry) : parseModelPattern(modelPattern(entry));
+    const parsed = splitModelPattern(entry);
     if (!parsed.provider || !parsed.id) continue;
     const key = `${parsed.provider}/${parsed.id}`;
     if (seen.has(key)) continue;
@@ -386,25 +380,34 @@ function configuredModelEntries(availableModels) {
   return rows;
 }
 // Resolve a role's pinned model against the providers the session actually
-// configured. An explicit provider wins only when it is configured; otherwise
-// the same model id is taken from a configured provider (preferring the
-// parent's provider), and an unavailable id falls back to the parent model.
+// configured. The legacy "local" placeholder carries no provider, so a bare or
+// placeholder pin is matched by model id; an unavailable id falls back to the
+// parent's resolved model. A pin with no model id is unresolved.
 function resolveRoleModel(selectedModel, { availableModels, inheritedModel } = {}) {
-  const selected = parseModelPattern(selectedModel);
-  const inherited = parseModelPattern(inheritedModel);
-  if (!Array.isArray(availableModels)) return { model: selectedModel, modelPolicySource: null };
+  const selected = normalizeModelPattern(selectedModel);
+  const inherited = splitModelPattern(inheritedModel);
+  const inheritedResult = inherited.provider && inherited.id
+    ? { model: `${inherited.provider}/${inherited.id}`, modelPolicySource: "inherit" }
+    : null;
+  if (!selected.id) {
+    if (inheritedResult) return inheritedResult;
+    const error = new Error(`role model ${JSON.stringify(String(selectedModel ?? ""))} has no model id`);
+    error.code = "ROLE_MODEL_UNRESOLVED";
+    throw error;
+  }
+  if (!Array.isArray(availableModels)) return { model: selected.model, modelPolicySource: null };
   const candidates = configuredModelEntries(availableModels);
   if (selected.provider) {
     const exact = candidates.find((row) => row.provider === selected.provider && row.id === selected.id);
     if (exact) return { model: `${exact.provider}/${exact.id}`, modelPolicySource: null };
   }
-  const matches = selected.id ? candidates.filter((row) => row.id === selected.id) : [];
+  const matches = candidates.filter((row) => row.id === selected.id);
   if (matches.length) {
     const preferred = matches.find((row) => row.provider === inherited.provider) || matches[0];
     return { model: `${preferred.provider}/${preferred.id}`, modelPolicySource: "derived" };
   }
-  if (inherited.provider && inherited.id) return { model: `${inherited.provider}/${inherited.id}`, modelPolicySource: "inherit" };
-  return { model: selectedModel, modelPolicySource: null };
+  if (inheritedResult) return inheritedResult;
+  return { model: selected.model, modelPolicySource: null };
 }
 function thinkingLevelFromContext(context = {}) {
   const level = context.thinkingLevel || context.ctx?.thinkingLevel;
@@ -798,9 +801,9 @@ class SubagentRunner {
       };
       const maybeResolve = () => {
         if (settled || promptAcceptedMs === null || !agentEnd || !stateDone || !messagesDone || (taskRpc && !agentSettled)) return;
-        const effectiveModel = modelPattern(state?.model);
+        const effectiveModel = observedModelPattern(state?.model).model || null;
         const effectiveThinkingLevel = state?.thinkingLevel || null;
-        if (record.roleContract && (effectiveModel !== launch.provenance?.selectedModel || effectiveThinkingLevel !== launch.provenance?.selectedThinkingLevel)) {
+        if (record.roleContract && (!roleModelsMatch(launch.provenance?.selectedModel, state?.model) || effectiveThinkingLevel !== launch.provenance?.selectedThinkingLevel)) {
           const error = new Error(`role inference policy mismatch: expected ${launch.provenance?.selectedModel}/${launch.provenance?.selectedThinkingLevel}, got ${effectiveModel || "unknown"}/${effectiveThinkingLevel || "unknown"}`);
           error.code = "SUBAGENT_INFERENCE_POLICY_MISMATCH";
           error.termination = { code: "inference_policy_mismatch", stopReason: null, message: error.message };
