@@ -3,7 +3,7 @@ name: rigging-animation-retarget
 description: "Use when character rigging, mocap retargeting, motion cleanup or animation export. Do not use when a static prop mesh with no moving components."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "media"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Validate deformation weights, animation curves, event timing and target-engine import behavior.
 
 6. Export reusable mapping, rig, cleaned clips and a side-by-side motion QC report.
+
+## Specialist protocol and proof boundaries
+
+- Validate cyclic phase, joint constraints, collisions and motion endpoints at sampled times; prioritize model-defined kinematics for rigid mechanisms.
+- Do not substitute aesthetically pleasing interpolation for correct mechanical constraints.
 
 ## Deliverables
 
@@ -99,3 +104,10 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md

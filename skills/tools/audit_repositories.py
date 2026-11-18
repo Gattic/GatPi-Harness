@@ -37,6 +37,7 @@ REPOSITORIES = [
     'debpalash/VoiceStudio', 'OpenBMB/VoxCPM', 'openwhispr/openwhispr',
     'freemocap/freemocap', 'nikopueringer/CorridorKey', 'latent-spaces/brag',
     'Autom8AI/Open-Higgsfield-AI', 'heygen-com/hyperframes', 'opf/openproject',
+    'morluto/rea',
 ]
 
 APP_REPOS = {
@@ -377,7 +378,7 @@ def do_audit(names: list[str], offline: dict[str,str], clone_dir: pathlib.Path,
     for rep in manifest:
         summary.append(f"| {rep['repository']} | {rep['kind']} | {rep['skills']} | {rep['status']} | `{(rep.get('commit') or 'n/a')[:12]}` |")
     summary += ['', '## Reproducibility and limits', '',
-                'Run `python tools/audit_repositories.py --out source-audit` with Git and network access, or provide 18 offline clones.',
+                'Run `python tools/audit_repositories.py --out source-audit` with Git and network access, or provide 19 offline clones.',
                 'Only a COMPLETE result for every repository and every file justifies calling this a full tracked-skill inventory. Check the `audit_is_exhaustive` field.',
                 'Do not interpret heuristic scores as validated effectiveness or licensing clearance.', '']
     (out/'README.md').write_text('\n'.join(summary),encoding='utf-8')
@@ -388,7 +389,7 @@ def do_audit(names: list[str], offline: dict[str,str], clone_dir: pathlib.Path,
 def main() -> int:
     parser=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--repo',action='append',choices=REPOSITORIES,
-                        help='One repository to audit (repeat for multiple); defaults to all 18')
+                        help='One repository to audit (repeat for multiple); defaults to all 19')
     parser.add_argument('--offline-repo',action='append',default=[],metavar='OWNER/REPO=/path/to/clone',
                         help='Reuse a local clone instead of network clone; can repeat')
     parser.add_argument('--clone-dir',type=pathlib.Path,default=pathlib.Path('.skill-audit-clones'))

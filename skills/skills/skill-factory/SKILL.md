@@ -3,7 +3,7 @@ name: skill-factory
 description: "Use when creating a new SKILL.md or improving an existing agent skill. Do not use when writing ordinary product documentation without agent-invocable behavior."
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   category: "meta"
 ---
 
@@ -44,6 +44,8 @@ metadata:
 - Add a target/tool/permission/authority matrix when creating reverse-engineering or other evidence-heavy skills; do not default to one all-purpose tool chain.
 - Build negative routing evaluations where the same technology is mentioned but does not warrant use; grade tool unavailability and authorization boundaries.
 - Do not equate static structural validation with empirical agent success; require real task trials before describing any skill as battle-tested.
+- Require real positive/negative routing prompts for new animation and visualization skills; test source-of-truth model integrity and reduced-motion paths.
+- Do not equate generated skill files and static schema validity with real visual/runtime success.
 
 ## Deliverables
 
@@ -107,10 +109,13 @@ the relevant part of this skill in the child task and keep this skill's acceptan
 
 ## Optional references
 
-- references/evaluation-protocol.md
+- [references/evaluation-protocol.md](references/evaluation-protocol.md)
 
 ## Provenance notes
 
 Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
 
 - https://github.com/morluto/rea/blob/main/.agents/skills/reverse-engineer-anything/SKILL.md
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

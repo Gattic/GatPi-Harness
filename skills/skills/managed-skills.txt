@@ -5,6 +5,7 @@ ad-creative-testing
 ai-prompt-injection-defense
 analytics-conversion-instrumentation
 android-apk-code-audit
+animation-benchmark-isolation
 api-contract-engineering
 application-fuzz-testing
 application-privacy-runtime-audit
@@ -12,7 +13,9 @@ artifact-version-delta-analysis
 asset-rights-content-authenticity
 audio-design-mix
 binary-mitigation-inventory
+blender-cinematic-video-pipeline
 brand-identity-system
+brand-motion-system
 brand-safety-compliance
 browser-qa-cross-device
 browser-scenario-evidence
@@ -57,14 +60,19 @@ image-edit-compositing
 image-generation-iteration
 image-quality-upscale
 implementation-plan
+interactive-isometric-explainer
 internal-link-strategy
 international-seo-localization
+isometric-svg-geometry-audit
 javascript-electron-artifact-recovery
 landing-page-conversion
 lighting-render-optimization
 long-run
+lottie-animation-delivery
 market-segmentation
+mechanical-animation-kinematics
 model-file-metadata-forensics
+motion-choreography-review
 multi-agent-delegation
 multi-camera-motion-capture
 multilingual-dubbing-localization
@@ -117,6 +125,7 @@ text-to-speech-voice-direction
 text-to-video-production
 typesafe-ai
 typography-layout-system
+ui-motion-direction
 ux-research-usability
 video-edit-color-delivery
 video-storyboard-shotlist
@@ -126,4 +135,5 @@ web-capture-api-surface
 web-migration-seo
 web-performance-core-vitals
 web-security-headers
+webgl-svg-hybrid-scene
 website-discovery-architecture

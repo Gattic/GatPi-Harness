@@ -3,7 +3,7 @@ name: 3d-modeling-topology
 description: "Use when asset modeling for games, animation, product visualization, AR or 3D printing. Do not use when 2D illustration without actual scene/mesh deliverables."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "media"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Create LODs or high/low-poly bake targets when relevant; preserve clean transforms, naming and object origin.
 
 6. Export and reimport target format and inspect scale, pivots, normals, textures and material slots.
+
+## Specialist protocol and proof boundaries
+
+- When preparing animated mechanisms, define collision-ready bounds, mechanical attachment points, geometric scale and separate moving assemblies.
+- Check supports and clearances at several animation poses instead of inspecting only the assembled mesh.
 
 ## Deliverables
 
@@ -98,3 +103,10 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

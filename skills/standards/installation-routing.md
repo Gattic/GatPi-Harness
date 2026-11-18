@@ -8,7 +8,7 @@ python tools/install.py --target /path/to/project/.agents/skills --skill skill-f
 python tools/install.py --target /path/to/project/.agents/skills --all --dry-run
 ```
 
-Do not overwrite existing user directories without explicit choice (`--force` will replace the matching folder). Avoid loading 129 entire instruction bodies into one context. Use the descriptions/manifest for discovery and load the smallest matching set on demand.
+Do not overwrite existing user directories without explicit choice (`--force` will replace the matching folder). Avoid loading 139 entire instruction bodies into one context. Use the descriptions/manifest for discovery and load the smallest matching set on demand.
 
 ## Routing rule
 

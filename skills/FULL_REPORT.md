@@ -1,7 +1,8 @@
+# Current release note
+
+This report covers the 2026-10-27 REA release; see [CHANGES_2026-11-18.md](CHANGES_2026-11-18.md) and [README.md](README.md) for the newer 131-skill release.
+
 # Skill Foundry v2.0 — full release report
-
-> **pi-harness note:** the supplied 2.0 ZIP omitted the authoring-side additions named below (`standards/evidence-authorship.md`, `standards/claim-ledger-schema.json`, `tools/check_evidence_ledger.py`, `tools/verify_release.py`, `RELEASE_FILES.json`, `research/rea-architecture-assessment.md` and `research/ORIGINAL_2026-10-24_FULL_REPORT.md`). They are absent from this repository copy. The report content below is otherwise reproduced as supplied.
-
 
 **Release:** 2026-10-27  
 **Contents:** 121 original modular AI Agent Skills covering software engineering, research, website development, SEO, marketing, advertising, 3D/media production, cybersecurity, delivery, and meta-skill engineering.  

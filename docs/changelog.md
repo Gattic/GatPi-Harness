@@ -1,5 +1,41 @@
 # Changelog
 
+## skills-pack-3.0 - 2026-11-18
+
+- Replaced the Skill Foundry payload in `skills/` with the supplied 2026-11-18
+  pack (Skill Foundry 3.0): 10 new motion, isometric, shader, Blender and
+  kinematics skills, 23 revised skills and 98 unchanged supplied entrypoints,
+  for 139 managed skills (131 supplied + the 8 local restorations, which are
+  byte-unchanged).
+- `skills/catalog.json` now holds the 131 supplied entries verbatim followed by
+  the eight local entries. The local `routing_tests` catalog field is gone:
+  `skills/tools/regenerate.py` applies the pack's own `routing_examples`
+  per-id prompt overrides, which yield the same evaluation bytes. The generator
+  also adopts the pack's markdown-link `refs` rendering and trailing-period
+  normalization for `special_rules`, which retires two deviations disclosed for
+  2.0; 22 otherwise unchanged entrypoints change only in those lines.
+- `skills/tools/validate_skills.py` gains the pack's `routing_examples`,
+  `special_rules` and `domain_tests` checks. Authoring-side files the 2.0 ZIP
+  omitted are now present (`tools/check_evidence_ledger.py`,
+  `tools/verify_release.py`, `standards/evidence-authorship.md`,
+  `standards/claim-ledger-schema.json`, the REA research notes) with their
+  offline tests; `tools/audit_repositories.py`, `research/repository-review.md`
+  and `source-audit/STATUS.md` move from their 2026-10-24 text to the supplied
+  19-source versions.
+- Every generated `SKILL.md` for a supplied skill equals the supplied body apart
+  from the trigger-only description and the **Harness delegation** section; all
+  131 supplied evaluation suites are byte-equal. Remaining deviations (the SEO
+  helper fix, the omitted `RELEASE_FILES.json`, adapted pack documents) are
+  recorded in `docs/skill-bundle-migration.md`.
+- The role skill-awareness roster now lists 139 skills, so every role's
+  `roleRevisionHash` changes; durable typed records and task graphs pinned to the
+  previous revision fail closed as documented in `docs/subagents.md`.
+- Verified with `skills/tools/validate_skills.py` (139 skills), the 28 offline
+  pack tests, and `generic-agent-skills`, `install-agent-skills`,
+  `agent-skills-pi-load`, `skill-awareness`, `role-consumer-contracts` and
+  `fleet-skill-gate`; installed on this machine to `~/.agents/skills` and
+  `~/.claude/skills` (139 managed skills each, digest-equal to the source).
+
 ## provider-derived-role-models - 2026-11-18
 
 - Role model pins in `config/harness-defaults.env` are now provider-neutral model

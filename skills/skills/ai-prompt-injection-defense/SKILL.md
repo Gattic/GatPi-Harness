@@ -107,7 +107,7 @@ the relevant part of this skill in the child task and keep this skill's acceptan
 
 ## Optional references
 
-- references/adversarial-eval.md
+- [references/adversarial-eval.md](references/adversarial-eval.md)
 
 ## Provenance notes
 

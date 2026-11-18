@@ -3,7 +3,7 @@ name: multi-agent-delegation
 description: "Use when a project supports parallel research, code, design or evaluation tasks. Do not use when single tightly coupled tasks where delegation adds more overhead than value."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "meta"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Integrate outputs by testing contracts and resolving conflicting recommendations explicitly, rather than concatenating artifacts.
 
 6. Perform a final system-level end-to-end check on the integrated result and report any unverified integrations.
+
+## Specialist protocol and proof boundaries
+
+- When delegating animation production, transmit complete format/physics/preview/QC constraints to the actual builder and require observable artifacts.
+- For comparative agent benchmarks, prevent cross-run data contamination with real isolation, not prompt-only boundaries.
 
 ## Deliverables
 
@@ -98,3 +103,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

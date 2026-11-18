@@ -1,6 +1,6 @@
 # Skill catalog
 
-**129 task skills**; regenerated from `catalog.json`.
+**139 task skills**; regenerated from `catalog.json`.
 
 ## delivery (5)
 
@@ -10,15 +10,20 @@
 - [`requirements-to-roadmap`](skills/requirements-to-roadmap/SKILL.md) — Convert ambitions into prioritized deliverable milestones with dependencies and verifiable outcomes.
 - [`risk-register-governance`](skills/risk-register-governance/SKILL.md) — Maintain actionable project and operational risk decisions with early-warning indicators.
 
-## design (8)
+## design (13)
 
 - [`brand-identity-system`](skills/brand-identity-system/SKILL.md) — Create a coherent, accessible visual identity with usage rules across channels.
+- [`brand-motion-system`](skills/brand-motion-system/SKILL.md) — Build a consistent motion identity with design tokens, component recipes and measurable accessibility and performance constraints.
 - [`data-visualization-design`](skills/data-visualization-design/SKILL.md) — Select and engineer honest charts with explicit semantics and accessibility.
 - [`design-critique`](skills/design-critique/SKILL.md) — Critique creative or interface work using prioritized evidence-based criteria.
 - [`design-to-code-handoff`](skills/design-to-code-handoff/SKILL.md) — Convert design intent into testable engineering contracts without losing responsive and accessible behavior.
+- [`interactive-isometric-explainer`](skills/interactive-isometric-explainer/SKILL.md) — Create an accurate, crafted interactive isometric diagram whose physical mechanism, animation and readout share a single mathematical model.
+- [`isometric-svg-geometry-audit`](skills/isometric-svg-geometry-audit/SKILL.md) — Audit isometric SVG illustrations for projection consistency, depth ordering, clipping, support, clearances, misleading dimensions and accessibility.
+- [`motion-choreography-review`](skills/motion-choreography-review/SKILL.md) — Diagnose and improve multi-element animation rhythm, legibility, sequencing, timing and interruption behavior.
 - [`presentation-narrative`](skills/presentation-narrative/SKILL.md) — Design persuasive factual presentations with a coherent evidence-to-decision arc.
 - [`product-interface-design`](skills/product-interface-design/SKILL.md) — Translate flows and constraints into polished implementable UI screens and interactions.
 - [`typography-layout-system`](skills/typography-layout-system/SKILL.md) — Construct readable typographic hierarchy and layout grids across sizes and content extremes.
+- [`ui-motion-direction`](skills/ui-motion-direction/SKILL.md) — Design comprehensible, accessible interface motion that supports user intent and a coherent brand personality.
 - [`ux-research-usability`](skills/ux-research-usability/SKILL.md) — Plan and synthesize user research without mistaking anecdotes for population facts.
 
 ## engineering (29)
@@ -68,11 +73,12 @@
 - [`paid-media-measurement`](skills/paid-media-measurement/SKILL.md) — Evaluate paid acquisition efficiency with transparent attribution and uncertainty.
 - [`positioning-message-architecture`](skills/positioning-message-architecture/SKILL.md) — Translate competitive differentiation into provable audience-specific value propositions.
 
-## media (23)
+## media (27)
 
 - [`3d-modeling-topology`](skills/3d-modeling-topology/SKILL.md) — Produce 3D meshes with correct scale, topology and downstream deformation/render use.
 - [`asset-rights-content-authenticity`](skills/asset-rights-content-authenticity/SKILL.md) — Document creative media origin and rights while preventing misleading provenance claims.
 - [`audio-design-mix`](skills/audio-design-mix/SKILL.md) — Deliver clear, balanced sound design and mixes for speech, music and effects.
+- [`blender-cinematic-video-pipeline`](skills/blender-cinematic-video-pipeline/SKILL.md) — Produce validated Blender animation projects and encoded videos using staged previews, physics checks, resource-aware rendering and reproducible delivery.
 - [`comfyui-graph-engineering`](skills/comfyui-graph-engineering/SKILL.md) — Design portable, efficient ComfyUI node graphs with validated input/output contracts.
 - [`generative-model-evaluation`](skills/generative-model-evaluation/SKILL.md) — Benchmark creative AI models for quality, latency, cost, controls and policy fit using blind tests.
 - [`greenscreen-keying`](skills/greenscreen-keying/SKILL.md) — Create clean transparent mattes with realistic edges, hair detail and spill suppression.
@@ -81,6 +87,8 @@
 - [`image-generation-iteration`](skills/image-generation-iteration/SKILL.md) — Produce and refine generated images through controlled, reproducible changes.
 - [`image-quality-upscale`](skills/image-quality-upscale/SKILL.md) — Improve image resolution/noise while protecting detail and avoiding hallucinated facts.
 - [`lighting-render-optimization`](skills/lighting-render-optimization/SKILL.md) — Design readable 3D lighting and optimize renders without unacceptable quality loss.
+- [`lottie-animation-delivery`](skills/lottie-animation-delivery/SKILL.md) — Produce and verify portable vector animation exports with explicit renderer, asset, compatibility and accessibility constraints.
+- [`mechanical-animation-kinematics`](skills/mechanical-animation-kinematics/SKILL.md) — Build and verify mechanism animations with gear ratios, linkage constraints, phase continuity, clearances and physically interpretable motion.
 - [`model-file-metadata-forensics`](skills/model-file-metadata-forensics/SKILL.md) — Inspect local model file declarations, tensors and header provenance without inferring generation quality or model safety from metadata alone
 - [`multi-camera-motion-capture`](skills/multi-camera-motion-capture/SKILL.md) — Design and validate multi-camera motion capture with calibrated geometry and uncertainty.
 - [`multilingual-dubbing-localization`](skills/multilingual-dubbing-localization/SKILL.md) — Adapt speech and timing to another language without mistranslating meaning or mismatching lip timing.
@@ -93,9 +101,11 @@
 - [`video-edit-color-delivery`](skills/video-edit-color-delivery/SKILL.md) — Finish multi-shot video with coherent pacing, color, audio and platform-specific exports.
 - [`video-storyboard-shotlist`](skills/video-storyboard-shotlist/SKILL.md) — Plan shootable or generatable video sequences with continuity and edit-ready timing.
 - [`voice-clone-consent`](skills/voice-clone-consent/SKILL.md) — Establish authorization and quality controls for permitted personalized voice synthesis.
+- [`webgl-svg-hybrid-scene`](skills/webgl-svg-hybrid-scene/SKILL.md) — Combine SVG mechanical geometry and WebGL effects in aligned world coordinates with synchronized timing, fallback rendering and performance checks.
 
-## meta (8)
+## meta (9)
 
+- [`animation-benchmark-isolation`](skills/animation-benchmark-isolation/SKILL.md) — Design fair and reproducible AI animation benchmarks with equivalent briefs, isolated workspaces and independently measured render quality and cost.
 - [`handoff`](skills/handoff/SKILL.md) — Write a durable, self-contained handoff file that lets a fresh agent resume this session's work without chat history.
 - [`multi-agent-delegation`](skills/multi-agent-delegation/SKILL.md) — Break large bounded projects into reviewable independent contributions with clear ownership.
 - [`rea-capability-routing`](skills/rea-capability-routing/SKILL.md) — Select the narrowest evidence-producing REA workflow for a specified shipped artifact without unnecessary setup or unsafe execution

@@ -107,6 +107,23 @@ def validate(root: pathlib.Path, verbose: bool=False) -> list[str]:
                     issues.append(f'{n}: must not mislabel unrun eval tests')
                 if len({x['prompt'] for x in ev['positive']+ev['negative']})<5:
                     issues.append(f'{n}: duplicate routing eval prompts')
+                if s.get('routing_examples'):
+                    tests = {x['id']: x['prompt'] for x in ev['positive'] + ev['negative']}
+                    for ident, prompt in s['routing_examples'].items():
+                        if tests.get(ident) != prompt or len(prompt.split()) < 9:
+                            issues.append(f'{n}: routing evaluation {ident} is missing or too short')
+                if s.get('special_rules'):
+                    if '## Specialist protocol and proof boundaries' not in body:
+                        issues.append(f'{n}: missing specialist proof boundaries')
+                    for rule in s['special_rules']:
+                        if rule.rstrip('. ') not in body:
+                            issues.append(f'{n}: specialist rule missing from generated body')
+                if s.get('domain_tests'):
+                    if len(ev.get('domain',[])) != len(s['domain_tests']):
+                        issues.append(f'{n}: domain evaluation cases missing')
+                    for case in ev.get('domain',[]):
+                        if len(case.get('assertions',[])) < 2:
+                            issues.append(f'{n}: domain eval assertions too weak')
             except (OSError,json.JSONDecodeError) as e:
                 issues.append(f'{n}: invalid eval JSON {e}')
         for rel in s.get('refs',[]):

@@ -1,6 +1,6 @@
 # Skill evaluation protocol — v1.0
 
-The packaged `evals/<skill>.json` files are **test designs**, not successful agent-test runs. Each of the 129 suites defines three positive routing prompts, two negative prompts and two adversarial/constraint prompts (903 cases). The 41 revised or new skills add two `domain` edge/negative cases each (82), for 985 designed cases total. Do not conflate these specifications with measured activation or end-to-end quality.
+The packaged `evals/<skill>.json` files are **test designs**, not successful agent-test runs. Each of the 139 suites defines three positive routing prompts, two negative prompts and two adversarial/constraint prompts (973 cases). 51 suites — the 41 skills revised or added in 2.0 and the ten 3.0 motion additions — add two `domain` edge/negative cases each (102), for 1075 designed cases total. Do not conflate these specifications with measured activation or end-to-end quality.
 
 ## Static phase (implemented)
 

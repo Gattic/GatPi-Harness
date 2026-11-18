@@ -1,17 +1,17 @@
 {
-  "catalog_version": "1.0.0",
+  "catalog_version": "2.0.0",
   "generator": "tools/regenerate.py",
-  "skill_count": 129,
+  "skill_count": 139,
   "categories": {
-    "media": 23,
+    "media": 27,
     "delivery": 5,
     "web-seo": 16,
     "marketing": 12,
     "security": 19,
+    "meta": 9,
     "engineering": 29,
-    "design": 8,
-    "research": 9,
-    "meta": 8
+    "design": 13,
+    "research": 9
   },
   "skills": [
     {
@@ -57,6 +57,12 @@
       "eval": "evals/android-apk-code-audit.json"
     },
     {
+      "name": "animation-benchmark-isolation",
+      "category": "meta",
+      "path": "skills/animation-benchmark-isolation/SKILL.md",
+      "eval": "evals/animation-benchmark-isolation.json"
+    },
+    {
       "name": "api-contract-engineering",
       "category": "engineering",
       "path": "skills/api-contract-engineering/SKILL.md",
@@ -99,10 +105,22 @@
       "eval": "evals/binary-mitigation-inventory.json"
     },
     {
+      "name": "blender-cinematic-video-pipeline",
+      "category": "media",
+      "path": "skills/blender-cinematic-video-pipeline/SKILL.md",
+      "eval": "evals/blender-cinematic-video-pipeline.json"
+    },
+    {
       "name": "brand-identity-system",
       "category": "design",
       "path": "skills/brand-identity-system/SKILL.md",
       "eval": "evals/brand-identity-system.json"
+    },
+    {
+      "name": "brand-motion-system",
+      "category": "design",
+      "path": "skills/brand-motion-system/SKILL.md",
+      "eval": "evals/brand-motion-system.json"
     },
     {
       "name": "brand-safety-compliance",
@@ -369,6 +387,12 @@
       "eval": "evals/implementation-plan.json"
     },
     {
+      "name": "interactive-isometric-explainer",
+      "category": "design",
+      "path": "skills/interactive-isometric-explainer/SKILL.md",
+      "eval": "evals/interactive-isometric-explainer.json"
+    },
+    {
       "name": "internal-link-strategy",
       "category": "web-seo",
       "path": "skills/internal-link-strategy/SKILL.md",
@@ -379,6 +403,12 @@
       "category": "web-seo",
       "path": "skills/international-seo-localization/SKILL.md",
       "eval": "evals/international-seo-localization.json"
+    },
+    {
+      "name": "isometric-svg-geometry-audit",
+      "category": "design",
+      "path": "skills/isometric-svg-geometry-audit/SKILL.md",
+      "eval": "evals/isometric-svg-geometry-audit.json"
     },
     {
       "name": "javascript-electron-artifact-recovery",
@@ -405,16 +435,34 @@
       "eval": "evals/long-run.json"
     },
     {
+      "name": "lottie-animation-delivery",
+      "category": "media",
+      "path": "skills/lottie-animation-delivery/SKILL.md",
+      "eval": "evals/lottie-animation-delivery.json"
+    },
+    {
       "name": "market-segmentation",
       "category": "marketing",
       "path": "skills/market-segmentation/SKILL.md",
       "eval": "evals/market-segmentation.json"
     },
     {
+      "name": "mechanical-animation-kinematics",
+      "category": "media",
+      "path": "skills/mechanical-animation-kinematics/SKILL.md",
+      "eval": "evals/mechanical-animation-kinematics.json"
+    },
+    {
       "name": "model-file-metadata-forensics",
       "category": "media",
       "path": "skills/model-file-metadata-forensics/SKILL.md",
       "eval": "evals/model-file-metadata-forensics.json"
+    },
+    {
+      "name": "motion-choreography-review",
+      "category": "design",
+      "path": "skills/motion-choreography-review/SKILL.md",
+      "eval": "evals/motion-choreography-review.json"
     },
     {
       "name": "multi-agent-delegation",
@@ -729,6 +777,12 @@
       "eval": "evals/typography-layout-system.json"
     },
     {
+      "name": "ui-motion-direction",
+      "category": "design",
+      "path": "skills/ui-motion-direction/SKILL.md",
+      "eval": "evals/ui-motion-direction.json"
+    },
+    {
       "name": "ux-research-usability",
       "category": "design",
       "path": "skills/ux-research-usability/SKILL.md",
@@ -781,6 +835,12 @@
       "category": "web-seo",
       "path": "skills/web-security-headers/SKILL.md",
       "eval": "evals/web-security-headers.json"
+    },
+    {
+      "name": "webgl-svg-hybrid-scene",
+      "category": "media",
+      "path": "skills/webgl-svg-hybrid-scene/SKILL.md",
+      "eval": "evals/webgl-svg-hybrid-scene.json"
     },
     {
       "name": "website-discovery-architecture",

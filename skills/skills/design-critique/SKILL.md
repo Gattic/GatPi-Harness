@@ -3,7 +3,7 @@ name: design-critique
 description: "Use when reviewing a website, visual design, brand asset or UI for improvement. Do not use when creating a new artifact without any existing design to assess."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "design"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Propose concrete alternative with tradeoffs and measurable criterion, preserving effective existing elements.
 
 6. Provide a short implementation order and a validation approach through usability or visual tests.
+
+## Specialist protocol and proof boundaries
+
+- Inspect animated work frame-by-frame for hierarchy, contrast, continuity, reduced-motion safety and timing rather than evaluating only still compositions.
+- For spatial diagrams, inspect zoomed part junctions, collision candidates and model/readout consistency.
 
 ## Deliverables
 
@@ -98,3 +103,10 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md

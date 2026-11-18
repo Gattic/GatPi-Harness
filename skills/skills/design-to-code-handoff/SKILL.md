@@ -3,7 +3,7 @@ name: design-to-code-handoff
 description: "Use when handing off visuals or prototypes to frontend implementation. Do not use when user is not moving a design into production code."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "design"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Build or request a small vertical slice and compare screenshots and user paths against the design specification.
 
 6. Produce acceptance tests, redline exceptions and change ownership for future design revisions.
+
+## Specialist protocol and proof boundaries
+
+- Hand off state transition graphs, easing/duration tokens, focus order, cancellation conditions and reduced-motion alternatives—not screenshots alone.
+- Treat implementation details as testable contracts rather than aesthetic adjectives.
 
 ## Deliverables
 
@@ -99,3 +104,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md

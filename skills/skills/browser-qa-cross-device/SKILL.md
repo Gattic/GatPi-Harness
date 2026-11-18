@@ -3,7 +3,7 @@ name: browser-qa-cross-device
 description: "Use when web app release QA, flaky UI, responsive regressions or browser-specific failures. Do not use when only unit-level business logic changes with no browser behavior."
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   category: "web-seo"
 ---
 
@@ -43,6 +43,8 @@ metadata:
 
 - If comparing runtime behavior across releases, record exact build/capture identities, deterministic seed state, service-worker policy and response-body capture coverage.
 - Separate screenshots or DOM appearance from proof of server persistence; verify state with permitted independent reads.
+- Capture animation at start, mid, settled, interrupted and reduced-motion states; test hover, keyboard, phone-sized viewports and WebGL fallbacks.
+- Treat one screenshot as insufficient to certify motion quality or collision clearance.
 
 ## Deliverables
 
@@ -110,3 +112,5 @@ the relevant part of this skill in the child task and keep this skill's acceptan
 Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
 
 - https://github.com/morluto/rea/blob/main/.agents/skills/reverse-engineer-anything/SKILL.md
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md

@@ -1,0 +1,65 @@
+{
+  "research_date": "2026-11-18",
+  "repo_checkout_available": false,
+  "method": "Public web GitHub source views; git clone unavailable because github.com DNS resolution failed in the container. No third-party code or full skill trees copied.",
+  "sources": {
+    "LottieFiles/motion-design-skill": {
+      "url": "https://github.com/LottieFiles/motion-design-skill",
+      "inspected": "Main SKILL.md read through public GitHub web view and repository README/tree outline; related director/pattern/reference contents only selectively available",
+      "upstream_skills_confirmed": [
+        "skills/motion-design/SKILL.md"
+      ],
+      "strengths": [
+        "Emotional intent and functional motion direction before implementation",
+        "Reusable duration and easing language",
+        "Choreography and state-feedback recipes",
+        "Progressive detail under director, patterns and reference paths"
+      ],
+      "cautions": [
+        "Source tables are heuristic starting points, not tested universal requirements",
+        "Avoid strict blanket requirements for all motion to include ambient layers",
+        "Third-party Creator MCP needed for actual proprietary exports and is not installed"
+      ]
+    },
+    "wheresryan22/anatomy": {
+      "url": "https://github.com/wheresryan22/anatomy",
+      "inspected": "Main SKILL.md, example inventory and README inspected through public GitHub pages; repository kit/scripts/tests were not cloned or executed",
+      "upstream_skills_confirmed": [
+        "SKILL.md"
+      ],
+      "strengths": [
+        "Truth-first shared model for geometry and numeric labels",
+        "Detailed recognizable physical metaphors for technical abstractions",
+        "Depth/painter-order handling and shape-accurate collision audits",
+        "Desktop/mobile/4x captures, fallback, reduced motion and shader synchronization"
+      ],
+      "cautions": [
+        "The 40+ part minimum and large prescribed builds are not suitable for all scopes",
+        "Mathematical audit requires actual geometry, not screenshots",
+        "Do not imply code-only package was imported or its test kit executed"
+      ]
+    },
+    "ivanfioravanti/Blender-gist": {
+      "url": "https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d",
+      "inspected": "Read web-rendered AGENTS.md and mechanical-watch-brief.md",
+      "upstream_skills_confirmed": [],
+      "guidance_documents": [
+        "AGENTS.md",
+        "mechanical-watch-brief.md"
+      ],
+      "strengths": [
+        "Brief with explicit timeline, physics, camera and deliverable format",
+        "Background-mode render script and GPU capability checks",
+        "Hero frame, keyframe previews, playblast, final video and contact sheet",
+        "Fair benchmarking with workspace isolation and equivalent briefs"
+      ],
+      "cautions": [
+        "An AGENTS.md instruction file is not an Agent Skills SKILL.md",
+        "Three iterations are not inherently better than verified acceptance",
+        "Spectrogram cannot prove no speech or determine sound quality",
+        "Hardware claims, anecdotes and comparison scores are not independent evidence",
+        "Do not assume access to install software, host machine or private logs"
+      ]
+    }
+  }
+}

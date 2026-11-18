@@ -1,0 +1,9 @@
+{
+  "source_repository": "https://github.com/morluto/rea",
+  "review_date": "2026-10-27",
+  "access": "Public GitHub HTML and indexed project documentation; outbound git clone from container failed (DNS).",
+  "original_skill": "https://github.com/morluto/rea/blob/main/.agents/skills/reverse-engineer-anything/SKILL.md",
+  "upstream_code_license": "MIT (GitHub LICENSE)",
+  "limitations": "Repository main changes quickly. Not every file/tree is independently audited; npm package, MCP server, providers, AgentEnv and runtime operations were not installed or exercised in this build environment.",
+  "adaptation": "Original domain-specific skills and checklists, with links to upstream documentation. No third-party binaries, extracted software or upstream skill text copied."
+}

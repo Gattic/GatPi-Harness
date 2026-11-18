@@ -49,7 +49,7 @@ metadata:
 - For large inventories start with summary/detail paging and retain the complete result identity.
 - Signed-file metadata and actual trust verification are different obligations.
 - Provide a manifest that downstream reverse engineering can audit without re-reading the original file.
-- When REA is unavailable, the self-contained `scripts/artifact_inventory.py` creates a bounded read-only ZIP member and hash manifest without extracting or executing anything
+- When REA is unavailable, the self-contained `scripts/artifact_inventory.py` creates a bounded read-only ZIP member and hash manifest without extracting or executing anything.
 
 ## Deliverables
 
@@ -113,8 +113,8 @@ the relevant part of this skill in the child task and keep this skill's acceptan
 
 ## Optional references
 
-- references/field-guide.md
-- scripts/artifact_inventory.py
+- [references/field-guide.md](references/field-guide.md)
+- [scripts/artifact_inventory.py](scripts/artifact_inventory.py)
 
 ## Provenance notes
 

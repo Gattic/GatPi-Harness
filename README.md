@@ -17,7 +17,7 @@ Pi is a fast terminal coding agent. GatPi-Harness is the extension layer that tu
 
 ## What's included
 
-52 extensions and 129 curated Agent Skills, grouped into capability families:
+52 extensions and 139 curated Agent Skills, grouped into capability families:
 
 | Area | What you get | Reference |
 |---|---|---|
@@ -27,7 +27,7 @@ Pi is a fast terminal coding agent. GatPi-Harness is the extension layer that tu
 | Memory & reasoning | Obsidian-backed project memory, layered context, model-side reasoning runtime, skill synthesis | [architecture](wiki/architecture.md) |
 | Long runs | `bg_run`, run deck, run monitor, automation loop, goal loop | [commands](wiki/extensions-and-commands.md) |
 | Governance | policy enforcer, privacy guard, evidence binder/inbox, debug and experiment ledgers, roadmap | [commands](wiki/extensions-and-commands.md) |
-| Skills | 129 curated Agent Skills installed hash-identically, with reconciliation that preserves your own skills | [skills](wiki/agent-skills.md) |
+| Skills | 139 curated Agent Skills installed hash-identically, with reconciliation that preserves your own skills | [skills](wiki/agent-skills.md) |
 | Accounts & queue | multi-login failover, shared DeepSeek request queue | [configuration](wiki/configuration.md) |
 
 Optional adapters (Hermes, CodeGraph, Semgrep, Obsidian) degrade to explicit guidance when their binaries are missing; nothing fails silently.

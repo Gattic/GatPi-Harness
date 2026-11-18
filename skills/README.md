@@ -1,51 +1,67 @@
-# Skill Foundry 2.0 — 129 Agent Skills (121 supplied + 8 pi-harness local)
+# Skill Foundry 3.0 — 139 Agent Skills (131 supplied + 8 pi-harness local)
 
-**Updated:** 2026-10-27. A complete replacement for the October 24 library (all original skills preserved). Inspired by the original 18 repositories **plus** [`morluto/rea`](https://github.com/morluto/rea), using its evidence discipline, target-first routing, scoped tool readiness and specialist reverse-engineering patterns.
+**Updated:** 2026-11-18. A complete replacement for the October 27 Skill Foundry 2.0 library: all 121 prior supplied skills are preserved, 10 original motion, isometric, shader, Blender and kinematics skills are added, and 23 established workflows are strengthened. The library remains inspired by the original 18 repositories **plus** [`morluto/rea`](https://github.com/morluto/rea) (evidence discipline, target-first routing, scoped tool readiness and specialist reverse-engineering patterns); 3.0 adds three public motion sources whose coverage and limits are recorded in [research/motion-sources-2026-11-18.json](research/motion-sources-2026-11-18.json).
 
-The supplied pack contains **121 usable `SKILL.md` files**, **121 unexecuted evaluation suites** containing **929 proposed cases** (including real-world routing and near-miss examples for the 20 REA skills), original procedural Blender and SEO scripts, 20 self-contained field guides, and a read-only ZIP/binary inventory helper. All source instructions are independently authored, not copied REA skills.
+The supplied pack contains **131 usable `SKILL.md` files**, **131 unexecuted evaluation suites** containing **1019 proposed cases**, original procedural Blender and SEO scripts, 20 self-contained REA field guides, a read-only ZIP/binary inventory helper, and — new in 3.0 — ten motion references and three standard-library validation scripts (motion timeline graph, SVG integrity, ideal gear/lead-screw samples). All source instructions are independently authored, not copied upstream skills.
 
-> **pi-harness local additions:** eight restored legacy skills are not part of the supplied pack: `handoff` (meta); `git-checkpoint`, `change-verify`, `long-run`, `durable-bug-hunt`, `build` and `typesafe-ai` (engineering); and `experiment-gate-lifecycle` (research). Each is a catalog entry adapted to this standard plus a hand-maintained `skills/<name>/references/` contract that preserves the legacy workflow. This repository copy therefore holds **129 skills: 121 supplied + 8 local**, and 985 designed evaluation cases (929 supplied + 56 local). `typesafe-ai` is third-party MIT material, Copyright (c) 2026 TypeSafe AI; its license stays in `skills/typesafe-ai/LICENSE`, the one exception to the statement above that no third-party skill files are redistributed. Provenance and rationale: `docs/skill-bundle-migration.md` in the harness repository.
+This project offers **portable task instructions** and local helper scripts. Installing a skill does **not** install an MCP server, browser, Blender, LottieFiles Creator, GPU or paid model.
 
-## What changed in 2.0
+> **pi-harness local additions:** eight restored legacy skills are not part of the supplied pack: `handoff` (meta); `git-checkpoint`, `change-verify`, `long-run`, `durable-bug-hunt`, `build` and `typesafe-ai` (engineering); and `experiment-gate-lifecycle` (research). Each is a catalog entry adapted to this standard plus a hand-maintained `skills/<name>/references/` contract that preserves the legacy workflow. This repository copy therefore holds **139 skills: 131 supplied + 8 local**, and 1075 designed evaluation cases (1019 supplied + 56 local). `typesafe-ai` is third-party MIT material, Copyright (c) 2026 TypeSafe AI; its license stays in `skills/typesafe-ai/LICENSE`, the one exception to the statement above that no third-party skill files are redistributed. Provenance and rationale: `docs/skill-bundle-migration.md` in the harness repository.
+
+## What changed in 3.0
+
+- **10 original skills added:** `ui-motion-direction`, `brand-motion-system`, `motion-choreography-review`, `lottie-animation-delivery`, `interactive-isometric-explainer`, `isometric-svg-geometry-audit`, `webgl-svg-hybrid-scene`, `blender-cinematic-video-pipeline`, `animation-benchmark-isolation` and `mechanical-animation-kinematics`. Each ships a reference under `skills/<name>/references/` plus two domain-specific edge/negative tests.
+- **23 existing skills revised** with motion, rendering, mechanism and routing rules (`special_rules`, `source_inspiration` and a new `revision`); the other **98 supplied entrypoints are unchanged**. [CHANGES_2026-11-18.md](CHANGES_2026-11-18.md) lists both sets.
+- **3 runnable validators:** `skills/ui-motion-direction/scripts/check_motion_timeline.py`, `skills/isometric-svg-geometry-audit/scripts/inspect_svg.py` and `skills/mechanical-animation-kinematics/scripts/validate_kinematics.py`. They check static properties only: no visual quality, geometric collision or loaded-mechanism claims.
+- **Authoring-side files that the 2.0 ZIP omitted are now present:** `standards/evidence-authorship.md`, `standards/claim-ledger-schema.json`, `tools/check_evidence_ledger.py`, `tools/verify_release.py`, `research/rea-architecture-assessment.md`, `research/rea-provenance.json` and `research/ORIGINAL_2026-10-24_FULL_REPORT.md`, with their offline tests.
+- The supplied `RELEASE_FILES.json` is **not** kept here: it hashes the supplied ZIP, and this copy differs from it by design (generated **Harness delegation** section, trigger-only descriptions, eight local skills). It passed `tools/verify_release.py` on the extracted ZIP before adaptation; run that tool against an extracted pack, not this tree.
+
+### Creative workflows
+
+- UI animation: `ui-motion-direction` → `brand-motion-system` (for reusable identity) → `motion-choreography-review` → browser QA.
+- Exported Lottie: `ui-motion-direction` → `lottie-animation-delivery` (only if export is explicitly requested and a renderer is available).
+- Explanatory technical graphics: `interactive-isometric-explainer` → `isometric-svg-geometry-audit` → `webgl-svg-hybrid-scene` (only for real shader value).
+- Blender cinematics: `video-storyboard-shotlist` → `blender-cinematic-video-pipeline` → `mechanical-animation-kinematics` (when needed) → `video-edit-color-delivery`.
+- AI model comparisons: `animation-benchmark-isolation` → independent candidate builders → neutral evaluation; never let candidates inspect each other's workspace.
+
+## What 2.0 added (retained)
 
 - **20 original specialized skills added:** shipped artifacts, native binary and runtime evidence, JS/Electron, .NET, Android APK, packaged Python, firmware, ELF/PE mitigation declarations, browser scenarios, HAR capture/API inference, exported browser JavaScript, evidence lineage, independent feature reconstruction, binary version differences, AgentEnv simulations, crash triage, model headers and privacy data flows.
-- **21 original skills materially improved:** systematic debugging, code review, routing, source provenance, security, research, web QA, observability, testing and skill evaluation. The other **80 original skill entrypoints are unchanged** apart from this repository's generated **Harness delegation** section.
-- **41** skills now carry two domain-specific edge/negative tests in addition to the base seven; the other 80 keep their base seven.
-- Each supplied skill now records a `revision`; revised and new skills carry `special_rules` (rendered as **Specialist protocol and proof boundaries**) and `source_inspiration` (rendered as **Provenance notes**).
-- Added **20 field guides** under `skills/<name>/references/field-guide.md` and an offline ZIP/binary manifest helper at `skills/shipped-artifact-provenance/scripts/artifact_inventory.py`.
-
-The supplied ZIP did **not** include the authoring-side additions its own documents name — `standards/evidence-authorship.md`, `standards/claim-ledger-schema.json`, `tools/check_evidence_ledger.py`, `tools/verify_release.py`, `RELEASE_FILES.json`, `research/rea-architecture-assessment.md` and `research/ORIGINAL_2026-10-24_FULL_REPORT.md`. They are therefore absent from this repository copy and are not referenced as available here.
+- **21 original skills materially improved:** systematic debugging, code review, routing, source provenance, security, research, web QA, observability, testing and skill evaluation.
+- Those **41** skills carry two domain-specific edge/negative tests in addition to the base seven, as do the ten 3.0 additions (51 in total); the remaining skills keep their base seven.
+- Revised and new skills carry a `revision`, `special_rules` (rendered as **Specialist protocol and proof boundaries**) and `source_inspiration` (rendered as **Provenance notes**).
+- **20 field guides** under `skills/<name>/references/field-guide.md` and an offline ZIP/binary manifest helper at `skills/shipped-artifact-provenance/scripts/artifact_inventory.py`.
 
 ## Status matrix
 
 | Work | Actual status |
 | --- | --- |
-| 129 `SKILL.md` files exist and satisfy this package's structural contracts | **PASS** |
-| 129 evaluation suites contain the intended designed cases | **PASS: generated and validated as data** |
-| Offline generator/installer/Git fixture/SEO helper tests | **PASS: 9 tests** |
-| 80 unchanged skill entrypoints preserved (plus generated delegation section) | **PASS** |
-| 21 revised skill entrypoints and 20 new skill entrypoints | **CREATED** |
+| 139 `SKILL.md` files exist and satisfy this package's structural contracts | **PASS** |
+| 139 evaluation suites contain the intended designed cases | **PASS: generated and validated as data** |
+| Offline generator/installer/Git fixture/evidence-ledger/release-manifest/motion and SEO helper tests | **PASS: 28 tests** (23 supplied + 5 local) |
+| 131 supplied entrypoints equal the supplied bodies apart from the trigger-only description and generated delegation section; 131 supplied evaluation suites byte-equal | **PASS** |
+| 23 revised skill entrypoints and 10 new skill entrypoints | **CREATED** |
 | REA installed, MCP connected, native providers exercised | **NOT TESTED** (not available here) |
 | All evaluation cases run against real agents and scored | **NOT TESTED** |
-| All 19 full repository Git trees exhaustively audited | **NOT DONE** (the 19-source auditor extension was not shipped) |
-| Blender sample scene visually rendered and tested | **NOT TESTED** in this environment |
+| All 19 full repository Git trees and the three motion sources exhaustively audited | **NOT DONE** (needs network access or local clones) |
+| Blender renders, Lottie/dotLottie playback, interactive browser scenes and WebGL effects | **NOT TESTED** in this environment |
 
 An installed skill **never** implies an MCP tool, engine, application account, runtime or permission exists. Check the live tool list and obtain approvals where required.
 
-## Inventory (129 total: 121 supplied + 8 local)
+## Inventory (139 total: 131 supplied + 8 local)
 
 | Domain | Supplied | Local | Total |
 | --- | ---: | ---: | ---: |
 | Engineering | 23 | 6 | 29 |
 | Research | 8 | 1 | 9 |
 | Web / SEO | 16 | 0 | 16 |
-| Design | 8 | 0 | 8 |
-| Image / video / 3D / audio | 23 | 0 | 23 |
+| Design | 13 | 0 | 13 |
+| Image / video / 3D / audio | 27 | 0 | 27 |
 | Marketing / advertising | 12 | 0 | 12 |
 | Cybersecurity | 19 | 0 | 19 |
 | Delivery / operations | 5 | 0 | 5 |
-| Skill architecture / orchestration | 7 | 1 | 8 |
-| **Total** | **121** | **8** | **129** |
+| Skill architecture / orchestration | 8 | 1 | 9 |
+| **Total** | **131** | **8** | **139** |
 
 See [CATALOG.md](CATALOG.md) for the exact names and descriptions; choose a skill from the **requested deliverable**, not incidental topic vocabulary.
 
@@ -53,26 +69,31 @@ See [CATALOG.md](CATALOG.md) for the exact names and descriptions; choose a skil
 
 ```text
 skills/
-├── skills/               # 129 independently usable directories with SKILL.md
+├── skills/               # 139 independently usable directories with SKILL.md
 │   ├── rea-capability-routing/
 │   ├── shipped-artifact-provenance/
+│   ├── ui-motion-direction/
 │   ├── skill-factory/
 │   ├── handoff/
 │   └── ...
-├── evals/                # 129 unexecuted routing + behavioral test specifications
+├── evals/                # 139 unexecuted routing + behavioral test specifications
 ├── catalog.json          # single structured editable source for skills
 ├── specialists.json      # generated subagent roster rendered into every skill
 ├── CATALOG.md            # all names with summaries and links
 ├── manifest.json         # machine-readable skill inventory
+├── CHANGES_2026-11-18.md # supplied change log for the 3.0 release
 ├── CHANGES_2026-10-27.md # supplied change log for the 2.0 release
-├── standards/            # five authoring/eval/quality/routing/trust policies
-├── research/             # 18-source strengths/weaknesses and direct skill reviews
+├── CHANGE_INDEX*.json    # supplied new/modified/unchanged name lists for both releases
+├── standards/            # authoring/eval/evidence/quality/routing/trust policies and the claim-ledger schema
+├── research/             # 18-source review, REA assessment and provenance, 3.0 motion sources
 ├── tools/
 │   ├── regenerate.py     # deterministic skill/eval build from catalog.json
 │   ├── validate_skills.py# portable static contract checking
+│   ├── check_evidence_ledger.py # validate a normalized claim ledger against its listed files
+│   ├── verify_release.py # check an extracted supplied pack against its RELEASE_FILES.json
 │   ├── audit_repositories.py  # full tracked-source audit, when network/clones available
 │   └── install.py        # selectively copy skills into agent discovery folders
-├── tests/test_pack.py
+├── tests/                # offline generator, installer, auditor, ledger, release and helper tests
 ├── source-audit/         # audit status, workflow; generated reports go here
 ├── AGENTS.md
 └── LICENSE              # applies only to our original work; not linked upstream projects
@@ -94,7 +115,7 @@ python tools/install.py --target /path/to/project/.agents/skills \
 python tools/install.py --target /path/to/project/.agents/skills --all --dry-run
 ```
 
-Existing target folders are not overwritten without `--force`. Use `--force` only if intentionally replacing your existing local skill folders. Installing all 129 may worsen activation quality if your agent indiscriminately loads instructions; prefer selecting by current project domain. Never pretend installation also grants web accounts, GPU tools, model weights, external APIs or publishing rights.
+Existing target folders are not overwritten without `--force`. Use `--force` only if intentionally replacing your existing local skill folders. Installing all 139 may worsen activation quality if your agent indiscriminately loads instructions; prefer selecting by current project domain. Never pretend installation also grants web accounts, GPU tools, model weights, external APIs or publishing rights.
 
 The Pi harness installs its managed catalog through `scripts/install-agent-skills.sh`, which reconciles `skills/skills/managed-skills.txt` into `~/.claude/skills` and `~/.agents/skills` and preserves unmanaged entries.
 
@@ -108,7 +129,7 @@ python -m unittest discover -s tests -v
 python tools/regenerate.py
 ```
 
-To improve an existing skill, edit its entry in [`catalog.json`](catalog.json), then rerun `tools/regenerate.py` and validation. The generator intentionally overwrites each generated `SKILL.md` and `evals/<name>.json`, so edit the catalog instead of only the generated file. It renders `revision`, `special_rules`, `source_inspiration`, `domain_tests` and optional hand-authored `routing_tests`. Add deeper implementation examples under that skill's `references/` or `scripts/` and register their relative paths in its catalog `refs` array; `tools/regenerate.py` leaves those supplemental files intact.
+To improve an existing skill, edit its entry in [`catalog.json`](catalog.json), then rerun `tools/regenerate.py` and validation. The generator intentionally overwrites each generated `SKILL.md` and `evals/<name>.json`, so edit the catalog instead of only the generated file. It renders `revision`, `special_rules`, `source_inspiration`, `domain_tests` and optional `routing_examples`, which replace the generated prompt of the routing case with the same id (`P1`–`P3`, `N1`–`N2`). Add deeper implementation examples under that skill's `references/` or `scripts/` and register their relative paths in its catalog `refs` array; `tools/regenerate.py` leaves those supplemental files intact.
 
 ### Read-only archive inventory fallback (offline)
 
@@ -119,6 +140,25 @@ python skills/shipped-artifact-provenance/scripts/artifact_inventory.py \
 ```
 
 The helper hashes the original file and inventories ZIP members within explicit bounded expansion budgets. It does **not** unpack, execute, decompile, authenticate publisher signatures or run REA. Unsupported formats receive header-only observations.
+
+### Motion, SVG and kinematics checks (offline)
+
+```bash
+python skills/ui-motion-direction/scripts/check_motion_timeline.py my-timeline.json
+python skills/isometric-svg-geometry-audit/scripts/inspect_svg.py figure.svg
+python skills/mechanical-animation-kinematics/scripts/validate_kinematics.py mechanism.json
+```
+
+These check static properties only. The timeline checker is not a visual-quality test, the SVG checker is not a geometric collision solver, and the kinematics checker validates ideal gear and lead-screw samples, not loaded physical mechanisms.
+
+### Claim ledger and supplied-release checks (offline)
+
+```bash
+python tools/check_evidence_ledger.py ledger.json --root /path/to/evidence --check-files
+python tools/verify_release.py --root /path/to/extracted/skill_foundry_pack
+```
+
+`check_evidence_ledger.py` validates only the normalized schema in [standards/evidence-authorship.md](standards/evidence-authorship.md) and the listed files; it does not authenticate REA-native Evidence. `verify_release.py` compares an extracted supplied pack with its unsigned `RELEASE_FILES.json`; it detects changed bytes, not publisher identity, and does not apply to this adapted tree.
 
 ## Exhaustive upstream audit (runs on your network-enabled machine)
 
@@ -149,11 +189,12 @@ The official REA skill and documentation are referenced under the relevant skill
 
 ## Documents and history
 
-- [FULL_REPORT.md](FULL_REPORT.md) — supplied full release report and source/action inventory.
-- [VALIDATION_REPORT.md](VALIDATION_REPORT.md) — supplied offline test and coverage limits.
-- [CHANGES_2026-10-27.md](CHANGES_2026-10-27.md) — supplied precise additions and modifications.
-- [research/repository-review.md](research/repository-review.md) — the original 18-repository research.
-- `docs/skill-bundle-migration.md` in the harness repository — this repository's migration record, including the 2.0 adaptation and disclosed deviations.
+- [CHANGES_2026-11-18.md](CHANGES_2026-11-18.md) and [CHANGE_INDEX_2026-11-18.json](CHANGE_INDEX_2026-11-18.json) — supplied 3.0 additions, modifications and limits.
+- [VALIDATION_REPORT.md](VALIDATION_REPORT.md) — supplied 3.0 offline test and coverage limits, with this repository's counts.
+- [FULL_REPORT.md](FULL_REPORT.md) — supplied full report for the 2.0 release and its source/action inventory.
+- [CHANGES_2026-10-27.md](CHANGES_2026-10-27.md) and [CHANGE_INDEX.json](CHANGE_INDEX.json) — supplied 2.0 additions and modifications.
+- [research/repository-review.md](research/repository-review.md), [research/rea-architecture-assessment.md](research/rea-architecture-assessment.md) and [research/motion-sources-2026-11-18.json](research/motion-sources-2026-11-18.json) — the original 18-repository research, the REA assessment and the 3.0 motion source scope.
+- `docs/skill-bundle-migration.md` in the harness repository — this repository's migration record, including the 2.0 and 3.0 adaptations and disclosed deviations.
 
 ## Rights and limitations
 

@@ -3,7 +3,7 @@ name: presentation-narrative
 description: "Use when slides for pitches, leadership updates, education or strategy briefings. Do not use when a quick text-only answer without deck intent."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "design"
 ---
 
@@ -39,6 +39,11 @@ metadata:
 5. Check charts, citations, readability, accessibility, time budget and notes for caveats.
 
 6. Rehearse transitions and objections; revise for comprehension and output editable deck or full slide-by-slide spec.
+
+## Specialist protocol and proof boundaries
+
+- For technical visuals, use a meaningful explanatory object and a real underlying model when an interactive illustration aids comprehension.
+- When presenting animated material, storyboard primary action and readable information at each beat.
 
 ## Deliverables
 
@@ -100,3 +105,10 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md

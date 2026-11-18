@@ -866,3 +866,179 @@ verify logs plus exit codes). Hosts run the runtime resources of `8b87c31`; the
 documentation-only commit that records this result is later on `main`, so hosts
 will fast-forward on the next routine fleet run without changing any installed
 extension or skill.
+
+## Skill Foundry 3.0 replacement — 2026-11-18
+
+The owner supplied `skill-bundle.zip` (Skill Foundry 3.0, release date
+2026-11-18, 131 skills, top-level directory `skill_foundry_pack/`, 344 files)
+to replace the installed library on this machine. The supplied change index
+reports 10 new skills, 23 revised skills and 98 unchanged skills; all 121
+October 27 skills remain. Input ZIP SHA-256:
+`f1da11fb38908f8b795272c20415130b610c9acba645d456006a2dfcb372a802`.
+
+Before adaptation, the extracted ZIP passed its own
+`python tools/verify_release.py` (every listed file has the expected size and
+SHA-256 and the directory listing matches), and its own `tools/regenerate.py`
+reproduced every supplied `SKILL.md`, evaluation suite, `CATALOG.md` and
+`manifest.json` byte-for-byte. Integration used `feat/skill-foundry-3.0` at
+`~/GatPi-Harness/.worktrees/skill-foundry-3.0`; the input ZIP was not modified
+and is not tracked. The branch started at `f349d63` and was fast-forwarded onto
+`main` at `ccbed64` before it was committed; that step brought in only
+`e354087`, which touches no file of this change. No provider request,
+global-settings edit or fleet deployment was performed. The owner then
+authorized committing the branch, merging it into `main` and pushing `main`.
+
+### Diff against the 129-skill catalog
+
+- **New (10):** `ui-motion-direction`, `brand-motion-system`,
+  `motion-choreography-review`, `lottie-animation-delivery`,
+  `interactive-isometric-explainer`, `isometric-svg-geometry-audit`,
+  `webgl-svg-hybrid-scene`, `blender-cinematic-video-pipeline`,
+  `animation-benchmark-isolation` and `mechanical-animation-kinematics`
+  (design 5, media 4, meta 1). Each has one reference file, a `revision`,
+  `special_rules`, `source_inspiration`, two `domain_tests` and
+  `routing_examples`; three ship a standard-library script.
+- **Revised (23):** exactly the names in `skills/CHANGE_INDEX_2026-11-18.json`.
+  Each catalog entry changes only in `revision`, `special_rules` and
+  `source_inspiration`; goals, triggers, steps, gates and evaluation suites are
+  unchanged.
+- **Unchanged (98):** catalog entries identical to the supplied entries once the
+  local `routing_tests` field is removed (see below).
+- **Local (8):** `handoff`, `git-checkpoint`, `change-verify`, `long-run`,
+  `durable-bug-hunt`, `experiment-gate-lifecycle`, `build` and `typesafe-ai`
+  are absent from the pack and are kept. Their catalog entries, `SKILL.md`,
+  evaluation suites and references are byte-unchanged.
+- No supplied or local skill was removed, so nothing is pruned on install.
+
+### Payload
+
+- `skills/catalog.json` holds 139 entries: the 131 supplied entries verbatim in
+  supplied order, then the eight local restorations.
+- `skills/tools/regenerate.py` is the supplied generator plus this repository's
+  adaptations (trigger-only description, **Harness delegation** section, the
+  `TypeSafe AI` title case and the `CATALOG.md` header wording). It now applies
+  the pack's `routing_examples` per-id prompt overrides; the local
+  `routing_tests` field that the 2.0 integration added to 20 entries produced
+  the same bytes and is removed. `manifest.json` carries the supplied
+  `catalog_version` `2.0.0`.
+- `skills/tools/validate_skills.py` is the supplied validator plus the
+  specialist-roster checks; it gains the pack's `routing_examples`,
+  `special_rules` and `domain_tests` checks.
+- Regeneration produced `SKILL.md` and `evals/<name>.json` for all 139 skills,
+  `CATALOG.md` and `manifest.json`; `skills/skills/managed-skills.txt` lists the
+  same 139 names in byte order.
+- Imported verbatim: the ten new skills' `references/` and `scripts/`,
+  `tools/check_evidence_ledger.py`, `tools/verify_release.py`,
+  `tools/audit_repositories.py`, `tests/test_motion_extensions.py`,
+  `tests/test_rea_evidence.py`, `tests/test_release_integrity.py`,
+  `standards/evidence-authorship.md`, `standards/claim-ledger-schema.json`,
+  `research/motion-sources-2026-11-18.json`,
+  `research/rea-architecture-assessment.md`, `research/rea-provenance.json`,
+  `research/ORIGINAL_2026-10-24_FULL_REPORT.md`, `research/repository-review.md`,
+  `source-audit/STATUS.md`, `FULL_REPORT.md`, `CHANGES_2026-11-18.md`,
+  `CHANGE_INDEX.json` and `CHANGE_INDEX_2026-11-18.json`. The auditor, the
+  repository review and the audit status replace this repository's 2026-10-24
+  text with the supplied 19-source versions. Two of these files differ from
+  the supplied bytes in trailing whitespace only (deviation 8).
+- Adapted: `skills/README.md`, `skills/AGENTS.md`, `skills/VALIDATION_REPORT.md`,
+  `skills/standards/evaluation-protocol.md` and
+  `skills/standards/installation-routing.md` for the 139-skill catalog;
+  `tests/generic-agent-skills.test.js`, the root `README.md`,
+  `wiki/agent-skills.md`, this record and `docs/changelog.md`.
+
+### Deviations from the supplied ZIP
+
+Retired from the 2.0 list: `refs` now render as the supplied markdown links for
+skills with `source_inspiration`, `special_rules` bullets end with the
+generator's normalized period, and the authoring-side files the 2.0 ZIP omitted
+are present. Twenty-two entrypoints outside the revised set change only in those
+lines. What remains:
+
+1. Descriptions carry only the routing triggers; the supplied description also
+   embeds the goal sentence (see `57201bb`). Every supplied description equals
+   ours once that sentence is removed.
+2. Every `SKILL.md` carries the generated **Harness delegation** section.
+3. `CATALOG.md` says "task skills" instead of "original task skills" and lists
+   the eight local skills; `manifest.json` counts them.
+4. The supplied `skills/seo-technical-audit/scripts/site_audit.py` still
+   regresses the valueless-attribute normalization (`d.get('content') or ''`).
+   The repository version is retained and `tests/test_helpers.py` passes.
+5. `tests/test_pack.py` keeps its explicit UTF-8 read of `catalog.json`.
+6. `RELEASE_FILES.json` is not kept: it hashes the supplied ZIP, which this
+   adapted tree intentionally differs from. `tools/verify_release.py` and its
+   synthetic-fixture test are kept for checking an extracted pack.
+7. `skills/AGENTS.md` keeps a single ordered list with the two harness
+   delegation items; `skills/README.md` keeps the harness sections;
+   `skills/VALIDATION_REPORT.md` is the supplied report under a pi-harness note;
+   `standards/authoring-standard.md` and `standards/trust-provenance.md` keep
+   their harness paragraphs.
+8. Trailing whitespace is removed from three supplied lines so
+   `git diff --check` passes: one stray space in
+   `research/ORIGINAL_2026-10-24_FULL_REPORT.md`, and two Markdown hard breaks
+   in `research/rea-architecture-assessment.md` that are now written as
+   backslash breaks, which render the same.
+
+### Verification
+
+- `python3 skills/tools/validate_skills.py` → `PASS: 139 skills`.
+- `python3 -m unittest discover -s skills/tests` → `Ran 28 tests ... OK` (the 23
+  supplied tests plus five local SEO-helper regressions).
+- Generated `evals/<name>.json` are byte-equal to the supplied files for all 131
+  supplied skills. Generated `SKILL.md` equal the supplied bodies for all 131
+  once the description line and the **Harness delegation** block are set aside.
+- `tests/generic-agent-skills.test.js` (139-skill contract, generated-byte
+  parity, offline tests), `tests/install-agent-skills.test.js`,
+  `tests/agent-skills-pi-load.test.js` (139 skills loaded by Pi's own loader),
+  `tests/skill-awareness.test.js` (139 skills, 22 roles),
+  `tests/role-consumer-contracts.test.js`, `tests/fleet-skill-gate.test.js`,
+  `tests/skill-extension-source.test.js`, `tests/skill-governance.test.js`,
+  `tests/skill-intake.test.js`, `tests/skill-synthesis.test.js`,
+  `tests/skill-lazy.test.js` and `tests/meta-prompt-skill-policy.test.js` pass.
+- `scripts/check-all.sh`, run on the `f349d63` base, covered 323 test files
+  with three failures, none in a skill test. `tests/subagent-task-rpc.test.js`
+  and `tests/subagent-task-rpc-degraded.test.js` failed identically on
+  unmodified `main` at `f349d63` (`role inference policy mismatch: expected
+  DeepSeek-V4.1-Flash-1017/low, got unknown/low`). `tests/specialist-vision.test.js`
+  failed once on its fixed-port listener preflight
+  (`blender-mcp:listener-unreachable:localhost:9876`) and passed unchanged when
+  rerun alone and on `main`. The gate therefore did not pass on this host and
+  the install below used `--no-check`.
+- After the fast-forward onto `ccbed64`, both `subagent-task-rpc` tests pass on
+  this tree, as do `tests/role-model-derivation.test.js`,
+  `tests/role-contract-revision.test.js`, `tests/skill-awareness.test.js`,
+  `tests/role-consumer-contracts.test.js` and
+  `tests/generic-agent-skills.test.js`. The full `scripts/check-all.sh` was not
+  repeated on the new base.
+- The skill-awareness roster grows from 5,041 to 5,323 characters for the
+  `coder` role (bound 16,000), and the `roleRevisionHash` of all 22 roles
+  changes. Durable typed records and task graphs pinned to the previous revision
+  fail closed as described in `docs/subagents.md`.
+- **NOT TESTED:** the 1,075 designed evaluation prompts, Blender renders,
+  Lottie/dotLottie playback, interactive browser scenes, WebGL effects and
+  physical collision checks. The three new scripts check static properties only.
+
+### Local installation
+
+`scripts/pi-harness-refresh.sh --skills --no-check`, run from the task worktree,
+reconciled both destinations with no pruned name and no displaced Pi user skill
+(`~/.pi/agent/skills` is empty).
+
+| Destination | Before | After | Manifest SHA-256 | Managed content digest |
+|---|---:|---:|---|---|
+| `~/.agents/skills` | 129 | 139 | `a21e2017…9faa` | `8d46c8a7…e7f2` |
+| `~/.claude/skills` | 129 | 139 | `a21e2017…9faa` | `8d46c8a7…e7f2` |
+
+Both values equal the source manifest
+(`a21e2017353cecf964bf2706f374fc887489b9e36c5ef9a54f8f7d20d3349faa`) and the
+source managed content digest
+(`8d46c8a76f633e9ad6e1ba7b599de49a5242535d86e6d449389ac3b0950de7f2`, the
+`managed_digest` definition in `scripts/fleet-host-update.sh`). Neither
+destination held an unmanaged entry before or after. Pi's loader reads 139
+skills from `~/.agents/skills` with no diagnostics.
+
+Before the install, `~/.agents/skills` was byte-equal to `main`, while
+`~/.claude/skills` still held an older generation of the same 129 managed
+skills (pre-`57201bb` descriptions); it is now current. The advisory pilot
+`exp-machine-verification-advisory-v2` pins
+`~/.agents/skills/change-verify/SKILL.md`; its SHA-256 (`461d5dce…ca12`) is
+unchanged. The fleet hosts were not updated.

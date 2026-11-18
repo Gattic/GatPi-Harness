@@ -3,7 +3,7 @@ name: video-edit-color-delivery
 description: "Use when editing clips into final video, grading, captioning or mastering delivery. Do not use when only requesting a raw unedited capture."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "media"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Export validated codec/container/audio settings and variants by aspect ratio; check black frames, flashes, clipped audio and title legibility.
 
 6. Preserve editable project and source manifest; deliver playthrough and technical QC results.
+
+## Specialist protocol and proof boundaries
+
+- Probe encoded outputs for fps, frame count, aspect ratio, pixel format, codec and duration; generate a timeline-wide contact sheet and inspect start/end frames.
+- Treat suggested loudness and watermark placement as platform and brief dependent rather than universal.
 
 ## Deliverables
 
@@ -100,3 +105,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

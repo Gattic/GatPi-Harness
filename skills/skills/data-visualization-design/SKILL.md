@@ -3,7 +3,7 @@ name: data-visualization-design
 description: "Use when creating dashboards, plots, explanatory figures or statistical visualizations. Do not use when only performing calculations with no visual output requested."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "design"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Validate values and rendering using independent calculations and extreme/empty-case fixtures.
 
 6. Deliver chart plus methods, sources, update rules and the one accurate takeaway it supports.
+
+## Specialist protocol and proof boundaries
+
+- Animate changing values from a single documented data model and never let motion or tweened labels imply measurements that do not exist.
+- Preserve a still accessible representation and ensure axis labels remain readable during transitions.
 
 ## Deliverables
 
@@ -98,3 +103,10 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md
