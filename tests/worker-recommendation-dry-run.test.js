@@ -15,7 +15,7 @@ assert.deepEqual(result.decision, { mode: "suggest", intent: "research", reasonC
 assert.deepEqual(result.recommendation, {
   schemaVersion: 1,
   roleId: "worker",
-  model: "local/DeepSeek-V4.1-Flash-1017",
+  model: "DeepSeek-V4.1-Flash-1017",
   thinkingLevel: "low",
   workspacePolicy: "shared-readonly",
   mutationPolicy: "forbidden",

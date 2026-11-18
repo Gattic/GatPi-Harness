@@ -31,7 +31,7 @@ TS
   printf '\003'
   sleep 1
   printf '\003'
-) | timeout 60 script -q -f -c "PI_COGNITIVE_STORAGE_ROOT='$state_root/cognitive' PI_SUBAGENT_STATE_ROOT='$state_root/subagents' PI_COGNITIVE_AUTO_VERIFY=0 PI_MULTI_AGENT_TOPOLOGIES_ENABLED=1 PI_ROLE_RUNTIME_VERSION=2 PI_ROLE_ROLLOUT_STAGE=R0 PI_ROLE_FIELD_PILOT=1 PI_ROLE_WORKER_SHADOW_CANARY=1 PI_ROLE_MUTATION=off PI_ROLE_SIDECAR=1 PI_TOPOLOGY_AUTO_ROUTE=suggest PI_ROLE_MODEL_WORKER=local/DeepSeek-V4.1-Flash-1017 PI_ROLE_THINKING_WORKER=low PI_SUBAGENT_EXECUTION_FIXTURE_RESULT='fixture worker shadow success' pi --no-session --no-extensions -e '$ext' -e '$stopper'" "$log" >/dev/null || true
+) | timeout 60 script -q -f -c "PI_COGNITIVE_STORAGE_ROOT='$state_root/cognitive' PI_SUBAGENT_STATE_ROOT='$state_root/subagents' PI_COGNITIVE_AUTO_VERIFY=0 PI_MULTI_AGENT_TOPOLOGIES_ENABLED=1 PI_ROLE_RUNTIME_VERSION=2 PI_ROLE_ROLLOUT_STAGE=R0 PI_ROLE_FIELD_PILOT=1 PI_ROLE_WORKER_SHADOW_CANARY=1 PI_ROLE_MUTATION=off PI_ROLE_SIDECAR=1 PI_TOPOLOGY_AUTO_ROUTE=suggest PI_ROLE_MODEL_WORKER=DeepSeek-V4.1-Flash-1017 PI_ROLE_THINKING_WORKER=low PI_SUBAGENT_EXECUTION_FIXTURE_RESULT='fixture worker shadow success' pi --no-session --no-extensions -e '$ext' -e '$stopper'" "$log" >/dev/null || true
 
 if [[ ! -s "$log" ]]; then
   printf 'worker shadow canary TUI validation did not produce a session log: %s\n' "$log" >&2

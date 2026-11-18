@@ -366,6 +366,46 @@ function modelPattern(model) {
   return model.provider ? `${model.provider}/${model.id}` : String(model.id);
 }
 function modelPatternFromContext(context = {}) { return modelPattern(context.model || context.ctx?.model); }
+function parseModelPattern(value) {
+  const pattern = String(value || "").trim();
+  const slash = pattern.indexOf("/");
+  if (slash <= 0) return { provider: null, id: pattern };
+  return { provider: pattern.slice(0, slash), id: pattern.slice(slash + 1) };
+}
+function configuredModelEntries(availableModels) {
+  const rows = [];
+  const seen = new Set();
+  for (const entry of availableModels) {
+    const parsed = typeof entry === "string" ? parseModelPattern(entry) : parseModelPattern(modelPattern(entry));
+    if (!parsed.provider || !parsed.id) continue;
+    const key = `${parsed.provider}/${parsed.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push(parsed);
+  }
+  return rows;
+}
+// Resolve a role's pinned model against the providers the session actually
+// configured. An explicit provider wins only when it is configured; otherwise
+// the same model id is taken from a configured provider (preferring the
+// parent's provider), and an unavailable id falls back to the parent model.
+function resolveRoleModel(selectedModel, { availableModels, inheritedModel } = {}) {
+  const selected = parseModelPattern(selectedModel);
+  const inherited = parseModelPattern(inheritedModel);
+  if (!Array.isArray(availableModels)) return { model: selectedModel, modelPolicySource: null };
+  const candidates = configuredModelEntries(availableModels);
+  if (selected.provider) {
+    const exact = candidates.find((row) => row.provider === selected.provider && row.id === selected.id);
+    if (exact) return { model: `${exact.provider}/${exact.id}`, modelPolicySource: null };
+  }
+  const matches = selected.id ? candidates.filter((row) => row.id === selected.id) : [];
+  if (matches.length) {
+    const preferred = matches.find((row) => row.provider === inherited.provider) || matches[0];
+    return { model: `${preferred.provider}/${preferred.id}`, modelPolicySource: "derived" };
+  }
+  if (inherited.provider && inherited.id) return { model: `${inherited.provider}/${inherited.id}`, modelPolicySource: "inherit" };
+  return { model: selectedModel, modelPolicySource: null };
+}
 function thinkingLevelFromContext(context = {}) {
   const level = context.thinkingLevel || context.ctx?.thinkingLevel;
   return THINKING_LEVELS.includes(level) ? level : null;
@@ -553,7 +593,8 @@ class SubagentRunner {
           modelPolicySource: rpc.model || record.modelPreference ? "preferred" : "default",
           thinkingPolicySource: "inherit",
         };
-    if (inferenceProfile.selectedModel) args.push("--model", inferenceProfile.selectedModel);
+    const resolvedModel = resolveRoleModel(inferenceProfile.selectedModel, { availableModels: context.availableModels || rpc.availableModels, inheritedModel });
+    if (resolvedModel.model) args.push("--model", resolvedModel.model);
     if (inferenceProfile.selectedThinkingLevel) args.push("--thinking", inferenceProfile.selectedThinkingLevel);
     if (roleContract && (!inferenceProfile.selectedModel || !inferenceProfile.selectedThinkingLevel)) throw new Error(`role ${roleContract.roleId} requires a resolved model and thinking level`);
     if (record.systemPrompt) args.push("--append-system-prompt", record.systemPrompt);
@@ -563,7 +604,7 @@ class SubagentRunner {
     const env = roleContract ? {
       PI_ROLE_SIDECAR: "1",
       PI_ROLE_CONTRACT_B64: Buffer.from(JSON.stringify(roleContract)).toString("base64url"),
-      PI_ROLE_EXPECTED_MODEL: inferenceProfile.selectedModel,
+      PI_ROLE_EXPECTED_MODEL: resolvedModel.model,
       PI_ROLE_EXPECTED_THINKING_LEVEL: inferenceProfile.selectedThinkingLevel,
     } : {};
     return {
@@ -574,9 +615,9 @@ class SubagentRunner {
       noSession,
       env,
       provenance: {
-        selectedModel: inferenceProfile.selectedModel || null,
+        selectedModel: resolvedModel.model || null,
         fallbackModel: inferenceProfile.fallbackModel || null,
-        modelPolicySource: inferenceProfile.modelPolicySource,
+        modelPolicySource: resolvedModel.modelPolicySource || inferenceProfile.modelPolicySource,
         selectedThinkingLevel: inferenceProfile.selectedThinkingLevel || null,
         thinkingPolicySource: inferenceProfile.thinkingPolicySource,
         roleSidecar: roleContract ? roleSidecar : null,
@@ -1665,5 +1706,6 @@ module.exports = {
   compactSubagentSnapshotResult,
   subagentBranchSnapshotState,
   toolAllowlistFromPolicy,
+  resolveRoleModel,
   withRpcConcurrency,
 };

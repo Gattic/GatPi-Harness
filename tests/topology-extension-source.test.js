@@ -35,7 +35,7 @@ assert(recipeSource.includes("recipe.metadata?.explicitOnly !== true") && recipe
 assert(source.includes('Type.Literal("recipes")') && source.includes('Type.Literal("install")') && source.includes('Type.Literal("lint")'), "run_topology owns recipe administration operations");
 assert(source.includes('appendTopologyRoleRuns(pi, result, "topology-command")'), "manual topology commands persist per-role execution provenance");
 assert(source.includes('appendTopologyRoleRuns(pi, result, "topology-tool")'), "model topology runs persist per-role execution provenance");
-assert(source.includes('piContext: { cwd: runtime.cwd, model: ctx.model, thinkingLevel: ctx.thinkingLevel, signal, executionMode: "tool-rpc" }'), "topology tool always uses the canonical RPC sidecar for subagent nodes");
+assert(source.includes('piContext: { cwd: runtime.cwd, model: ctx.model, thinkingLevel: ctx.thinkingLevel, availableModels: availableModelEntries(ctx), signal, executionMode: "tool-rpc" }'), "topology tool always uses the canonical RPC sidecar for subagent nodes");
 assert(!source.includes('executionMode: "pi-fork"'), "topology surfaces do not retain replacement-session fallback");
 assert(source.includes("runtime.boundary.topologies.replay"), "topology replay uses adapter replay API");
 assert(source.includes("join=") && source.includes("joinDecisions") && source.includes("evidence="), "topology inspection renders compact join and evidence state");
