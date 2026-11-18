@@ -3,7 +3,7 @@ name: procedural-3d-blender
 description: "Use when blender Python modeling, repeatable scenes or scalable geometry generation. Do not use when manual sculpting is the only requested method and scripts are not desired."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "media"
 ---
 
@@ -39,6 +39,11 @@ metadata:
 5. Run in clean/headless Blender if available; inspect object counts, bounds, transforms, normals and render preview.
 
 6. Export script, native .blend, geometry statistics and parameter documentation with reproducibility instructions.
+
+## Specialist protocol and proof boundaries
+
+- For animated deliverables use a staged Blender background-mode preview → contact sheet → playblast → final render workflow, checking actual device logs.
+- Preserve native .blend scene, generators, dependencies and reproducible command manifest.
 
 ## Deliverables
 
@@ -103,5 +108,11 @@ the relevant part of this skill in the child task and keep this skill's acceptan
 
 ## Optional references
 
-- references/quality.md
-- scripts/build_product_stage.py
+- [references/quality.md](references/quality.md)
+- [scripts/build_product_stage.py](scripts/build_product_stage.py)
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

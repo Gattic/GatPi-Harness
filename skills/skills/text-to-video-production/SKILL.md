@@ -3,7 +3,7 @@ name: text-to-video-production
 description: "Use when creating AI-assisted footage from a script, shot or reference image. Do not use when user requested still images or editable 3D rigs only."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "media"
 ---
 
@@ -39,6 +39,11 @@ metadata:
 5. Revise failing shots with stronger reference frames or simpler action rather than hiding faults with uncontrolled extra generations.
 
 6. Assemble selects and export media metadata, shot log, license provenance and editorial notes.
+
+## Specialist protocol and proof boundaries
+
+- For multi-shot sequences, capture representative frames and check temporal identity, camera framing, physical continuity and transitions before final delivery.
+- Do not label plausible-looking interactions physically accurate without measurable evidence.
 
 ## Deliverables
 
@@ -100,3 +105,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

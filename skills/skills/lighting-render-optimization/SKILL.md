@@ -3,7 +3,7 @@ name: lighting-render-optimization
 description: "Use when rendering scenes, path-trace tuning or lighting a product/character/environment. Do not use when a nonrendered mesh-only export."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "media"
 ---
 
@@ -39,6 +39,11 @@ metadata:
 5. Validate color transforms, alpha, AOVs/passes, clipping and compositing needs at delivery resolution.
 
 6. Provide scene settings and a benchmark showing render time, memory and visual difference.
+
+## Specialist protocol and proof boundaries
+
+- Before a costly full animation, render a high-value hero frame, representative keyframes and a low-sample preview to catch lighting and occlusion defects.
+- Record actual active render device, denoise configuration and color-management pipeline.
 
 ## Deliverables
 
@@ -100,3 +105,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

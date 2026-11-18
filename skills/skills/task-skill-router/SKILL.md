@@ -3,7 +3,7 @@ name: task-skill-router
 description: "Use when a request spans disciplines, multiple possible workflows, or a broad project. Do not use when a single unambiguous skill already covers the deliverable."
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   category: "meta"
 ---
 
@@ -45,6 +45,8 @@ metadata:
 - Prefer source code reading for ordinary repository architecture questions; REA is not a default repo crawler or prerequisite for implementation.
 - Require permission escalation as a separate explicit stage before browser actions, process attach, extraction, configuration changes or any external side effect.
 - Route evidence-lineage comparison after analysis only when more than one artifact/session actually needs comparison.
+- Route UI state motion to ui-motion-direction; full video to blender-cinematic-video-pipeline; SVG explainers to interactive-isometric-explainer; mechanical constraints to mechanical-animation-kinematics.
+- Use anatomy geometry audit only where actual spatial diagrams or moving assemblies exist.
 
 ## Deliverables
 
@@ -109,3 +111,6 @@ the relevant part of this skill in the child task and keep this skill's acceptan
 Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
 
 - https://github.com/morluto/rea/blob/main/.agents/skills/reverse-engineer-anything/SKILL.md
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

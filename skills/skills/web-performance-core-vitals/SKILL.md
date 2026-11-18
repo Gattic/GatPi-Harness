@@ -3,7 +3,7 @@ name: web-performance-core-vitals
 description: "Use when optimizing loading, INP, LCP, CLS, bundle weight or caching. Do not use when no observed web performance issue and no target measurement."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "web-seo"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Rerun matched before/after tests and check visual/functional regressions, including cold-cache and adverse-network paths.
 
 6. Deliver metrics with measurement method, residual bottlenecks, expected field impact and rollback triggers.
+
+## Specialist protocol and proof boundaries
+
+- When diagnosing motion performance, distinguish compositor-only transforms from layout-triggering animations and measure real frame responsiveness.
+- Verify low-power/reduced-motion variants and paused offscreen loops.
 
 ## Deliverables
 
@@ -98,3 +103,10 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md

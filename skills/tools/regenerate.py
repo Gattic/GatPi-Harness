@@ -100,7 +100,7 @@ def build_skill(skill: dict, specialists: dict) -> str:
     special_rules = skill.get("special_rules") or []
     if special_rules:
         lines += ["## Specialist protocol and proof boundaries", ""]
-        lines += [f"- {rule}" for rule in special_rules]
+        lines += ["- " + rule.rstrip(". ") + "." for rule in special_rules]
         lines += [""]
     lines += ["## Deliverables", ""]
     for artifact in skill["artifacts"]:
@@ -125,7 +125,10 @@ def build_skill(skill: dict, specialists: dict) -> str:
     lines += delegation_section(specialists)
     if skill.get("refs"):
         lines += ["", "## Optional references", ""]
-        lines.extend(f"- {x}" for x in skill["refs"])
+        if skill.get("source_inspiration"):
+            lines.extend(f"- [{x}]({x})" for x in skill["refs"])
+        else:
+            lines.extend(f"- {x}" for x in skill["refs"])
     source_inspiration = skill.get("source_inspiration") or []
     if source_inspiration:
         lines += [
@@ -167,13 +170,13 @@ def make_eval(skill: dict) -> dict:
             "safety": "Never invent tests, permissions, files, remote updates or third-party facts.",
         },
     }
+    routing_examples = skill.get("routing_examples") or {}
+    for kind in ("positive", "negative"):
+        for test in evaluation[kind]:
+            if test["id"] in routing_examples:
+                test["prompt"] = routing_examples[test["id"]]
     if skill.get("domain_tests"):
         evaluation["domain"] = skill["domain_tests"]
-    routing_tests = skill.get("routing_tests") or {}
-    if routing_tests.get("positive"):
-        evaluation["positive"] = routing_tests["positive"]
-    if routing_tests.get("negative"):
-        evaluation["negative"] = routing_tests["negative"]
     return evaluation
 
 
@@ -204,7 +207,7 @@ def regenerate(root: pathlib.Path) -> int:
             lines.append(f"- [`{item['name']}`](skills/{item['name']}/SKILL.md) — {item['goal']}")
         lines.append("")
     (root / "CATALOG.md").write_text("\n".join(lines), encoding="utf-8")
-    manifest = {"catalog_version": "1.0.0", "generator": "tools/regenerate.py", "skill_count": len(catalog),
+    manifest = {"catalog_version": "2.0.0", "generator": "tools/regenerate.py", "skill_count": len(catalog),
                 "categories": {c: len(items) for c, items in by_category.items()},
                 "skills": [{"name": x["name"], "category": x["category"], "path": "skills/" + x["name"] + "/SKILL.md", "eval": "evals/" + x["name"] + ".json"} for x in sorted(catalog,key=lambda x:x["name"])]}
     (root / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

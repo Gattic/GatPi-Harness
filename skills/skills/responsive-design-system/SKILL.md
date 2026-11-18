@@ -3,7 +3,7 @@ name: responsive-design-system
 description: "Use when multiple pages or products need coherent responsive components and patterns. Do not use when one-off graphic or single nonreusable visual."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "web-seo"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Document examples, usage/non-usage criteria, migration notes and visual regression fixtures.
 
 6. Validate long copy, RTL where relevant, zoom, dark mode, touch and keyboard controls on representative screens.
+
+## Specialist protocol and proof boundaries
+
+- Publish named motion tokens beside typography, color and spacing; avoid embedding timing constants independently in every component.
+- Test motion state legibility on mobile and low-motion settings.
 
 ## Deliverables
 
@@ -99,3 +104,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md

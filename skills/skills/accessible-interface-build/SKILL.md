@@ -3,7 +3,7 @@ name: accessible-interface-build
 description: "Use when building or refactoring interactive web UI, components, forms or navigation. Do not use when pure graphic mockup with no intended interaction."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "web-seo"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Use accessibility automation to detect common issues then manually test focus order, labels and accessible names.
 
 6. Produce a component behavior contract and browser evidence for all critical interactions.
+
+## Specialist protocol and proof boundaries
+
+- For motion, respect prefers-reduced-motion and preserve loading, success and error semantics via nonmoving feedback and status announcements.
+- Test interactions with both pointer and keyboard while animations are interrupted.
 
 ## Deliverables
 
@@ -98,3 +103,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md

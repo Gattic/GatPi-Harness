@@ -3,7 +3,7 @@ name: acceptance-quality-release
 description: "Use when preparing launch sign-off, QA handoff, publication or production rollout. Do not use when exploratory brainstorming with no output being released."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "delivery"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Choose release, controlled rollback, staged rollout or hold based on nonnegotiable gates and residual exposure.
 
 6. Publish release decision, rollback/readiness plan and postrelease observation window.
+
+## Specialist protocol and proof boundaries
+
+- For rendered media and interactive technical figures, require actual inspected frames, decode checks, reduced-motion/accessibility checks and relevant state/geometry audits.
+- Report separately what is validated by code, by visuals and by physical or mathematical tests.
 
 ## Deliverables
 
@@ -99,3 +104,11 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md
+- https://github.com/wheresryan22/anatomy/blob/main/SKILL.md
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

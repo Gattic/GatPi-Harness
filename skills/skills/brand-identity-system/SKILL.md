@@ -3,7 +3,7 @@ name: brand-identity-system
 description: "Use when new or refreshed brand identity, creative system, logo usage rules or templates. Do not use when user needs an unrelated one-off illustration."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "design"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Test identity in monochrome, tiny social avatars, print, dark background, localization and real product contexts.
 
 6. Package production files, token values, do/don't examples, governance and review criteria.
+
+## Specialist protocol and proof boundaries
+
+- Where branded motion repeats, specify a limited palette of durations, easing curves and state transitions with accessible reduced-motion equivalents.
+- Use one signature behavior intentionally rather than mandatory motion on every component.
 
 ## Deliverables
 
@@ -99,3 +104,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md

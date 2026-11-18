@@ -3,7 +3,7 @@ name: product-interface-design
 description: "Use when product feature design, multi-screen experience or high-fidelity interaction specification. Do not use when only writing backend code with no UI impact."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "design"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Check contrast, reading order, responsive layouts and localization across small and large viewports.
 
 6. Hand off state table, screen inventory, reusable patterns and testable acceptance conditions.
+
+## Specialist protocol and proof boundaries
+
+- For interactive transitions, define explicit state graphs, latency and interruption behavior; route motion architecture to ui-motion-direction rather than adding arbitrary animation.
+- Verify reduced-motion and keyboard navigation for all expressive interactions.
 
 ## Deliverables
 
@@ -99,3 +104,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md

@@ -110,7 +110,7 @@ the relevant part of this skill in the child task and keep this skill's acceptan
 
 ## Optional references
 
-- references/field-guide.md
+- [references/field-guide.md](references/field-guide.md)
 
 ## Provenance notes
 

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "artifacts": [
+    {
+      "id": "example-release-a",
+      "path": "relative-path-to-the-actual-original.bin",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "tool-evidence-or-local-source-reference",
+      "artifact_id": "example-release-a",
+      "authority": "observed",
+      "source_location": "tool name + source address/record ordinal/field path",
+      "coverage": "which bytes, records or events were inspected; note omissions",
+      "producer": "exact tool invocation or read-only parser"
+    }
+  ],
+  "claims": [
+    {
+      "id": "C-001",
+      "text": "What the inspected source actually established",
+      "authority": "observed",
+      "evidence_ids": ["tool-evidence-or-local-source-reference"],
+      "limitations": [],
+      "status": "NOT TESTED"
+    }
+  ],
+  "comparisons": []
+}

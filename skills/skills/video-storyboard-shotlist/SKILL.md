@@ -3,7 +3,7 @@ name: video-storyboard-shotlist
 description: "Use when preproduction for commercials, explainers, social shorts or narrative video. Do not use when a single static image without motion output."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "media"
 ---
 
@@ -39,6 +39,11 @@ metadata:
 5. Prepare voice/music/SFX synchronization notes, captions and safe areas across aspect ratios.
 
 6. Deliver shot list, reference board, asset gaps, risk/cost estimates and edit acceptance criteria.
+
+## Specialist protocol and proof boundaries
+
+- Create a seconds-based beat sheet with camera framing, material response, mechanical/physical actions, and verifiable output format.
+- Flag motion moments requiring preview-frame checks before expensive full rendering.
 
 ## Deliverables
 
@@ -100,3 +105,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d

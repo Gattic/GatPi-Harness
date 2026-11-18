@@ -3,7 +3,7 @@ name: frontend-state-architecture
 description: "Use when a UI has complex shared state, async data or reusable component contracts. Do not use when a small static page with no interactive state."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "engineering"
 ---
 
@@ -38,6 +38,11 @@ metadata:
 5. Check keyboard, screen-reader announcements and focus continuity across async renders and modals.
 
 6. Validate source-of-truth consistency, memory cleanup, render cost and ease of extension.
+
+## Specialist protocol and proof boundaries
+
+- Represent animation as cancelable state transitions synchronized to actual business state, not timers that pretend requests have completed.
+- Ensure reduced-motion eliminates visual travel without changing state semantics.
 
 ## Deliverables
 
@@ -98,3 +103,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md

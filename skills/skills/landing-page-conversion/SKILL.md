@@ -3,7 +3,7 @@ name: landing-page-conversion
 description: "Use when product landing page, lead generation, signup or paid traffic destination. Do not use when information-only internal documentation without conversion objective."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "web-seo"
 ---
 
@@ -39,6 +39,11 @@ metadata:
 5. Test responsive behavior, performance, form recovery and clarity with representative visitors.
 
 6. Create variant hypotheses with guardrail metrics and a prioritized testing backlog.
+
+## Specialist protocol and proof boundaries
+
+- Use motion to clarify action/feedback and guide attention, not as a conversion promise; keep primary CTA reachable during transitions.
+- Measure conversions independently from aesthetic motion judgments.
 
 ## Deliverables
 
@@ -99,3 +104,9 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md

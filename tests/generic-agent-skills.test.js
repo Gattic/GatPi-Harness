@@ -18,7 +18,7 @@ const discovered = fs.readdirSync(source, { withFileTypes: true })
   .map((entry) => entry.name).sort();
 const managed = fs.readFileSync(path.join(source, "managed-skills.txt"), "utf8").trim().split(/\r?\n/);
 
-// The 121 supplied pack skills plus eight legacy skills restored and adapted to
+// The 131 supplied pack skills plus eight legacy skills restored and adapted to
 // the pack standard because no supplied skill covers their workflows.
 const restored = {
   handoff: "handoff-contract.md",
@@ -30,7 +30,7 @@ const restored = {
   build: "build-contract.md",
   "typesafe-ai": "typesafe-guide.md",
 };
-assert.equal(expected.length, 121 + Object.keys(restored).length, "catalog holds the 121-skill pack plus the restored legacy skills");
+assert.equal(expected.length, 131 + Object.keys(restored).length, "catalog holds the 131-skill pack plus the restored legacy skills");
 for (const name of Object.keys(restored)) assert.ok(expected.includes(name), `restored skill must be in the catalog: ${name}`);
 assert.equal(new Set(expected).size, expected.length, "catalog names must be unique");
 assert.deepEqual(discovered, expected, "no missing bundle skills or retained legacy skills");
@@ -149,4 +149,4 @@ const report = fs.readFileSync(path.join(root, "docs", "session-derived-skills.m
 assert.ok(report.includes("Historical report:"), "legacy study must not advertise retired skills");
 assert.ok(report.includes("No prompts, assistant responses, reasoning, raw commands, tool output, credentials, or transcript excerpts"));
 assert.ok(report.includes("## Limitations"));
-console.log(`generic agent skills tests passed (121 pack skills + ${Object.keys(restored).length} restored; static/offline validation only)`);
+console.log(`generic agent skills tests passed (131 pack skills + ${Object.keys(restored).length} restored; static/offline validation only)`);

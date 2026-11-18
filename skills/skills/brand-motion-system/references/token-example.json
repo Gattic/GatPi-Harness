@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "duration_ms": {"quick": 120, "standard": 240, "expressive": 420},
+  "easing": {"enter": [0.2, 0, 0, 1], "exit": [0.3, 0, 1, 1], "onscreen": [0.4, 0, 0.2, 1]},
+  "motion_policy": {"reduced_motion": "crossfade_or_instant", "autoplay_ambient": false, "interruptible": true},
+  "notes": "Examples only. Tune to interaction and platform, and verify against user tests."
+}
