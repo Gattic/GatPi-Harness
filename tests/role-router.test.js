@@ -149,7 +149,7 @@ assert.deepEqual(workerShadowTopology.nodes, [{ id: "worker", roleId: "worker", 
 assert.deepEqual(workerShadowTopology.metadata, { explicitOnly: true, autoRoutePolicy: "never", publishCapable: false, workerShadowCanary: true });
 assert.equal(workerShadowTopology.concurrencyLimit, 1);
 const canaryAuthorization = authorizeWorkerShadowCanary(canaryCandidate, canaryControls);
-assert.equal(WORKER_SHADOW_CANARY_MODEL, "local/DeepSeek-V4.1-Flash-1017");
+assert.equal(WORKER_SHADOW_CANARY_MODEL, "DeepSeek-V4.1-Flash-1017");
 assert.equal(WORKER_SHADOW_CANARY_THINKING_LEVEL, "low");
 assert.equal(canaryAuthorization.authorized, true);
 assert.equal(canaryAuthorization.decision.topologyId, WORKER_SHADOW_CANARY_TOPOLOGY_ID);

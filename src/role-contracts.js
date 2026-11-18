@@ -7,9 +7,10 @@ const { skillAwarenessPrompt } = require("./skill-awareness");
 
 const ROLE_CONTRACT_SCHEMA_VERSION = 2;
 // Canonical delegate model; keep in sync with the role pins in
-// config/harness-defaults.env. Role children cannot fail over, so a delegate
-// model whose provider is rate-limited or unauthenticated blocks delegation.
-const DEFAULT_DELEGATE_MODEL = "local/DeepSeek-V4.1-Flash-1017";
+// config/harness-defaults.env. The value is a provider-neutral model id: the
+// launch path resolves a configured provider and falls back to the parent's
+// resolved model when the id is unavailable.
+const DEFAULT_DELEGATE_MODEL = "DeepSeek-V4.1-Flash-1017";
 const WORKSPACE_POLICIES = Object.freeze(["handler-only", "shared-readonly", "isolated-worktree"]);
 const MUTATION_POLICIES = Object.freeze(["forbidden", "proposed-patch", "isolated-only"]);
 const MODEL_POLICY_MODES = Object.freeze(["inherit", "preferred", "fixed"]);

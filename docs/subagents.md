@@ -185,10 +185,10 @@ Role rollout/rollback controls are evaluated before typed role creation or topol
 - `PI_ROLE_ROLLOUT_STAGE=R0..R5` is authoritative when explicitly configured. If omitted, fresh deterministic and exact live-field evidence select a stage capped at R4.
 - `PI_ROLE_WORKER_SHADOW_CANARY=0|1` controls the R0/suggest/mutation-off bounded worker canary; the disabled-topology canonical configuration sets `0`.
 - `PI_ROLE_RUNTIME_BENCHMARK_REPORT` points at the deterministic report. See [Role runtime benchmark and rollout](role-runtime-benchmark.md).
-- `PI_ROLE_MODEL_<ROLE_ID>` overrides the role model with a separate `provider/model` value.
+- `PI_ROLE_MODEL_<ROLE_ID>` overrides the role model with a model id or `provider/model` value.
 - `PI_ROLE_THINKING_<ROLE_ID>` overrides the role thinking level (`off|minimal|low|medium|high|xhigh|max`).
 
-All model-backed delegates default to `local/DeepSeek-V4.1-Flash-1017`, including custom roles and patch-reviewer. Model and effort resolve separately; the canonical `config/harness-defaults.env` pins the role effort levels in the table below. Pinned effort must stay within the delegate model's supported levels: models that do not declare `xhigh` or `max` fail closed at launch when a role pins them. Handler-only roles launch no model. Model values with embedded thinking suffixes are rejected. Start a new Pi process to load changed `config/harness-defaults.env` values; `/reload` retains existing environment values.
+All model-backed delegates default to `DeepSeek-V4.1-Flash-1017`, including custom roles and patch-reviewer. The value is provider-neutral: the launch path resolves it against the providers the session actually configured. Model and effort resolve separately; the canonical `config/harness-defaults.env` pins the role effort levels in the table below. Pinned effort must stay within the delegate model's supported levels: models that do not declare `xhigh` or `max` fail closed at launch when a role pins them. Handler-only roles launch no model. Model values with embedded thinking suffixes are rejected. Start a new Pi process to load changed `config/harness-defaults.env` values; `/reload` retains existing environment values.
 
 ### Inference precedence
 
@@ -197,17 +197,18 @@ Model and thinking resolve independently, in this order:
 1. `PI_ROLE_MODEL_<ROLE_ID>` / `PI_ROLE_THINKING_<ROLE_ID>` environment override. An invalid thinking value is rejected rather than ignored.
 2. The role contract's `modelPolicy`: `fixed` requires a preference, `preferred` uses its preference when declared and otherwise the parent model, and `inherit` uses the parent model. A contract `thinkingLevel` other than `inherit` pins that effort.
 3. The parent session profile, used only where the resolved policy is `inherit`. It is read before spawn, so every child receives both `--model` and `--thinking`.
+4. Provider resolution. A provider-qualified value keeps its provider only when that provider is configured and offers the model. Otherwise the same model id is taken from a configured provider, preferring the parent's provider, and an unavailable id falls back to the parent's resolved model.
 
-A configured model override switches the effective mode to `preferred` and wins over the contract preference. The recorded `fallbackModel` is provenance only: role children launch with one fixed model and never fail over. The role sidecar verifies the effective profile before provider use, and the parent records selected/effective categorical provenance.
+A configured model override switches the effective mode to `preferred` and wins over the contract preference. The recorded `fallbackModel` is provenance: once provider resolution finishes, each role child launches with exactly one fixed model and does not fail over during the run. The role sidecar verifies the effective profile before provider use, and the parent records selected/effective categorical provenance, including `derived` when the provider was resolved from the configured set and `inherit` when the parent model was used.
 
 ### Canonical role profiles
 
 | Roles | Model | Effort |
 |---|---|---|
-| planner, reviewer, coder, refactorer, evidence-auditor | `local/DeepSeek-V4.1-Flash-1017` | `high` |
-| researcher, benchmark | `local/DeepSeek-V4.1-Flash-1017` | `medium` |
-| worker, verifier | `local/DeepSeek-V4.1-Flash-1017` | `low` |
-| patch-reviewer, custom roles | `local/DeepSeek-V4.1-Flash-1017` | inherited |
+| planner, reviewer, coder, refactorer, evidence-auditor | `DeepSeek-V4.1-Flash-1017` | `high` |
+| researcher, benchmark | `DeepSeek-V4.1-Flash-1017` | `medium` |
+| worker, verifier | `DeepSeek-V4.1-Flash-1017` | `low` |
+| patch-reviewer, custom roles | `DeepSeek-V4.1-Flash-1017` | inherited |
 | integrator, mathematical-researcher, reverse-engineer, 3d-critic, reliability-investigator, code-profiler, security-reviewer | inherited | inherited |
 | 3d-modeler | inherited | `medium` (canonical pin) |
 | coordinator, memory-curator, skill-intake-handler, tool-specialist | none (handler-only) | none |

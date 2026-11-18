@@ -22,15 +22,15 @@ const root = path.resolve(__dirname, "..");
 const env = readHarnessEnvironment({ root }).values;
 const contracts = new Map(DEFAULT_ROLE_CONTRACTS.map((contract) => [contract.roleId, contract]));
 const expected = {
-  planner: ["local/DeepSeek-V4.1-Flash-1017", "high"],
-  researcher: ["local/DeepSeek-V4.1-Flash-1017", "medium"],
-  reviewer: ["local/DeepSeek-V4.1-Flash-1017", "high"],
-  coder: ["local/DeepSeek-V4.1-Flash-1017", "high"],
-  verifier: ["local/DeepSeek-V4.1-Flash-1017", "low"],
-  refactorer: ["local/DeepSeek-V4.1-Flash-1017", "high"],
-  benchmark: ["local/DeepSeek-V4.1-Flash-1017", "medium"],
-  "evidence-auditor": ["local/DeepSeek-V4.1-Flash-1017", "high"],
-  worker: ["local/DeepSeek-V4.1-Flash-1017", "low"],
+  planner: ["DeepSeek-V4.1-Flash-1017", "high"],
+  researcher: ["DeepSeek-V4.1-Flash-1017", "medium"],
+  reviewer: ["DeepSeek-V4.1-Flash-1017", "high"],
+  coder: ["DeepSeek-V4.1-Flash-1017", "high"],
+  verifier: ["DeepSeek-V4.1-Flash-1017", "low"],
+  refactorer: ["DeepSeek-V4.1-Flash-1017", "high"],
+  benchmark: ["DeepSeek-V4.1-Flash-1017", "medium"],
+  "evidence-auditor": ["DeepSeek-V4.1-Flash-1017", "high"],
+  worker: ["DeepSeek-V4.1-Flash-1017", "low"],
 };
 
 for (const [roleId, [model, thinkingLevel]] of Object.entries(expected)) {

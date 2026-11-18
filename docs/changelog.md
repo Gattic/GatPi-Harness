@@ -1,5 +1,31 @@
 # Changelog
 
+## provider-derived-role-models - 2026-11-18
+
+- Role model pins in `config/harness-defaults.env` are now provider-neutral model
+  ids (`DeepSeek-V4.1-Flash-1017`) instead of `local/DeepSeek-V4.1-Flash-1017`.
+  `local` was only a placeholder that an operator had to define in
+  `~/.pi/agent/models.json`; hosts without it failed every delegation at launch
+  with `Model "local/DeepSeek-V4.1-Flash-1017" not found` and zero model calls,
+  before any provider request.
+- `src/subagents.js` `rpcArgs()` now resolves the pinned model against the
+  session's configured providers. A provider-qualified pin keeps its provider
+  only when that provider is configured and offers the model; otherwise the same
+  model id is taken from a configured provider, preferring the parent's
+  provider; an unavailable id falls back to the parent's resolved model. The
+  resolved model is what `--model`, `PI_ROLE_EXPECTED_MODEL` and provenance
+  report, so the child's effective-profile check still matches. The reasoning
+  runtime supplies the configured set from `ctx.modelRegistry` through the
+  subagent/topology inference context.
+- `DEFAULT_DELEGATE_MODEL` in `src/role-contracts.js` and the worker shadow
+  canary pin now use the same provider-neutral id. Provenance records
+  `derived` when the provider was resolved from the configured set and
+  `inherit` when the parent model was used. Changing the model matrix
+  invalidates prior runtime-fingerprinted benchmark and field evidence.
+- Verified with the new `role-model-derivation` test, `role-reasoning-policy`,
+  `role-router`, `harness-environment`, `worker-recommendation-dry-run`, the
+  subagent/topology TUI checks, `npm run lint` and `npm run typecheck`.
+
 ## lazy-global-skills - 2026-11-17
 
 - `skill-lazy` stops advertising user-scope skill descriptions in the startup

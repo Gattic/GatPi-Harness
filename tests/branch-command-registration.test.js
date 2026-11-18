@@ -25,6 +25,6 @@ assert(source.includes("startSubagentCommandRun(pi, ctx, sub.id"), "single /suba
 assert(source.includes('const runner = "rpc"'), "subagent commands use the single detached RPC runner");
 assert(!source.includes('executionMode: "pi-fork"'), "replacement-session execution is removed");
 assert(source.includes("runtime.subagentRuns?.get(id)?.abort()"), "subagent cancel should abort an active command-side runner");
-assert(source.includes('piContext: { cwd: runtime.cwd, model: ctx.model, thinkingLevel: ctx.thinkingLevel, executionMode: "tool-rpc" }'), "topology commands pass model and thinking to the canonical RPC sidecar context");
+assert(source.includes('piContext: { cwd: runtime.cwd, model: ctx.model, thinkingLevel: ctx.thinkingLevel, availableModels: availableModelEntries(ctx), executionMode: "tool-rpc" }'), "topology commands pass model and thinking to the canonical RPC sidecar context");
 
 console.log("branch command registration tests passed");
