@@ -39,7 +39,7 @@ const OAUTH_PROMPT = [
 ].join("\n");
 const CLAUDE_CODE_IDENTITY = "You are Claude Code, Anthropic's official CLI";
 // Pinned request contract, not a configurable account setting.
-const CLAUDE_CODE_VERSION = "2.1.288";
+const CLAUDE_CODE_VERSION = "2.1.327";
 const BILLING_HEADER_SALT = "59cf53e54c78";
 const BILLING_HEADER_POSITIONS = [4, 7, 20];
 const PARAGRAPH_REMOVAL_ANCHORS = [

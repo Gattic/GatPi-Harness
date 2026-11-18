@@ -252,7 +252,7 @@ async function assertAnthropicHandshake(provider) {
       assert.deepEqual(captured.metadata, { user_id: "fixture-user" });
       assert.equal(captured.tools[0].name, oauth ? "Read" : "read");
       if (oauth) {
-        assert.equal(captured.system[0].text, "x-anthropic-billing-header: cc_version=2.1.288.a41; cc_entrypoint=sdk-cli; cch=a1c5f;");
+        assert.equal(captured.system[0].text, "x-anthropic-billing-header: cc_version=2.1.327.0f5; cc_entrypoint=sdk-cli; cch=a1c5f;");
         assert.equal(captured.system.filter((block) => block.text.startsWith("x-anthropic-billing-header:")).length, 1);
         assert.equal(captured.system[1].text, "You are Claude Code, Anthropic's official CLI for Claude.");
         assert.ok(captured.system[1].cache_control);

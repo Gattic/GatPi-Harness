@@ -16,9 +16,9 @@ const payload = (content = "hello world this is a test message") => ({
 
 // Golden values are fixed reference captures, not computed by the implementation under test.
 for (const [text, header] of [
-  ["hello world this is a test message", "x-anthropic-billing-header: cc_version=2.1.288.a41; cc_entrypoint=sdk-cli; cch=a1c5f;"],
-  ["Hi", "x-anthropic-billing-header: cc_version=2.1.288.9ae; cc_entrypoint=sdk-cli; cch=3639e;"],
-  ["𐐀🙂 héllo", "x-anthropic-billing-header: cc_version=2.1.288.17d; cc_entrypoint=sdk-cli; cch=face4;"],
+  ["hello world this is a test message", "x-anthropic-billing-header: cc_version=2.1.327.0f5; cc_entrypoint=sdk-cli; cch=a1c5f;"],
+  ["Hi", "x-anthropic-billing-header: cc_version=2.1.327.502; cc_entrypoint=sdk-cli; cch=3639e;"],
+  ["𐐀🙂 héllo", "x-anthropic-billing-header: cc_version=2.1.327.4a6; cc_entrypoint=sdk-cli; cch=face4;"],
 ]) {
   for (const content of [text, [{ type: "image", source: {} }, { type: "text", text }]]) {
     const original = payload(content);
