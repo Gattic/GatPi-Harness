@@ -263,6 +263,11 @@ function planSessionHygiene(options = {}) {
   const maxScanBytesPerFile = Math.max(1, Number(options.maxScanBytesPerFile || DEFAULT_MAX_SCAN_BYTES_PER_FILE));
   const listed = listSessionFiles(root, maxFiles, maxEntries);
   const permissionChanges = [];
+  // Session permission posture is a continuous invariant, not a one-time event:
+  // files created after the migration marker was written can regress to 0644 and
+  // must still be planned, or the privacy gate can never recover. Gating the plan
+  // on the marker made the documented apply path a silent no-op. Applying stays
+  // explicit: it requires a matching persisted preview plus --apply --yes.
   const archiveCandidates = [];
   const modeCounts = { files: {}, directories: {} };
   let totalBytes = 0;
@@ -272,7 +277,7 @@ function planSessionHygiene(options = {}) {
     try { stat = fs.lstatSync(dir); } catch { continue; }
     const currentMode = stat.mode & 0o777;
     increment(modeCounts.directories, modeLabel(currentMode));
-    if (!migrationState.applied && currentMode !== 0o700) permissionChanges.push({ path: dir, type: "directory", fromMode: currentMode, toMode: 0o700, identity: identityOf(stat) });
+    if (currentMode !== 0o700) permissionChanges.push({ path: dir, type: "directory", fromMode: currentMode, toMode: 0o700, identity: identityOf(stat) });
   }
   for (const file of listed.files) {
     let stat;
@@ -283,7 +288,7 @@ function planSessionHygiene(options = {}) {
     totalBytes += stat.size;
     const isActive = activeSessionFile && path.resolve(file) === activeSessionFile;
     if (isActive) activeFilesExcluded += 1;
-    else if (!migrationState.applied && currentMode !== 0o600) permissionChanges.push({ path: file, type: "file", fromMode: currentMode, toMode: 0o600, identity: identityOf(stat) });
+    else if (currentMode !== 0o600) permissionChanges.push({ path: file, type: "file", fromMode: currentMode, toMode: 0o600, identity: identityOf(stat) });
     if (isActive) continue;
     if (olderThanMs && now - stat.mtimeMs < olderThanMs) continue;
     const summary = summarizeSessionFile(file, { maxBytes: maxScanBytesPerFile });

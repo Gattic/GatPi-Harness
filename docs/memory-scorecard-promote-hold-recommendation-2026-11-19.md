@@ -253,40 +253,32 @@ value. Do not commit changes to `src/project-memory*`, `src/memory-effectiveness
 
 **1a. Raw-session permissions** (the `unsafe-session-permissions` high finding).
 
-Verified by running this phase on 2026-11-19: the gate scan reproduces the finding, but the
-hygiene apply path is **inert** in the current state. Always read the preview line before
-trusting it.
+The plan is state-driven: every currently non-private file or directory is planned, whether or
+not the one-time migration marker has already been written. The marker remains an audit record
+(`permissionMigration=v2 status=already-applied`); it no longer suppresses planning.
 
 ```bash
 node scripts/session-hygiene.js --write-manifest --yes   # persists the private preview manifest (fingerprint)
+node scripts/session-hygiene.js --apply --yes            # applies chmod using the matching preview
 ```
 
-Inspect `permissionMigration=v2 status=… permissionChanges=N` in the output. Both the directory
-and file loops in `planSessionHygiene` emit permission changes only while the one-time migration
-marker is *not* applied (`!migrationState.applied`). The observed state is:
+Read the preview line `permissionMigration=v2 status=… permissionChanges=N`. `N` must equal the
+number of non-private entries the gate scan reports below. On 2026-11-19 the store held 2,130
+session files with 2 files at 0644, so the expected value is `permissionChanges=2`.
 
-```text
-permissionMigration=v2 status=already-applied activeExcluded=1
-permissionChanges=0  modes.files={"0600":2128,"0644":2}
-```
+`--apply` refuses with `preview-mismatch` unless the persisted fingerprint matches the current
+plan, and refuses entirely on truncated or unsafe plans. Each entry carries its inode identity,
+so an apply also refuses entries swapped after the preview (`path-changed-since-preview`).
 
-The v2 marker was written 2026-07-26 after scanning 1,502 files; the store now holds 2,130. Files
-created after the migration are never re-planned, so `--apply --yes` matches the 0-change
-fingerprint and reports `changed=0` while leaving the non-private files untouched — a silent
-no-op, not a failure.
-
-- If `permissionChanges > 0`: continue with `node scripts/session-hygiene.js --apply --yes`
-  (it refuses on `preview-mismatch` or on truncated/unsafe plans).
-- If `permissionChanges = 0` while the gate scan still reports `nonPrivateFiles > 0`: harden the
-  late files explicitly, discovering them by mode only (no file content is read):
+If `permissionChanges = 0` while the gate scan still reports `nonPrivateFiles > 0`, treat it as a
+planner regression, not as a reason to chmod by hand. Cross-check by mode only (no file content
+is read) and stop to fix the planner:
 
 ```bash
 find ~/.pi/agent/sessions -type f -perm 0644
-chmod 0600 <each-listed-file>
 ```
 
-Regenerate the preview afterwards so the stale 0-change fingerprint at
-`~/.pi/agent/session-permissions-v2-preview.json` cannot be mistaken for a completed fix. Gate:
+Gate:
 
 ```bash
 node -e "const {scan}=require('./src/privacy-guard-scan');const s=scan(process.cwd(),undefined,{rawSessionPermissions:true});console.log(JSON.stringify(s.permissionPosture))"
@@ -459,7 +451,7 @@ Start a fresh Pi process, then `/obsidian-project-memory-status`. Require `effec
 | `candidate-set-id-mismatch` after reviews | a finding was added or removed | re-review handles in the new set |
 | `summary-mismatch` | evidence edited by hand | regenerate |
 | `unresolvedHighSeverity > 0` despite reviews | reviews do not clear high findings | remediate the underlying state (Phase 1) |
-| `changed=0` from session-hygiene while `nonPrivateFiles > 0` | one-time v2 migration already applied, so no changes are planned | harden the late files explicitly, then rescan (Phase 1a) |
+| `changed=0` from session-hygiene while `nonPrivateFiles > 0` | planner regression: planning must be state-driven, not marker-gated | fix the planner; do not chmod by hand |
 | `backupCoverageQualified: false` / `backupClean: false` | backup root absent, incomplete, or unredacted | redact and rescan the backup |
 | `result-set-id-mismatch` | `input.json` results changed after gold reviews | freeze the result set, redo Phase 5 |
 | `missing-or-invalid-signing-key` | key absent or under 32 bytes | re-export the same key |

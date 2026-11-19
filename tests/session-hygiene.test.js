@@ -98,7 +98,7 @@ function writeSession(file, cwd, id, options = {}) {
   assert.equal(fs.statSync(migrationMarker).mode & 0o777, 0o600, "the one-time migration marker is private");
   const repeated = planSessionHygiene({ root, archiveRoot, migrationMarker, activeSessionFile: activeFile, tempRoot: classifiedTempRoot });
   assert.equal(repeated.migration.alreadyApplied, true);
-  assert.equal(repeated.permissionChanges.length, 0, "a completed one-time migration is not silently re-applied");
+  assert.equal(repeated.permissionChanges.length, 0, "a completed migration plans nothing when every non-excluded entry is already private");
 
   fs.chmodSync(activeFile, 0o644);
   assert.equal(hardenActiveSessionFile(activeFile).changed, true);
@@ -213,4 +213,49 @@ function writeSession(file, cwd, id, options = {}) {
   assert.match(result.errors[0].error, /real file|symbolic|identity/i, "archive apply refuses symlink swaps");
   assert.equal(fs.statSync(outside).mode & 0o777, 0o644, "archive refusal never chmods a symlink target");
   assert.equal(fs.lstatSync(candidate).isSymbolicLink(), true);
+})();
+
+(() => {
+  // Regression: files created after the one-time migration marker was written can
+  // regress to 0644. Planning must stay state-driven so the documented
+  // preview -> apply flow can restore a compliant posture instead of silently
+  // reporting zero changes.
+  const tmp = tmpFixture("pi-session-hygiene-late-permissions-");
+  const root = path.join(tmp, "agent", "sessions");
+  const archiveRoot = path.join(tmp, "agent", "session-archive");
+  const marker = path.join(tmp, "agent", "session-permissions-v2.json");
+  const first = path.join(root, "--project--", "first.jsonl");
+  writeSession(first, path.join(tmp, "project"), "first-session");
+
+  const initial = planSessionHygiene({ root, archiveRoot, migrationMarker: marker, olderThanMs: 7 * DAY_MS });
+  assert.equal(initial.migration.alreadyApplied, false);
+  assert(initial.permissionChanges.some((item) => item.path === first && item.toMode === 0o600));
+  assert.equal(applySessionPermissions(initial, { dryRun: true, writePreview: true }).errors.length, 0);
+  const initialApplied = applySessionPermissions(initial, { dryRun: false });
+  assert.equal(initialApplied.errors.length, 0);
+  assert.equal(initialApplied.migrationCompleted, true);
+  assert.equal(fs.statSync(first).mode & 0o777, 0o600);
+  assert.equal(fs.existsSync(marker), true, "the migration records completion");
+
+  const late = path.join(root, "--project--", "late.jsonl");
+  writeSession(late, path.join(tmp, "project"), "late-session");
+  const latePlan = planSessionHygiene({ root, archiveRoot, migrationMarker: marker, olderThanMs: 7 * DAY_MS });
+  assert.equal(latePlan.migration.alreadyApplied, true, "the completed marker is still reported as applied");
+  assert.equal(latePlan.summary.modeCounts.files["0644"], 1);
+  assert(latePlan.permissionChanges.length > 0, "a late non-private entry yields a non-zero plan");
+  assert(latePlan.permissionChanges.some((item) => item.path === late && item.toMode === 0o600));
+  assert.equal(latePlan.permissionManifest.permissionChanges, latePlan.permissionChanges.length, "the preview manifest carries the late entries");
+
+  const latePreview = applySessionPermissions(latePlan, { dryRun: true, writePreview: true });
+  assert.equal(latePreview.errors.length, 0);
+  assert(latePreview.preview.permissionChanges > 0, "the persisted preview is non-empty");
+  const lateApplied = applySessionPermissions(latePlan, { dryRun: false });
+  assert.equal(lateApplied.errors.length, 0);
+  assert.equal(lateApplied.changedCount, latePlan.permissionChanges.length);
+  assert.equal(fs.statSync(late).mode & 0o777, 0o600, "the late session file is hardened");
+
+  const posture = sessionPermissionPosture({ root });
+  assert.equal(posture.nonPrivateFiles, 0);
+  assert.equal(posture.nonPrivateDirectories, 0);
+  assert.equal(posture.compliant, true, "post-migration non-private entries are remediated through preview/apply");
 })();

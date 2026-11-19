@@ -67,6 +67,10 @@ node_modules/
 summaryexample.html
 summaryexample_files/
 
+# Packaged release bundles of content that is already tracked in extracted form
+# (skills/ holds the unpacked pack: skills/skills, skills/tools, catalog metadata).
+/skill-bundle.zip
+
 # Pi runtime state. Tracked source under .pi/ is re-included explicitly.
 # Roadmap and fleet/verification evidence stay local-only: never force-add them.
 .pi/*
