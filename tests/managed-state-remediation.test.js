@@ -155,4 +155,22 @@ function compressedRef(payload) {
   assert(!fs.readFileSync(entropy, "utf8").includes(assignmentValue));
 }
 
+{
+  const cwd = tmp();
+  const checkpoint = path.join(cwd, ".pi/ast-refactor/checkpoints/ast_fixture.json");
+  const evidenceCopy = path.join(cwd, ".pi/debug-ledger/evidence/candidate/tests/fixture.js");
+  write(checkpoint, `${JSON.stringify({ id: "ast_fixture", note: `api_key=${"R".repeat(24)}` }, null, 2)}\n`);
+  write(evidenceCopy, `const key = "sk-${"S".repeat(24)}";\n`);
+  const discovered = discoverManagedStateFiles(cwd);
+  assert(discovered.includes(checkpoint), "discovery covers ast-refactor checkpoints, which the privacy scan walks");
+  assert(discovered.includes(evidenceCopy), "discovery covers debug-ledger evidence trees, which the privacy scan walks");
+  const plan = planManagedStateRemediation({ cwd, writeManifest: false });
+  assert.equal(plan.summary.inspectedFiles, 2);
+  assert.equal(plan.summary.transformableFiles, 1);
+  assert.equal(plan.summary.unsupportedFiles, 1);
+  assert.equal(plan.summary.candidateFiles, 1, "a JSON checkpoint is a remediable record");
+  assert.equal(plan.summary.blockedFiles, 0, "an unsupported format is reported, not a transform failure");
+  assert.deepEqual(plan.unsupported, [{ file: path.relative(cwd, evidenceCopy), reason: "unsupported-format" }]);
+}
+
 console.log("managed-state remediation tests passed");

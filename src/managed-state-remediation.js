@@ -8,6 +8,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const zlib = require("node:zlib");
 const { diagnosticTextMetadata, isDiagnosticTextMetadata, sanitizeManagedDiagnosticState, sanitizeManagedState } = require("./managed-state-sanitizer");
+const { defaultRoots } = require("./privacy-guard-scan");
 
 function sha256(value) { return crypto.createHash("sha256").update(value).digest("hex"); }
 function nowIso() { return new Date().toISOString(); }
@@ -21,28 +22,33 @@ function addCounts(target, counts) { for (const [rule, count] of Object.entries(
 function sortedCounts(counts) { return Object.fromEntries(Object.entries(counts).filter(([, count]) => count > 0).sort(([left], [right]) => left.localeCompare(right))); }
 function ensurePrivateDir(dir) { fs.mkdirSync(dir, { recursive: true, mode: 0o700 }); fs.chmodSync(dir, 0o700); return dir; }
 function writePrivateJson(file, value) { ensurePrivateDir(path.dirname(file)); fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 }); fs.chmodSync(file, 0o600); return file; }
-function regularFiles(dir, predicate) {
-  try {
-    return fs.readdirSync(dir).sort().filter(predicate).map((name) => path.join(dir, name)).filter((file) => {
-      try { const stat = fs.lstatSync(file); return stat.isFile() && !stat.isSymbolicLink(); } catch { return false; }
-    });
-  } catch { return []; }
+// The privacy scan walks every file under these roots. Remediation has to enumerate
+// the same universe: otherwise a flagged file sits outside remediation scope and the
+// preview reports zero candidates while the scan reports findings.
+function walkRegularFiles(dir, out) {
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+  for (const entry of entries) {
+    const file = path.join(dir, entry.name);
+    if (entry.isSymbolicLink()) continue;
+    if (entry.isDirectory()) { walkRegularFiles(file, out); continue; }
+    if (!entry.isFile()) continue;
+    let stat;
+    try { stat = fs.lstatSync(file); } catch { continue; }
+    if (stat.isFile() && !stat.isSymbolicLink()) out.push(file);
+  }
+  return out;
 }
+
+const RECORD_FORMAT = /\.(json|jsonl)$/i;
 
 function discoverManagedStateFiles(cwd, explicitFiles) {
   if (explicitFiles?.length) {
     return [...new Set(explicitFiles.map((file) => path.resolve(cwd, file)))].filter((file) => isWithin(cwd, file));
   }
-  const files = [
-    path.join(cwd, ".pi", "cognitive-automation", "cognitive-memory.json"),
-    path.join(cwd, ".pi", "cognitive-automation", "entropy", "events.jsonl"),
-    path.join(cwd, ".pi", "cognitive-automation", "entropy", "snapshots.jsonl"),
-    ...regularFiles(path.join(cwd, ".pi", "debug-ledger"), (name) => name.endsWith(".json")),
-    ...regularFiles(path.join(cwd, ".pi", "traces"), (name) => /\.jsonl(?:\.\d+(?:\.\d+)?)?$/.test(name)),
-  ];
-  return [...new Set(files)].filter((file) => {
-    try { const stat = fs.lstatSync(file); return stat.isFile() && !stat.isSymbolicLink(); } catch { return false; }
-  });
+  const files = [];
+  for (const root of defaultRoots(cwd)) walkRegularFiles(root, files);
+  return [...new Set(files)];
 }
 
 function remediationKind(file) {
@@ -164,8 +170,13 @@ function planManagedStateRemediation(options = {}) {
   const files = discoverManagedStateFiles(cwd, options.files);
   const candidates = [];
   const blocked = [];
+  const unsupported = [];
   let inspectedBytes = 0;
   for (const file of files) {
+    // Record redaction only rewrites JSON/JSONL documents. Anything else under the
+    // scanned roots is reported rather than dropped, so a scan finding in a
+    // non-record file stays visible instead of silently leaving remediation scope.
+    if (!RECORD_FORMAT.test(file)) { unsupported.push({ file: path.relative(cwd, file), reason: "unsupported-format" }); continue; }
     let before;
     let beforeIdentity;
     try {
@@ -203,6 +214,8 @@ function planManagedStateRemediation(options = {}) {
     preview: true,
     summary: {
       inspectedFiles: files.length,
+      transformableFiles: files.length - unsupported.length,
+      unsupportedFiles: unsupported.length,
       inspectedBytes,
       candidateFiles: candidates.length,
       changedRecords: candidates.reduce((sum, item) => sum + item.changedRecords, 0),
@@ -211,6 +224,7 @@ function planManagedStateRemediation(options = {}) {
     },
     candidates,
     blocked,
+    unsupported,
   };
   if (options.writeManifest !== false) {
     const manifest = path.join(cwd, ".pi", "privacy-guard", "remediation-previews", `${id}.json`);
@@ -317,6 +331,8 @@ function formatManagedStateRemediationPlan(plan) {
   const lines = [
     `Managed-state privacy remediation preview ${plan.id}`,
     `inspected files: ${plan.summary.inspectedFiles}`,
+    `transformable files: ${plan.summary.transformableFiles}`,
+    `unsupported files: ${plan.summary.unsupportedFiles}`,
     `candidate files: ${plan.summary.candidateFiles}`,
     `changed records: ${plan.summary.changedRecords}`,
     `blocked files: ${plan.summary.blockedFiles}`,
@@ -325,6 +341,8 @@ function formatManagedStateRemediationPlan(plan) {
   for (const item of plan.candidates.slice(0, 40)) lines.push(`- ${item.file}: ${item.changedRecords} records, ${JSON.stringify(item.redactions)}`);
   if (plan.candidates.length > 40) lines.push(`... ${plan.candidates.length - 40} more candidates`);
   for (const item of plan.blocked.slice(0, 20)) lines.push(`BLOCKED ${item.file}: ${item.reason}`);
+  for (const item of (plan.unsupported || []).slice(0, 20)) lines.push(`UNSUPPORTED ${item.file}: ${item.reason}`);
+  if ((plan.unsupported || []).length > 20) lines.push(`... ${plan.unsupported.length - 20} more unsupported files`);
   return lines.join("\n");
 }
 
