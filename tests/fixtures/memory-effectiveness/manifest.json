@@ -13,21 +13,24 @@
     {
       "id": "repeated-memory-audit",
       "queryTerms": ["session", "memory", "obsidian", "effectiveness"],
-      "relevantIds": ["prior-memory-audit"],
-      "requiredTopK": 3
+      "relevantIds": ["prior-memory-audit", "compaction-effectiveness", "memory-cache-sizing", "obsidian-vault-layout", "session-transcript-pruning"],
+      "requiredTopK": 5,
+      "scopeRoot": "root-a"
     },
     {
       "id": "canonical-authority",
       "queryTerms": ["canonical", "durable", "authority"],
-      "relevantIds": ["canonical-obsidian-decision"],
-      "requiredTopK": 5
+      "relevantIds": ["canonical-obsidian-decision", "authority-delegation", "durable-store-choice", "canonical-naming", "authority-boundaries"],
+      "requiredTopK": 5,
+      "scopeRoot": "root-a"
     },
     {
       "id": "same-name-project-isolation",
       "queryTerms": ["project", "constraint"],
-      "relevantIds": ["root-a-constraint"],
+      "relevantIds": ["root-a-constraint", "root-a-build-constraint", "root-a-review-constraint", "root-a-release-constraint", "root-a-merge-constraint"],
       "forbiddenIds": ["root-b-constraint"],
-      "requiredTopK": 5
+      "requiredTopK": 5,
+      "scopeRoot": "root-a"
     },
     {
       "id": "known-fix-verbose-thread",

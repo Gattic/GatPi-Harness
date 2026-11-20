@@ -21,11 +21,15 @@ function recallableEntries(entries, now = Date.now()) {
 class ProjectMemoryIndex {
   constructor({ store = null, entries = [], now = () => Date.now() } = {}) { this.store = store; this.seedEntries = entries; this.now = now; this.entries = []; this.rows = []; this.refresh(); }
   refresh() { const entries = this.store ? this.store.list({ includeExpired: true, limit: Infinity }) : [...this.seedEntries]; const signature = entries.map((entry) => `${entry.id}:${entry.updatedAt}:${entry.candidateHash || ""}`).join("|"); if (signature !== this.signature) { this.entries = entries; this.rows = entries.map(prepareEntry); this.signature = signature; } return this.entries.length; }
-  search(query, { limit = 5, kinds, minTermCoverage, taskConditioned = false } = {}) {
+  // Entries may carry a `root` attribution (project root or opaque scope id).
+  // A scoped search never considers another root's entries, and never assumes an
+  // unattributed entry belongs to the requested scope.
+  search(query, { limit = 5, kinds, minTermCoverage, taskConditioned = false, root } = {}) {
     const started = process.hrtime.bigint(); const rows = []; const preparedQuery = prepareQuery(query, taskConditioned); const now = this.now(); const minimumCoverage = minTermCoverage == null ? (taskConditioned ? 0 : preparedQuery.terms.length >= 2 ? 0.6 : 0) : Math.max(0, Math.min(1, Number(minTermCoverage)));
     const eligible = new Set(recallableEntries(this.entries, now));
     for (const row of this.rows) {
       if (!preparedQuery.terms.length || !eligible.has(row.entry) || (kinds?.length && !kinds.includes(row.entry.kind))) continue;
+      if (root != null && row.entry.root !== root) continue;
       const score = scorePrepared(row, preparedQuery, { now, kinds });
       // Verification/recency bonuses must never manufacture a relevance match.
       if (score.factors.termCoverage <= 0 || score.factors.termCoverage < minimumCoverage) continue;
