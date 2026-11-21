@@ -1,6 +1,6 @@
 # Memory rollout gates — passive telemetry specification
 
-**Status:** approved design, not yet implemented
+**Status:** implemented — gates read passive telemetry; artifact CLIs are deleted
 **Supersedes:** artifact gates in `src/memory-effectiveness.js`, `src/memory-effectiveness-privacy.js`,
 `src/memory-effectiveness-reviewed-gold.js`, and the exact-version cohort clause in
 `src/project-memory-rollout.js`.
@@ -75,8 +75,8 @@ These fields must exist for the corresponding stage to be evaluable. Absence is
 Let `W` be the 14-day window, `now` the evaluation time.
 
 ### 5.1 Deterministic `D`
-From the full-suite record `.pi/test-runner/full-latest.json` (written by the full profile only;
-`.pi/test-runner/latest.json` is a focused run and is not admissible):
+From the full-suite record `.pi/test-runner/full-latest.json`, written by
+`scripts/record-full-suite.js` (the focused `.pi/test-runner/latest.json` is not admissible):
 
 ```
 D = ok === true
@@ -96,24 +96,43 @@ P = scan().permissionPosture.compliant === true
 ```
 
 ### 5.3 Privacy baseline `B`
-Baseline file `.pi/privacy-guard/privacy-baseline.json` (§6) stores `baselineAt`,
-`recordFileHashes[]` (sha256 of every `.json`/`.jsonl` file flagged at baseline),
-`codeHighHandles[]`, and `counts`.
+Baseline file `.pi/privacy-guard/privacy-baseline.json` (§7) stores `baselineAt`,
+`recordFileHashes[]` (the scan's `file` handle for every record-format file with a high finding at
+baseline), `codeHighHandles[]`, and `counts`.
+
+`scan()` in `src/privacy-guard-scan.js` walks only runtime-state roots, so every finding it returns
+is record-format and `finding.file` is already a content handle (`project-state:<sha256 prefix>`),
+never a path.
+
+`latestWriteAudit` is the newest `kind:"write"` diagnostic in the window, appended by
+`recordWriteAudit()` in `src/project-memory-write-audit.js`. The audit re-runs the managed-state
+sanitizer over every record file in `.pi/project-memory`; anything it still has to redact proves
+that write bypassed the sanitizer. Only counts and file-name hashes are recorded.
 
 ```
-RECORD = /\.(json|jsonl)$/i
-newRecordHighs = findings.filter(f =>
-    f.severity === "high"
-    && RECORD.test(f.file)
-    && !baseline.recordFileHashes.includes(sha256(f.file))
+newRecordHighs = scan.findings.filter(f =>
+    f.severity === "high" && !baseline.recordFileHashes.includes(f.file)
 ).length
 
-sanitizerBypasses = diagnostics
-    .filter(d => d.kind === "write" && d.at >= baseline.baselineAt && d.sanitized === false)
-    .length
+latestWriteAudit = diagnostics
+    .filter(d => d.kind === "write" && d.at >= baseline.baselineAt)
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0]
 
-B = newRecordHighs === 0 && sanitizerBypasses === 0
+B = scan === null || scan.coverage.complete !== true ? "insufficient"
+  : baseline === null ? "insufficient"
+  : latestWriteAudit === undefined ? "insufficient"
+  : newRecordHighs === 0 && latestWriteAudit.sanitized === true
 ```
+
+An incomplete scan is `insufficient`, never a pass: a partial scan cannot prove the absence of new
+record highs.
+
+A missing audit row is `insufficient`, not a pass: `B` must be backed by an audit taken inside the
+window and after the baseline. `scripts/record-full-suite.js` appends it with `PI_AUDIT_WRITE=1`,
+so one verification run supplies both `D` and `B`.
+
+The latest-row rule is deliberate: a stale row from an earlier run must not gate a tree that has
+since been fixed, and the privacy scan independently catches any content that actually leaked.
 
 Code-file highs (`.js`, `.md`, `.diff`, …) are **never** part of `B`. They are reported as an
 advisory backlog with provenance (`high-provenance-*.json`) and cannot block promotion.
@@ -131,9 +150,10 @@ S1 = saves.length >= 20
 From `recall.completed` events in `W`:
 
 ```
-completions = events where payload.injected === false   // shadow at M1
-              (payload.injected === true at M2+)
-sessions    = distinct session_id with >= 1 completion
+completions = recall.completed events where typeof payload.injected === "boolean"
+              // shadow (injected:false) at M1, injected (injected:true) at M2+;
+              // both exercise the same retrieval path, so both measure R
+sessions    = distinct session (payload.sessionIdHash, else sha256(session_id)[:16])
 days        = distinct UTC dates among completions
 
 R1 latency:     p95(completions.payload.durationMs) <= 50
@@ -146,7 +166,7 @@ R  = completions.length >= 30 && sessions >= 10 && days >= 14 && R1 && R2 && R3 
 Definitions:
 
 - `citedSessions` = sessions where a `recall.completed` occurred and a **later** decision in
-  the same `sessionIdHash` has `evidenceIds ∩ returnedHashes ≠ ∅`.
+  the same session hash has `evidenceIds ∩ returnedHashes ≠ ∅`.
 - `supersededWithin7d` = returned handles whose store entry was superseded (a decision with
   `action:"superseded"` referencing the same handle) within 7 days after the recall.
 
@@ -168,7 +188,7 @@ From diagnostics `kind === "settle"` in `W`:
 
 ```
 previews = settles in W
-C1 volume:      previews.length >= 4 && observedDays(previews) >= 14
+C1 volume:      previews.length >= 14 && observedDays(previews) >= 14
 C2 stability:   consecutivePreviews.every((prev, cur) =>
                     sortedJson(prev.candidateHashes) === sortedJson(cur.candidateHashes))
 C3 accounting:  fraction of previews where sum(reasonCounts.values()) === scanned >= 0.95
@@ -210,8 +230,8 @@ deterministic suite, compliant permissions, and zero new record-format highs sin
 
 | | |
 |---|---|
-| Active controls | explicit writes (`PI_PROJECT_MEMORY_WRITES=1`) |
-| Shadow measurement | explicit save quality accumulates |
+| Active controls | explicit writes (`PI_PROJECT_MEMORY_WRITES=1`), shadow recall (measured, not injected) |
+| Shadow measurement | explicit save quality accumulates; `recall.completed` with `injected:false` |
 | Promotion predicate | `M0 && explicit writes enabled` |
 | Operator authority | `PI_PROJECT_MEMORY_STAGE=M1` + `PI_PROJECT_MEMORY_WRITES=1` (today's opt-in) |
 
@@ -228,7 +248,10 @@ memory data exists. Save *quality* is not an M1 bar; it is a prerequisite of M2.
 | Required samples | ≥ 30 recall completions, ≥ 10 sessions, ≥ 14 days; ≥ 20 explicit saves over ≥ 7 days |
 | Bars | p95 ≤ 50 ms · out-of-scope 0 · citation rate ≥ 0.40 · stale rate ≤ 0.05 · explicit save precision ≥ 0.95 |
 
-Shadow recall runs at M1: the recall path computes and logs candidates but injects nothing.
+Shadow recall runs at M1: the `shadowRecall` control (M1 and above, whenever `taskRecall` is not
+authorized) runs the same retrieval path and emits `recall.completed` with `injected:false`. The
+advisory block is not formatted and never enters the context, so `R` accrues before M2 is enabled.
+`PI_PROJECT_MEMORY_RECALL=0` and the `PI_PROJECT_MEMORY=0` kill switch both disable it.
 This is what makes M2 reachable from ordinary sessions rather than from a signed gold artifact.
 
 ### M3 — candidate capture (shadow decisions)
@@ -248,7 +271,7 @@ This is what makes M2 reachable from ordinary sessions rather than from a signed
 | Active controls | curation writes, review-queue writes, Hermes curation |
 | Shadow measurement | diagnostic-only curation previews at M3 |
 | Promotion predicate | `M3 && C` |
-| Required samples | ≥ 4 previews over ≥ 14 days |
+| Required samples | ≥ 14 nightly previews over ≥ 14 days |
 | Bars | candidate stability 1.0 · resolution accounting ≥ 0.95 · 0 scheduled mutations · vault ready |
 
 ### M5 — automatic verified upserts
@@ -263,7 +286,8 @@ This is what makes M2 reachable from ordinary sessions rather than from a signed
 
 ## 7. Grandfather baseline
 
-Written once, at implementation time, to `.pi/privacy-guard/privacy-baseline.json`:
+Written once, at implementation time, by `node scripts/write-privacy-baseline.js`, to
+`.pi/privacy-guard/privacy-baseline.json`:
 
 ```json
 {
@@ -272,7 +296,7 @@ Written once, at implementation time, to `.pi/privacy-guard/privacy-baseline.jso
   "baselineAt": "2026-11-21T…Z",
   "sourceRevision": "content:…",
   "counts": { "actionable": 191, "high": 17, "medium": 174 },
-  "recordFileHashes": ["sha256:…"],
+  "recordFileHashes": ["project-state:0123456789ab"],
   "codeHighHandles": ["privacy_…"],
   "permissionPostureCompliant": true,
   "note": "Pre-instrumentation findings are grandfathered; only new record-format highs gate."
@@ -281,13 +305,17 @@ Written once, at implementation time, to `.pi/privacy-guard/privacy-baseline.jso
 
 Rules:
 
-- A finding is **new** only if its file is a record format and that file's sha256 is absent from
-  `recordFileHashes`.
+- A finding is **new** only if its severity is `high` and the scan's `file` handle is absent from
+  `recordFileHashes`. Every finding is record-format by construction, so code-file highs never
+  appear here.
 - Grandfathered findings are never re-reviewed to satisfy a gate.
 - The advisory backlog is reported separately and may be burned down at any time without
   affecting stage eligibility.
 - The baseline is rewritten only when the grandfather list changes, with `baselineAt` advancing
-  and the old file retained as `privacy-baseline-<timestamp>.json`.
+  and the old file retained as `privacy-baseline-<timestamp>.json`. The writer refuses to run on
+  an incomplete scan, so a partial scan can never grandfather a finding.
+- The baseline is private runtime state (`.pi/`), never committed; the writer and its builder live
+  in `src/privacy-baseline.js`.
 
 ## 8. Promotion and demotion algorithm
 
@@ -328,21 +356,44 @@ Rules:
 
 - `insufficient` metrics are `false` predicates, never `true`.
 - A stage never promotes on data that lacks its required instrumentation fields.
-- `PI_PROJECT_MEMORY_HOLD` may only lower the effective stage.
-- Every evaluation is appended to the trace log so stage history is auditable from telemetry
-  alone.
+- `PI_PROJECT_MEMORY_HOLD` may only lower the effective stage and is applied last, so it also caps
+  the M1 operator opt-in. `PI_PROJECT_MEMORY_HOLD=M0` is the fail-closed hold; an unrecognized value
+  is treated as `M0` rather than ignored, because a typo must never widen authority.
+- Every fresh evaluation appends one `rollout.evaluated` event, so stage history is auditable from
+  telemetry alone; the previous stage and failure streak for hysteresis are read back from that
+  event, so the runtime needs no second state file. A cached read emits nothing, and an emission
+  failure is reported (`emission.emitted=false`) without changing the stage decision.
+- Event payload: `stage` (effective), `candidateStage`, `previousStage`, `decidedStage`, `promoted`,
+  `demoted`, `consecutiveFailures`, `previousConsecutiveFailures`, `held`, `hold`, `windowDays`,
+  `insufficient`, per-predicate `{status, reasons}`, and `implementationRevision`. Replaying
+  `decideStage(candidateStage, previousStage, previousConsecutiveFailures, hold)` reproduces
+  `stage`, so a transition is explainable from one event. The default sink is the project trace log via
+  the sanitized JSONL writer; the event carries handles and counts only, never absolute paths,
+  prompts, transcripts, or secrets.
+- M1 is operator-consented, not telemetry-earned: an evaluation that passes M0 authorizes M0
+  only, and `PI_PROJECT_MEMORY_STAGE=M1` + `PI_PROJECT_MEMORY_WRITES=1` raises eligibility to M1.
+  M2+ requires the telemetry bars, which imply real explicit saves already occurred.
+- `eligibleStage` accepts only a well-formed `rollout.evaluated` record whose `effectiveStage` is a
+  known stage. Anything else — a missing evaluation, a scorecard-derived object, a malformed stage
+  — is M0 with authority `fail-closed`.
+- The evaluation is cached per checkout and source revision for five minutes; a scan deadline or
+  error yields `insufficient`, never a pass.
 
 ## 9. What this removes
 
-| Removed | Replaced by |
+| Deleted | Replaced by |
 |---|---|
-| `src/memory-effectiveness-reviewed-gold.js` + signing key + 12 per-case reviews | production recall metrics (`R`) |
-| `.pi/privacy-guard/rollout-evidence.json` regeneration, `--backup-root`, backup coverage | `B` (content-addressed baseline + sanitizer bypass count) |
+| `src/memory-effectiveness-reviewed-gold.js`, `scripts/report-reviewed-gold-evidence.js`, `scripts/review-reviewed-gold-evidence.js` and the signing key | production recall metrics (`R`) |
+| `src/memory-effectiveness-privacy.js`, `scripts/report-privacy-rollout-evidence.mjs`, `scripts/review-privacy-rollout-evidence.js`, `.pi/privacy-guard/rollout-evidence.json`, `--backup-root` | `B` (grandfathered baseline + sanitizer bypass count) |
 | Human review of the 191-candidate backlog | grandfathered baseline; advisory backlog only |
 | `exactVersionFieldQualified` cohort attestation (`cohortId`, `evidenceClass`) | `implementationRevision` stamped on trace events, aggregated from traces |
 | `realFixtureCurationQualified` declared evidence class | `C` from diagnostic-only curation previews |
-| `PI_REVIEWED_GOLD_*` environment contract | none |
-| `.pi/roadmap/active.json` as an apply blocker | removed from the remediation path; repair or delete independently |
+| `PI_REVIEWED_GOLD_*` and `PI_PROJECT_MEMORY_PRIVACY_EVIDENCE_MAX_AGE_MS` environment contracts | none |
+| `.pi/roadmap/active.json` as an apply blocker | removed from the remediation path; repaired from `last-known-good.json` |
+
+The scorecard (`src/memory-effectiveness.js`) is now reporting-only: `authority:"reporting-only"`,
+no `highestAuthorizedStage`, no `evidenceQualification`, no `gateEligible` artifact flags. It
+reports synthetic fixtures and declared measurements; it cannot authorize a stage.
 
 Kept: `tests/fixtures/memory-effectiveness/manifest.json` as a deterministic smoke test only
 (12/12 passing, not a gate).
@@ -373,5 +424,4 @@ The design is satisfied when:
 1. Two weeks of ordinary sessions produce a promotion from M0→M1→M2 with **zero** manual
    commands, signatures, or review attestations.
 2. Every stage transition is explainable from a `rollout.evaluated` trace event alone.
-3. Deleting `.pi/privacy-guard/rollout-evidence.json`, `reviewed-gold-*.json`, and the signing
-   key changes no gate outcome.
+3. Deleting the retired artifact files (already deleted from the tree) changes no gate outcome.

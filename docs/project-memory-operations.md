@@ -102,7 +102,7 @@ Rollback controls (saved notes are preserved):
 - `PI_PROJECT_MEMORY_STAGE=M0` or `PI_PROJECT_MEMORY_WRITES=0`: disable operator automatic mode and writes; explicit reads remain available.
 - `PI_PROJECT_MEMORY=0`: disable project-memory reads and writes.
 
-No new field cohort, reviewed-gold record, or curation evidence is created by enabling these defaults.
+Enabling these defaults creates no field cohort, reviewed-gold record, or curation evidence class.
 
 ## Recall behavior
 
@@ -148,30 +148,33 @@ Privacy Guard findings expose only a severity, pattern name, hashed state path, 
 
 The command displays the local file/line and pattern but never the matched value. Inspect the exact value locally. Do not paste it into a report, note, issue, test fixture, or model prompt. Candidate review is complete only when every current actionable handle has a human disposition; unresolved findings keep rollout blocked.
 
-### M0 rollout privacy evidence
+### M0 rollout privacy gate
 
-Generate a metadata-only preview that combines the current project/global/raw-session scan with the retained private-backup scan:
-
-```bash
-node scripts/report-privacy-rollout-evidence.mjs --backup-root=<private-backup-root>
-```
-
-Persist the reviewed scan identity explicitly:
+The privacy gate reads the scan directly. Pre-instrumentation findings are grandfathered once,
+by content handle, in a private baseline:
 
 ```bash
-node scripts/report-privacy-rollout-evidence.mjs --backup-root=<private-backup-root> --write --yes
+node scripts/write-privacy-baseline.js
 ```
 
-The private `0600` artifact binds current source/config identity, scan and source-qualified candidate-set IDs, aggregate coverage, permission posture, hashed state references, and human review records. It excludes matched values and absolute paths. Unrelated state growth may change the scan ID, while reviews remain bound to the same source-qualified candidate set; source or candidate changes invalidate them.
+The writer scans the default runtime-state roots, refuses to run on an incomplete scan, and
+writes `.pi/privacy-guard/privacy-baseline.json` with `0600` permissions. It retains the previous
+baseline as `privacy-baseline-<timestamp>.json` and records counts and content handles only,
+never paths or matched values. Only a *new* record-format high finding blocks; grandfathered
+findings and code-file highs are an advisory backlog that never gates a stage.
 
-After resolving and inspecting a current handle locally with `/privacy-review`, a human may record only its bounded disposition:
+`B` also requires a sanitizer-bypass audit taken after the baseline. One verification run
+supplies both `D` and `B`:
 
 ```bash
-export PI_PRIVACY_REVIEWER_ID=<local-reviewer-id>
-node scripts/review-privacy-rollout-evidence.js --handle=privacy_<current-handle> --disposition=<false-positive-structured|retained-bounded|remediated> --human-confirmed --write --yes
+PI_AUDIT_WRITE=1 node scripts/record-full-suite.js
 ```
 
-The local reviewer identity is hashed before persistence. The review command rejects absent/stale handles, invalid dispositions, and calls without explicit human confirmation. Rerun the evidence report after reviews. Scorecard generation rejects missing, stale, mismatched, tampered, expired, incomplete-coverage, or unreviewed privacy evidence; it no longer trusts bare privacy counts in the general input file.
+The audit re-runs the managed-state sanitizer over every record file and appends a
+`kind:"write"` diagnostic with counts and file-name hashes. A missing audit row, an incomplete
+scan, or a missing baseline is `insufficient`, never a pass. The retired
+`report-privacy-rollout-evidence.mjs`, `review-privacy-rollout-evidence.js`, `--backup-root`, and
+`.pi/privacy-guard/rollout-evidence.json` artifact are gone.
 
 ## Retention and permissions
 
@@ -224,38 +227,57 @@ The stable `selectionId`, `projectKey`, and `pathHash` appear in status, doctor,
 - `projectMemoryReads` combines vault readiness with rollout read authority;
 - `projectMemoryExplicitWrites` combines vault readiness with explicit-write authority;
 - `hermesCuration` requires separate current provider proof and rollout authority;
-- `automaticBehaviorAuthorized` reports operator-authorized capture/recall separately from scorecard-qualified behavior, including the field-effectiveness label.
+- `automaticBehaviorAuthorized` reports operator-authorized capture/recall separately from telemetry-authorized behavior, including the field-effectiveness label.
 
 A writable vault never raises rollout stage. The harness explicitly supplies the operator M1 controls above; standalone consumers without these defaults or evidence authority remain at M0. Obsidian desktop is optional for filesystem saves/recall; desktop/open features need a working executable on `PATH` or `PI_OBSIDIAN_BIN`. Hermes authentication/provider readiness alone does not establish curation readiness: a bounded current curation smoke and separate M4 authority are required.
 
 ## Rollout and evidence
 
-Independent controls are derived from `PI_PROJECT_MEMORY_STAGE`, the operator flags above and the current private scorecard. Requested stages are capped at the highest evidence-eligible stage, except that exact M1 + `PI_PROJECT_MEMORY_WRITES=1` grants M1. Adding `PI_PROJECT_MEMORY_AUTOMATIC=1` grants selective unverified capture and task recall, not M2–M5 promotion. The evidence ladder remains:
+Stage eligibility comes only from passive telemetry (`src/memory-rollout-telemetry.js`): traces,
+decision records, diagnostics, and the revision-bound full-suite record. No signing key,
+per-case human attestation, reviewed-gold artifact, or privacy-evidence artifact participates in
+a gate. Each evaluation appends one `rollout.evaluated` trace event with the candidate stage, the
+decided stage, per-predicate status, and `insufficient[]`.
+
+Independent controls are derived from `PI_PROJECT_MEMORY_STAGE`, the operator flags above, and
+the passive evaluation. Requested stages are capped at the telemetry-eligible stage, except that
+exact M1 + `PI_PROJECT_MEMORY_WRITES=1` grants M1 (operator-consented, not telemetry-earned).
+Adding `PI_PROJECT_MEMORY_AUTOMATIC=1` grants selective unverified capture and task recall, not
+M2–M5 promotion. `PI_PROJECT_MEMORY_HOLD=<stage>` caps the result and can only lower it;
+`PI_PROJECT_MEMORY_HOLD=M0` forces the fail-closed stage, and an unrecognized value is treated as
+M0. The ladder remains:
 
 - M0 read-only characterization;
-- M1 explicit save/recall/status;
-- M2 task-conditioned local recall;
+- M1 explicit save/recall/status, plus shadow recall (measured, never injected);
+- M2 task-conditioned local recall injection;
 - M3 candidate capture (shadow-only until M5 verified automatic upsert);
 - M4 review queue and reviewed Hermes curation;
 - M5 narrow verified automatic upsert.
 
-After a gold-set reviewer has personally inspected each current retrieval/save case, record one signed review at a time and collect the private reviewed-gold artifact:
+Promotion is immediate on the first passing evaluation; demotion requires two consecutive failing
+evaluations. The previous stage and failure streak are read back from the newest emitted
+`rollout.evaluated` event, so no second state file exists. See
+`docs/memory-rollout-gates-passive-telemetry.md` for the predicate definitions and bars.
 
-```bash
-export PI_REVIEWED_GOLD_REVIEWER_ID=<local-reviewer-id>
-read -rs PI_REVIEWED_GOLD_SIGNING_KEY && export PI_REVIEWED_GOLD_SIGNING_KEY
-node scripts/review-reviewed-gold-evidence.js --case=<retrieval|save>:<case-id> --human-confirmed --write --yes
-node scripts/report-reviewed-gold-evidence.js
-node scripts/report-reviewed-gold-evidence.js --write --yes
-```
-
-Do not automate the human-confirmation command. The HMAC key must contain at least 32 bytes, remains local secret material, and is never persisted. The reviews and aggregate evidence are private under `.pi/memory-effectiveness/`; the source manifest remains `synthetic-readiness` and is not relabeled. Generate the aggregate scorecard, with the same signing key available whenever the reviewed-gold artifact exists, using:
+The scorecard is reporting-only. Generate it with:
 
 ```bash
 node scripts/benchmark-project-memory.js
 node scripts/report-memory-effectiveness.js --public
 ```
 
-The current public scorecard is `docs/memory-effectiveness-scorecard.json`. Runtime authorization recomputes the harness implementation fingerprint, requires an exact source/config match, and rejects scorecards older than `PI_PROJECT_MEMORY_SCORECARD_MAX_AGE_MS` (default seven days). Evidence-qualified automatic release remains `no-go-deferred` until privacy review, at least 20 real fixture-vault curation attempts, at least 30 exact-version uses across 10 independent sessions over 14 days, and every fixed bar pass. Missing or stale evidence fails closed for evidence-based promotion; it does not revoke a separately explicit M1 operator opt-in. Operator permission does not change those evidence labels or the `no-go-deferred` promotion decision.
+The current public scorecard is `docs/memory-effectiveness-scorecard.json`. Runtime reporting
+recomputes the harness implementation fingerprint, requires an exact source/config match, and
+rejects scorecards older than `PI_PROJECT_MEMORY_SCORECARD_MAX_AGE_MS` (default seven days). A
+fresh scorecard never authorizes a stage; `authority:"reporting-only"` and the absence of
+`highestAuthorizedStage`, `evidenceQualification`, and `gateEligible` make that explicit. The
+`decision` field is advisory reporting, not a gate.
 
-Synthetic retrieval/save fixtures remain `synthetic-readiness`: passing metrics are informative but have `gateEligible:false`. A `user-reviewed-gold` classification requires the separate signed artifact to cover every current retrieval/save case and match the exact manifest hash, result-set ID, source revision/configuration, and freshness window. Missing signing keys and tampered, stale, future-dated, incomplete, mismatched, or manually supplied `input.json.evidence` values fail closed. Exact-version field input qualifies only when it carries `evidenceClass: "exact-version-field"`, a preregistered `cohortId`, at least 30 exact-version uses across 10 independent sessions over 14 days, and a `sourceRevision` equal to the scored implementation revision. Real curation additionally requires fixture-vault provenance and 20 attempts. The open `exp-memory-learning-compounding-efficacy-field` experiment remains insufficient data; this documentation does not launch a cohort, change its C0–C5 gates, promote rollout, or substitute synthetic observations for field evidence.
+Synthetic retrieval/save fixtures are reported as `synthetic-readiness`: passing metrics are
+informative only. The retired `user-reviewed-gold` evidence class, its HMAC signing key, its review
+and collector CLIs, the privacy-evidence CLI and backup-root requirement, and the exact-version
+cohort attestation no longer exist; a manifest that declares `user-reviewed-gold` is refused. Field
+and curation numbers in `input.json` are declared measurements, reported directly without a cohort
+attestation or declared evidence class.
+
+The open `exp-memory-learning-compounding-efficacy-field` experiment remains insufficient data; this documentation does not launch a cohort, change its C0–C5 gates, promote rollout, or substitute synthetic observations for field evidence.

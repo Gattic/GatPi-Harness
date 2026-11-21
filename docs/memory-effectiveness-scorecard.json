@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-14T14:09:16.772Z",
+  "authority": "reporting-only",
+  "generatedAt": "2026-11-21T14:45:36.443Z",
   "classifierVersion": "memory-effectiveness-v1",
-  "manifestHash": "sha256:cf0ccb2eb7dd553663af88ae2fbef217cce9d27e73d86c0589a52e9eaafd4827",
+  "manifestHash": "sha256:315a104ade2b30dfd94bef7c8495c4ea7edc984f630ffa59db61b4f6a6ce8297",
   "source": {
-    "revision": "content:5c0dfac7ba3e8de5f50e9355f4aae24646b98a84acc726af5868fafcac37682a",
-    "configHash": "sha256:5c0dfac7ba3e8de5f50e9355f4aae24646b98a84acc726af5868fafcac37682a",
+    "revision": "content:633521ca5607b08cf2f63edad6623679c10e1b33735f3403462ec8b22e7593e4",
+    "configHash": "sha256:633521ca5607b08cf2f63edad6623679c10e1b33735f3403462ec8b22e7593e4",
     "activeSessionExclusion": {
       "requested": 1,
       "matched": 1,
@@ -17,19 +18,8 @@
     "lifetime",
     "deterministic",
     "migration",
-    "exact-version-field",
-    "synthetic-readiness",
-    "real-fixture-vault-curation",
-    "user-reviewed-gold"
+    "synthetic-readiness"
   ],
-  "evidenceQualification": {
-    "manifestEvidenceClass": "synthetic-readiness",
-    "reviewedGoldQualified": false,
-    "reviewedGoldEvidenceId": null,
-    "exactVersionFieldQualified": false,
-    "realCurationQualified": false,
-    "expectedReviewedCases": 12
-  },
   "bars": {
     "precisionAt5": 0.9,
     "recallAt5": 0.9,
@@ -47,25 +37,25 @@
       "cases": [
         {
           "id": "repeated-memory-audit",
-          "relevant": 1,
-          "hits": 1,
-          "returnedAt5": 1,
+          "relevant": 5,
+          "hits": 5,
+          "returnedAt5": 5,
           "forbiddenHits": 0,
           "passed": true
         },
         {
           "id": "canonical-authority",
-          "relevant": 1,
-          "hits": 1,
-          "returnedAt5": 1,
+          "relevant": 5,
+          "hits": 5,
+          "returnedAt5": 5,
           "forbiddenHits": 0,
           "passed": true
         },
         {
           "id": "same-name-project-isolation",
-          "relevant": 1,
-          "hits": 1,
-          "returnedAt5": 1,
+          "relevant": 5,
+          "hits": 5,
+          "returnedAt5": 5,
           "forbiddenHits": 0,
           "passed": true
         },
@@ -80,9 +70,9 @@
       ],
       "precisionAt5": 1,
       "recallAt5": 1,
-      "relevantReturned": 4,
-      "relevantTotal": 4,
-      "returnedAt5": 4,
+      "relevantReturned": 16,
+      "relevantTotal": 16,
+      "returnedAt5": 16,
       "contamination": 0,
       "knownMisses": 0
     },
@@ -168,18 +158,7 @@
       "rollbackPassed": true,
       "fixtures": 2
     },
-    "privacy": {
-      "evidenceId": "privacy-evidence:4e6a0c511d13e33975e23b104c4b3b345a36bb7684a63f348b09387dba7f8a86",
-      "scanId": "privacy-scan:50f4390608e8b6a71bcc6276189dacaa5e02cc06540962408fa7690abf32f57b",
-      "candidateSetId": "privacy-candidates:37d70ad748f8aae9d291a9452b90786c3d2ca0558bddbacf4fd4cffbf8cd93d9",
-      "evidenceQualified": true,
-      "unresolvedHighSeverity": 0,
-      "unresolvedActionable": 0,
-      "reviewedCandidates": 8,
-      "candidateCount": 8,
-      "primaryCoverageQualified": true,
-      "backupCoverageQualified": true
-    }
+    "privacy": {}
   },
   "scores": {
     "privacyBoundary": {
@@ -187,33 +166,29 @@
       "metric": 0,
       "bar": 0,
       "evidenceClass": "deterministic",
-      "gateEligible": true,
-      "sampleSize": 8
+      "sampleSize": 0
     },
     "retrievalPrecisionAt5": {
       "status": "pass",
       "metric": 1,
       "bar": 0.9,
       "evidenceClass": "synthetic-readiness",
-      "gateEligible": false,
       "sampleSize": 4,
-      "note": "synthetic fixtures validate deterministic behavior only; signed reviewed gold is absent"
+      "note": "synthetic fixtures validate deterministic behavior only; stage gates read passive telemetry"
     },
     "retrievalRecallAt5": {
       "status": "pass",
       "metric": 1,
       "bar": 0.9,
       "evidenceClass": "synthetic-readiness",
-      "gateEligible": false,
       "sampleSize": 4,
-      "note": "synthetic fixtures validate deterministic behavior only; signed reviewed gold is absent"
+      "note": "synthetic fixtures validate deterministic behavior only; stage gates read passive telemetry"
     },
     "crossProjectContamination": {
       "status": "pass",
       "metric": 0,
       "bar": 0,
       "evidenceClass": "deterministic",
-      "gateEligible": true,
       "sampleSize": 4
     },
     "localRecallP95Ms": {
@@ -221,7 +196,6 @@
       "metric": 14.49315,
       "bar": 50,
       "evidenceClass": "deterministic",
-      "gateEligible": true,
       "sampleSize": 50
     },
     "explicitSavePrecision": {
@@ -229,74 +203,59 @@
       "metric": 1,
       "bar": 0.95,
       "evidenceClass": "synthetic-readiness",
-      "gateEligible": false,
       "sampleSize": 8,
-      "note": "synthetic fixtures validate deterministic behavior only; signed reviewed gold is absent"
+      "note": "synthetic fixtures validate deterministic behavior only; stage gates read passive telemetry"
     },
     "automaticSavePrecision": {
-      "status": "blocked",
+      "status": "insufficient-data",
       "metric": null,
       "bar": 0.98,
-      "evidenceClass": "exact-version-field",
-      "gateEligible": false,
+      "evidenceClass": "lifetime",
       "sampleSize": 0,
-      "note": "qualified exact-version cohort, source revision, independent sessions, and observed days are required"
+      "note": "declared field measurement; the A gate reads passive telemetry"
     },
     "currentFactStaleRate": {
       "status": "insufficient-data",
       "metric": 0,
       "bar": 0,
-      "evidenceClass": "exact-version-field",
-      "gateEligible": false,
-      "sampleSize": 0,
-      "note": "unqualified field evidence"
+      "evidenceClass": "lifetime",
+      "sampleSize": 0
     },
     "exactVersionUses": {
       "status": "insufficient-data",
       "metric": 0,
       "bar": 30,
-      "evidenceClass": "exact-version-field",
-      "gateEligible": false,
-      "sampleSize": 0,
-      "note": "unqualified field evidence"
+      "evidenceClass": "lifetime",
+      "sampleSize": 0
     },
     "exactVersionSessions": {
       "status": "insufficient-data",
       "metric": 0,
       "bar": 10,
-      "evidenceClass": "exact-version-field",
-      "gateEligible": false,
-      "sampleSize": 0,
-      "note": "unqualified field evidence"
+      "evidenceClass": "lifetime",
+      "sampleSize": 0
     },
     "observedDays": {
       "status": "insufficient-data",
       "metric": 0,
       "bar": 14,
-      "evidenceClass": "exact-version-field",
-      "gateEligible": false,
-      "sampleSize": 0,
-      "note": "unqualified field evidence"
+      "evidenceClass": "lifetime",
+      "sampleSize": 0
     },
     "realCuration": {
       "status": "insufficient-data",
       "metric": 1,
       "bar": 0.9,
-      "evidenceClass": "real-fixture-vault-curation",
-      "gateEligible": false,
-      "sampleSize": 4,
-      "note": "real fixture-vault provenance is required"
+      "evidenceClass": "lifetime",
+      "sampleSize": 4
     },
     "migrationRollback": {
       "status": "pass",
       "metric": true,
       "bar": true,
       "evidenceClass": "migration",
-      "gateEligible": true,
       "sampleSize": 2
     }
   },
-  "decision": "no-go-deferred",
-  "highestAuthorizedStage": "M0",
-  "automaticBehaviorAuthorized": false
+  "decision": "no-go-deferred"
 }

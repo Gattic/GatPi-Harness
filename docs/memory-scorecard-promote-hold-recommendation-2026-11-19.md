@@ -1,3 +1,8 @@
+> **Superseded (2026-11-21).** Artifact-based promotion is retired. Stages now advance only on
+> passive telemetry (`docs/memory-rollout-gates-passive-telemetry.md`); the reviewed-gold module,
+> signing key, review/collector CLIs, privacy-evidence CLI, and exact-version cohort attestation
+> are deleted, and the scorecard is reporting-only. This document is retained as decision history.
+
 # Memory-effectiveness scorecard refresh and promote/hold recommendation
 
 **Date:** 2026-11-19
