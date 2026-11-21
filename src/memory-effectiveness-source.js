@@ -14,10 +14,7 @@ function sourceFiles(implementationRoot = path.resolve(__dirname, "..")) {
   return [
     path.join(root, "tests", "fixtures", "memory-effectiveness", "manifest.json"),
     path.join(root, "scripts", "report-memory-effectiveness.js"),
-    path.join(root, "scripts", "report-privacy-rollout-evidence.mjs"),
-    path.join(root, "scripts", "review-privacy-rollout-evidence.js"),
-    path.join(root, "scripts", "report-reviewed-gold-evidence.js"),
-    path.join(root, "scripts", "review-reviewed-gold-evidence.js"),
+    path.join(root, "scripts", "write-privacy-baseline.js"),
     path.join(root, "scripts", "benchmark-project-memory.js"),
     path.join(root, "src", "privacy-guard-scan.js"),
     ...src,

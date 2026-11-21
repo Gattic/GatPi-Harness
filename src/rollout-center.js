@@ -64,14 +64,16 @@ function roleCapability(cwd, env) {
 }
 
 function memoryCapability(cwd, env) {
-  const runtime = projectMemoryRuntimeConfig(cwd, env);
+  // The rollout center is a read-only observation surface: it must not append
+  // rollout telemetry or create state while reporting posture.
+  const runtime = projectMemoryRuntimeConfig(cwd, env, { emit: false });
   const rollout = runtime.rollout;
   const scoreFresh = runtime.scorecard.fresh === true;
   return {
     capabilityId: "project-memory", currentStage: rollout.effectiveStage,
     technicalReadiness: technical(runtime.readiness?.projectMemoryReads?.ready ? "ready" : "degraded", [runtime.selection?.ambiguous ? "vault-selection-ambiguous" : runtime.selection?.exists ? "vault-present" : "vault-unavailable", scoreFresh ? "scorecard-current" : "scorecard-stale"]),
     policyAuthorization: policy(rollout.controls.explicitWrites ? "authorized" : rollout.controls.reads ? "read-only" : "advisory-only", rollout.controls.explicitWrites, rollout.controls.automaticVerifiedUpserts, [rollout.promotionBlocked ? "requested-stage-clamped" : "stage-authorized", rollout.controls.diagnosticCapture ? "diagnostic-capture-enabled" : "diagnostic-capture-disabled", rollout.decision]),
-    fieldProof: proof(scoreFresh && rollout.effectiveStage === "M5" ? "passed" : scoreFresh ? "insufficient-data" : "stale", { evidenceClass: "exact-version-field", exactIdentity: rollout.effectiveStage === "M5", evidenceRefs: [runtime.scorecard.manifestHash].filter(Boolean), reasonCodes: runtime.scorecard.freshnessReasons }),
+    fieldProof: proof(scoreFresh && rollout.effectiveStage === "M5" ? "passed" : scoreFresh ? "insufficient-data" : "stale", { evidenceClass: "passive-telemetry", exactIdentity: rollout.effectiveStage === "M5", evidenceRefs: [runtime.scorecard.manifestHash].filter(Boolean), reasonCodes: runtime.scorecard.freshnessReasons }),
     rollbackControl: rollback("available", ["PI_PROJECT_MEMORY_STAGE", "PI_PROJECT_MEMORY", "PI_PROJECT_MEMORY_DIAGNOSTICS", "PI_PROJECT_MEMORY_WRITES", "PI_PROJECT_MEMORY_AUTO_SAVE"]),
     nextObservation: nextObservation(scoreFresh ? "collect-project-memory-field" : "refresh-project-memory-scorecard", scoreFresh ? "memory-scorecard" : "memory-effectiveness-report", "permitted", ["automatic-memory-write", "stage-promotion", "retention-apply"]),
     provenance: [provenance("project-memory", "scorecard", { schemaVersion: runtime.scorecard.schemaVersion, recordId: runtime.scorecard.manifestHash || "missing", fingerprint: runtime.scorecard.sourceRevision, evidenceRef: runtime.scorecard.manifestHash, freshness: scoreFresh ? "current" : "stale-time" })],

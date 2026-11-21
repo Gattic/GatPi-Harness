@@ -83,6 +83,7 @@ assert.equal(scorecard.scores.explicitSavePrecision.status, "pass");
 assert.equal(scorecard.scores.localRecallP95Ms.status, "pass");
 assert.equal(scorecard.scores.exactVersionSessions.status, "insufficient-data");
 assert.equal(scorecard.decision, "no-go-deferred");
-assert.equal(scorecard.automaticBehaviorAuthorized, false);
+assert.equal(scorecard.authority, "reporting-only");
+assert.equal(scorecard.automaticBehaviorAuthorized, undefined, "the scorecard no longer authorizes automatic behavior");
 
 console.log("memory effectiveness end-to-end tests passed");
