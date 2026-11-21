@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { TraceRuntime, FileTraceStorage, ReplayIndex } = require("../src/trace-observability");
+const { currentMemorySourceEvidence } = require("../src/memory-effectiveness-source");
 const { tmpFixture } = require("./helpers/tmp-fixture");
 
 const tmp = tmpFixture("pi-trace-runtime-");
@@ -18,6 +19,26 @@ assert.equal(events.length, 2);
 assert(events[1].payload_ref, "large payloads are compressed into refs");
 assert.equal(trace.export("corr").length, 2);
 assert.equal(trace.replaySummary().steps, 2);
+// Rollout attribution: every persisted record carries the scorecard's content
+// revision so trace evidence and rollout evidence agree on the implementation.
+const expectedRevision = currentMemorySourceEvidence().revision;
+trace.emit({ category: "session", name: "session_start", subsystem: "test", payload: { event: { type: "session_start" } } });
+const attributed = ReplayIndex.readEvents(storage.path());
+assert.equal(attributed.length, 3);
+assert(attributed.every((e) => e.implementationRevision === expectedRevision), "every trace event carries the implementation revision");
+// Project-memory telemetry categories must survive normalization; an unknown
+// category would silently be rewritten to "session".
+const { normalizeTraceEvent } = require("../src/trace-observability");
+assert.equal(normalizeTraceEvent({ category: "memory_decision" }).category, "memory_decision");
+assert.equal(normalizeTraceEvent({ category: "memory_curation" }).category, "memory_curation");
+const headerStorage = new FileTraceStorage({ root: tmpFixture("pi-trace-header-"), sessionId: "header", compressPayloadBytes: 1_000_000, capturePayloads: true });
+new TraceRuntime({ storage: headerStorage, sessionId: "header" }).emit({ category: "session", name: "session_start", subsystem: "test", payload: { event: { type: "session_start" } } });
+const header = ReplayIndex.readEvents(headerStorage.path())[0];
+assert.equal(header.implementationRevision, expectedRevision, "session header records the revision");
+assert.equal(header.payload.implementationRevision, expectedRevision, "session headers repeat the revision in their payload");
+const pinned = new FileTraceStorage({ root: tmpFixture("pi-trace-pinned-"), sessionId: "pinned", implementationRevision: "content:pinned" });
+pinned.write({ category: "session", name: "evt", subsystem: "test" });
+assert.equal(ReplayIndex.readEvents(pinned.path())[0].implementationRevision, "content:pinned", "an explicit revision overrides resolution");
 // Disposable metadata traces are pruned oldest-first; active files and
 // payload-bearing evidence remain protected.
 const retTmp = tmpFixture("pi-trace-retention-");
@@ -38,6 +59,7 @@ privateDefault.write({ category: "session", name: "private", subsystem: "test", 
 const privateDefaultText = fs.readFileSync(privateDefault.path(), "utf8");
 assert(!privateDefaultText.includes("PRIVATE_TRACE_PAYLOAD"), "new trace storage omits payloads by default");
 assert.equal(ReplayIndex.readEvents(privateDefault.path())[0].payload, undefined);
+assert.equal(ReplayIndex.readEvents(privateDefault.path())[0].implementationRevision, expectedRevision, "metadata-only traces are still attributed");
 let disabledPayloadReads = 0;
 const lazyPayload = {};
 Object.defineProperty(lazyPayload, "expensive", {

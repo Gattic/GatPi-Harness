@@ -28,8 +28,8 @@ function readJson(file, fallback) { try { return JSON.parse(fs.readFileSync(file
 function readJsonl(file) { try { return fs.readFileSync(file, "utf8").split(/\n+/).filter(Boolean).flatMap((line) => { try { return [JSON.parse(line)]; } catch { return []; } }); } catch { return []; } }
 
 class ProjectMemoryDecisionStore {
-  constructor({ cwd = process.cwd(), dir, clock = () => new Date() } = {}) {
-    this.cwd = cwd; this.dir = dir || path.join(cwd, ".pi", "project-memory"); this.clock = clock;
+  constructor({ cwd = process.cwd(), dir, clock = () => new Date(), sessionIdHash = () => null } = {}) {
+    this.cwd = cwd; this.dir = dir || path.join(cwd, ".pi", "project-memory"); this.clock = clock; this.sessionIdHash = sessionIdHash;
     this.ledgerFile = path.join(this.dir, "decisions.jsonl"); this.stateFile = path.join(this.dir, "state.json");
   }
   normalize(input = {}) {
@@ -49,13 +49,19 @@ class ProjectMemoryDecisionStore {
       sourceFingerprints: [...new Set((input.sourceFingerprints || []).map(String).filter((x) => /^[A-Za-z0-9_.:+-]{1,160}$/.test(x)))].sort(),
       evidenceIds: [...new Set((input.evidenceIds || []).map(String).filter((x) => /^[A-Za-z0-9_.:+-]{1,160}$/.test(x)))].sort(),
       verification,
+      // Provenance the rollout gates read: automatic vs explicit writes, and the
+      // session that produced the decision. Hashed so the ledger holds no raw id.
+      automatic: input.automatic === true,
+      sessionIdHash: /^[a-f0-9]{16,64}$/.test(String(input.sessionIdHash || "")) ? String(input.sessionIdHash) : null,
       at,
     };
     row.decisionId = `memdec_${idFor(row)}`;
     return row;
   }
   record(input = {}) {
-    const row = this.normalize(input); appendPrivate(this.ledgerFile, row);
+    let sessionIdHash = input.sessionIdHash;
+    if (sessionIdHash == null) { try { sessionIdHash = this.sessionIdHash(); } catch { sessionIdHash = null; } }
+    const row = this.normalize({ ...input, sessionIdHash }); appendPrivate(this.ledgerFile, row);
     const previous = this.status();
     const next = { schemaVersion: 1, projectKey: row.projectKey, lastAttempt: { decisionId: row.decisionId, action: row.action, reason: row.reason, at: row.at }, lastSuccessful: previous.lastSuccessful || null, canonicalRevision: previous.canonicalRevision || null, reviewBacklog: Number(previous.reviewBacklog || 0) };
     if (["saved", "updated", "superseded", "pinned", "unpinned"].includes(row.action)) { next.lastSuccessful = { decisionId: row.decisionId, action: row.action, at: row.at, noteRevision: row.noteRevision }; if (row.noteRevision) next.canonicalRevision = row.noteRevision; }

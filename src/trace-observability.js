@@ -10,17 +10,38 @@ const { TraceAdapter, MemoryJsonStorage, NullSink, RecordingSink } = require("./
 const { sanitizeManagedDiagnosticState, sanitizeManagedStateValue } = require("./managed-state-sanitizer");
 const { FileIntegrationStorage } = require("./file-integration-storage");
 const { DEFAULT_HEADROOM_RATIO, retainTraceFiles, traceProjectPrefix } = require("./trace-retention");
+const { currentMemorySourceEvidence } = require("./memory-effectiveness-source");
 
 const TRACE_CATEGORIES = Object.freeze([
   "prompt_assembly", "context_injection", "memory_retrieval", "tool_exposure",
   "model_request", "model_response", "token_accounting", "retry", "compaction",
   "file_edit", "shell_execution", "verifier_result", "agent_branching",
   "failure_state", "cancellation", "session", "message", "performance", "retrieval",
+  "memory_decision", "memory_curation", "memory_rollout",
 ]);
 
 function sha256(value) { return crypto.createHash("sha256").update(typeof value === "string" ? value : stableStringify(value)).digest("hex"); }
 function stableStringify(value) { return JSON.stringify(value, (_k, v) => typeof v === "bigint" ? String(v) : v, 2) ?? "null"; }
 function nowIso() { return new Date().toISOString(); }
+
+const revisionByRoot = new Map();
+/**
+ * Trace attribution uses the scorecard's `content:` revision so trace events and
+ * rollout evidence cannot disagree about which implementation produced them.
+ * Hashing the tracked sources is expensive, so it runs once per implementation
+ * root. A failed resolution yields a sentinel that matches no real revision:
+ * gates then fail closed as "insufficient" rather than tracing going dark.
+ */
+function resolveImplementationRevision(implementationRoot = path.resolve(__dirname, "..")) {
+  const root = path.resolve(implementationRoot);
+  const cached = revisionByRoot.get(root);
+  if (cached) return cached;
+  let revision;
+  try { revision = currentMemorySourceEvidence({ implementationRoot: root }).revision; }
+  catch { revision = "content:unknown"; }
+  revisionByRoot.set(root, revision);
+  return revision;
+}
 function truncate(s, n = 1200) { s = String(s ?? ""); return s.length > n ? `${s.slice(0, n)}…<${s.length - n} chars>` : s; }
 function normalizeTraceEvent(event = {}) {
   return {
@@ -37,6 +58,7 @@ function normalizeTraceEvent(event = {}) {
     severity: event.severity || "info",
     payload: event.payload,
     duration_ms: event.duration_ms ?? event.durationMs,
+    implementationRevision: event.implementationRevision,
   };
 }
 
@@ -66,10 +88,11 @@ class FailureAnalyzer {
 }
 
 class FileTraceStorage {
-  constructor({ root = path.join(process.env.HOME || ".", ".pi", "agent", "traces"), sessionId = "trace", rotateBytes = 25 * 1024 * 1024, maxTotalBytes = 128 * 1024 * 1024, headroomRatio = DEFAULT_HEADROOM_RATIO, maxFiles = 200, maxAgeDays = 14, cwd = process.cwd(), compressPayloadBytes = 32 * 1024, capturePayloads = false } = {}) {
+  constructor({ root = path.join(process.env.HOME || ".", ".pi", "agent", "traces"), sessionId = "trace", rotateBytes = 25 * 1024 * 1024, maxTotalBytes = 128 * 1024 * 1024, headroomRatio = DEFAULT_HEADROOM_RATIO, maxFiles = 200, maxAgeDays = 14, cwd = process.cwd(), compressPayloadBytes = 32 * 1024, capturePayloads = false, implementationRoot, implementationRevision } = {}) {
     if (!/^[A-Za-z0-9_-]+$/.test(sessionId)) throw new Error("invalid trace session id");
     if (![rotateBytes, maxTotalBytes, maxFiles, maxAgeDays].every((value) => Number.isFinite(value) && value > 0)) throw new Error("trace retention limits must be positive finite numbers");
     if (!(Number.isFinite(headroomRatio) && headroomRatio >= 0 && headroomRatio < 1)) throw new Error("trace headroom ratio must be in [0, 1)");
+    this.implementationRevision = implementationRevision || resolveImplementationRevision(implementationRoot);
     this.root = root; this.sessionId = sessionId; this.rotateBytes = rotateBytes; this.maxTotalBytes = maxTotalBytes; this.headroomRatio = headroomRatio; this.compressPayloadBytes = compressPayloadBytes; this.capturePayloads = capturePayloads; this.seq = 0;
     this.maxFiles = maxFiles; this.maxAgeDays = maxAgeDays; this.cwd = cwd; this.bytesSinceRetention = 0;
     this.files = new FileIntegrationStorage(root);
@@ -91,16 +114,24 @@ class FileTraceStorage {
     return this.file;
   }
   materialize(e) {
+    return { ...this.materializeRecord(e), implementationRevision: this.implementationRevision };
+  }
+  materializeRecord(e) {
     if (!this.capturePayloads) {
       const metadata = {};
       for (const key of Object.keys(e || {})) {
         if (key !== "payload") metadata[key] = e[key];
       }
-      return { ...sanitizeManagedStateValue(metadata), payload: undefined };
+      return sanitizeManagedStateValue(metadata);
     }
     const sanitized = sanitizeManagedStateValue(e);
     if (sanitized.payload == null) return { ...sanitized, payload: undefined };
     const materialized = { ...sanitized, payload: sanitizeManagedDiagnosticState(sanitized.payload).value };
+    // Session headers repeat the revision inside the payload so consumers that
+    // read only `payload` can still attribute the session.
+    if (materialized.name === "session_start" && materialized.payload && typeof materialized.payload === "object") {
+      materialized.payload = { ...materialized.payload, implementationRevision: this.implementationRevision };
+    }
     const text = stableStringify(materialized.payload);
     if (Buffer.byteLength(text) <= this.compressPayloadBytes) return materialized;
     const gz = zlib.gzipSync(Buffer.from(text));
@@ -135,14 +166,15 @@ class ReplayIndex {
 }
 
 class TraceRuntime {
-  constructor({ enabled = true, storage, sink = new NullSink(), maxRecent = 500, sessionId = "trace", root, cwd, rotateBytes, maxTotalBytes, headroomRatio, maxFiles, maxAgeDays, compressPayloadBytes, capturePayloads, clock = () => Date.now() } = {}) {
+  constructor({ enabled = true, storage, sink = new NullSink(), maxRecent = 500, sessionId = "trace", root, cwd, rotateBytes, maxTotalBytes, headroomRatio, maxFiles, maxAgeDays, compressPayloadBytes, capturePayloads, implementationRoot, implementationRevision, clock = () => Date.now() } = {}) {
     this.enabled = enabled; this.sink = sink; this.maxRecent = maxRecent; this.clock = clock; this.recentEvents = []; this.metrics = new TraceMetrics(); this.analyzer = new FailureAnalyzer({ sink }); this.correlationId = crypto.randomUUID();
-    this.storage = storage || (this.enabled ? new FileTraceStorage({ root, cwd, sessionId, rotateBytes, maxTotalBytes, headroomRatio, maxFiles, maxAgeDays, compressPayloadBytes, capturePayloads }) : {});
+    this.implementationRevision = implementationRevision || resolveImplementationRevision(implementationRoot);
+    this.storage = storage || (this.enabled ? new FileTraceStorage({ root, cwd, sessionId, rotateBytes, maxTotalBytes, headroomRatio, maxFiles, maxAgeDays, compressPayloadBytes, capturePayloads, implementationRoot, implementationRevision: this.implementationRevision }) : {});
   }
   setCorrelation(id = crypto.randomUUID()) { this.correlationId = id; return id; }
   emit(event) {
     if (!this.enabled) return { enabled: false, skipped: true };
-    const e = normalizeTraceEvent({ correlation_id: this.correlationId, ...event });
+    const e = normalizeTraceEvent({ correlation_id: this.correlationId, implementationRevision: this.implementationRevision, ...event });
     this.recentEvents.push(e); this.recentEvents = this.recentEvents.slice(-this.maxRecent);
     this.metrics.observe(e); if (this.storage.write) this.storage.write(e); else this.storage.appendJsonl?.("trace/events", e); this.sink.emit({ type: "trace.event", category: e.category, name: e.name, severity: e.severity });
     this.analyzer.observe(e, (derived) => this.emit(derived));
@@ -159,4 +191,4 @@ class TraceRuntime {
 
 function createTraceRuntime(options = {}) { return new TraceRuntime(options); }
 
-module.exports = { TRACE_CATEGORIES, TraceAdapter, MemoryJsonStorage, NullSink, RecordingSink, TraceMetrics, FailureAnalyzer, FileTraceStorage, ReplayIndex, TraceRuntime, createTraceRuntime, normalizeTraceEvent, sha256, stableStringify, truncate };
+module.exports = { TRACE_CATEGORIES, TraceAdapter, MemoryJsonStorage, NullSink, RecordingSink, TraceMetrics, FailureAnalyzer, FileTraceStorage, ReplayIndex, TraceRuntime, createTraceRuntime, normalizeTraceEvent, resolveImplementationRevision, sha256, stableStringify, truncate };

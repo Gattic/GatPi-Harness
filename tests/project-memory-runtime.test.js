@@ -18,7 +18,7 @@ const env = { ...process.env, PI_PROJECT_MEMORY_POSTURE: "env", PI_OBSIDIAN_VAUL
 function write(card) { fs.writeFileSync(path.join(scoreDir, "scorecard.json"), `${JSON.stringify(card)}\n`, { mode: 0o600 }); }
 write({ ...evidence, source: { revision: "stale", configHash: "sha256:deadbeef" } });
 const stale = projectMemoryRuntimeConfig(cwd, env); assert.equal(stale.scorecard.fresh, false); assert.equal(stale.rollout.effectiveStage, "M0"); assert.equal(stale.rollout.controls.automaticVerifiedUpserts, false); assert(stale.scorecard.freshnessReasons.includes("source-revision-mismatch")); assert(stale.scorecard.freshnessReasons.includes("config-hash-mismatch")); assert.equal(stale.selection.source, "configured"); assert.equal(stale.readiness.projectMemoryReads.ready, true); assert.equal(stale.readiness.projectMemoryExplicitWrites.ready, false); assert.equal(stale.readiness.automaticBehaviorAuthorized.ready, false);
-write(evidence); const fresh = projectMemoryRuntimeConfig(cwd, env); assert.equal(fresh.scorecard.fresh, true); assert.equal(fresh.rollout.effectiveStage, "M5"); assert.equal(fresh.rollout.controls.automaticVerifiedUpserts, true); assert.equal(fresh.readiness.projectMemoryReads.ready, true); assert.equal(fresh.readiness.projectMemoryExplicitWrites.ready, true); assert.equal(fresh.readiness.automaticBehaviorAuthorized.ready, true); assert.equal(fresh.adapter.selection.selectionId, fresh.selection.selectionId);
+write(evidence); const fresh = projectMemoryRuntimeConfig(cwd, env); assert.equal(fresh.scorecard.fresh, true); assert.equal(fresh.rollout.passiveEligibleStage, "M0", "a fresh scorecard no longer authorizes a stage"); assert.equal(fresh.rollout.stageAuthority, "passive-telemetry"); assert.equal(fresh.rollout.effectiveStage, "M0"); assert.equal(fresh.rollout.insufficient.includes("D"), true); assert.equal(fresh.rollout.controls.automaticVerifiedUpserts, false); assert.equal(fresh.readiness.projectMemoryReads.ready, true); assert.equal(fresh.readiness.projectMemoryExplicitWrites.ready, false); assert.equal(fresh.readiness.automaticBehaviorAuthorized.ready, false); assert.equal(fresh.adapter.selection.selectionId, fresh.selection.selectionId);
 assert.equal(stale.readiness.vaultConfirmation.confirmed, true);
 assert.equal(stale.readiness.vaultConfirmation.source, "configured");
 assert.equal(fresh.readiness.canonicalProjectFolder.status, "missing");
@@ -32,7 +32,7 @@ const fallback = projectMemoryRuntimeConfig(cwd, { ...env, PI_OBSIDIAN_VAULT: un
 assert.equal(fallback.selection.source, "default-managed");
 assert.equal(fallback.readiness.vaultConfirmation.confirmed, false);
 assert.equal(fallback.readiness.vaultConfirmation.status, "unconfirmed");
-// Freshness and passing synthetic metrics are not reviewed-gold qualification.
+// The scorecard is reporting-only: fresh synthetic metrics cannot authorize a stage.
 const manifest = loadJson(path.join(__dirname, "fixtures", "memory-effectiveness", "manifest.json"));
 const synthetic = buildScorecard({
   manifest, source,
@@ -42,14 +42,13 @@ const synthetic = buildScorecard({
   migration: { rollbackPassed: true, fixtures: 1 },
   privacy: { evidenceQualified: true, unresolvedHighSeverity: 0, unresolvedActionable: 0 },
 });
-assert.equal(synthetic.highestAuthorizedStage, "M0");
-assert.equal(synthetic.evidenceQualification.reviewedGoldQualified, false);
+assert.equal(synthetic.authority, "reporting-only");
 assert.equal(synthetic.scores.retrievalPrecisionAt5.status, "pass");
-assert.equal(synthetic.scores.retrievalPrecisionAt5.gateEligible, false);
+assert.equal(synthetic.scores.retrievalPrecisionAt5.gateEligible, undefined, "a reporting score carries no gate flag");
 write(synthetic);
 const syntheticRuntime = projectMemoryRuntimeConfig(cwd, { ...env, PI_PROJECT_MEMORY_STAGE: "M2", PI_PROJECT_MEMORY_WRITES: "1" });
 assert.equal(syntheticRuntime.scorecard.fresh, true);
-assert.equal(syntheticRuntime.rollout.effectiveStage, "M1", "fresh synthetic metrics cannot authorize M2 without reviewed gold");
+assert.equal(syntheticRuntime.rollout.effectiveStage, "M0", "fresh synthetic metrics cannot authorize M1 or M2");
 assert.equal(syntheticRuntime.rollout.promotionBlocked, true);
 assert.equal(syntheticRuntime.rollout.controls.taskRecall, false);
 assert.equal(projectMemoryRuntimeConfig(cwd, { ...env, PI_PROJECT_MEMORY_STAGE: undefined }).rollout.effectiveStage, "M0", "the scorecard's default stage is preserved");
@@ -61,8 +60,8 @@ for (const qualification of [undefined, {}, { reviewedGoldQualified: false }, { 
   for (const stage of ["M2", "M3", "M4", "M5"]) {
     const denied = projectMemoryRuntimeConfig(cwd, { ...env, PI_PROJECT_MEMORY_STAGE: stage, PI_PROJECT_MEMORY_WRITES: "1" });
     assert.equal(denied.scorecard.fresh, true);
-    assert.equal(denied.rollout.evidenceEligibleStage, "M1");
-    assert.equal(denied.rollout.effectiveStage, "M1");
+    assert.equal(denied.rollout.passiveEligibleStage, "M0");
+    assert.equal(denied.rollout.effectiveStage, "M0");
     assert.equal(denied.rollout.promotionBlocked, true);
     assert.equal(denied.readiness.automaticBehaviorAuthorized.ready, false);
     for (const control of ["taskRecall", "candidateCapture", "reviewQueueWrites", "hermesCuration", "automaticVerifiedUpserts"]) {
@@ -75,14 +74,14 @@ for (const qualification of [undefined, {}, { reviewedGoldQualified: false }, { 
   assert.equal(manualUnqualified.rollout.controls.taskRecall, false);
 }
 write({ ...evidence, aggregates: { ...evidence.aggregates, retrieval: { ...evidence.aggregates.retrieval, precisionAt5: 0.89 } } });
-assert.equal(projectMemoryRuntimeConfig(cwd, env).rollout.effectiveStage, "M1", "reviewed gold does not bypass retrieval thresholds");
+assert.equal(projectMemoryRuntimeConfig(cwd, env).rollout.effectiveStage, "M0", "scorecard metrics no longer select a stage");
 
 write({ ...evidence, generatedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString() }); const expired = projectMemoryRuntimeConfig(cwd, env); assert.equal(expired.scorecard.fresh, false); assert(expired.scorecard.freshnessReasons.includes("scorecard-expired")); assert.equal(expired.rollout.effectiveStage, "M0");
 // Explicit manual M1 is separate from (and never repairs) stale field evidence.
 const manualEnv = { ...env, PI_PROJECT_MEMORY_STAGE: "M1", PI_PROJECT_MEMORY_WRITES: "1" };
 const manual = projectMemoryRuntimeConfig(cwd, manualEnv);
 assert.equal(manual.scorecard.fresh, false);
-assert.equal(manual.rollout.evidenceEligibleStage, "M0");
+assert.equal(manual.rollout.passiveEligibleStage, "M0");
 assert.equal(manual.rollout.effectiveStage, "M1");
 assert.equal(manual.rollout.stageAuthority, "explicit-m1-opt-in");
 assert.equal(manual.adapter.writeEnabled, true);

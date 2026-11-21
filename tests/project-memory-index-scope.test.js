@@ -21,6 +21,8 @@ assert.deepEqual(ids(index.search("project constraint", { limit: 5 })).sort(), [
 const scoped = index.search("project constraint", { limit: 5, root: "root-a" });
 assert.deepEqual(ids(scoped).sort(), ["a-cache-rule", "a-constraint"]);
 assert.equal(scoped.candidates, 2, "candidate count reflects the scope, not the whole corpus");
+assert.equal(scoped.outOfScope, 2, "entries matching the query from other roots are reported out of scope");
+assert.equal(index.search("project constraint", { limit: 5 }).outOfScope, 0, "an unscoped search has nothing out of scope");
 assert.ok(scoped.items.every((row) => row.root === "root-a"));
 
 // An entry with no attribution is never assumed to belong to a requested scope.

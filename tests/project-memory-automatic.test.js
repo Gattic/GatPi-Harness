@@ -15,7 +15,7 @@ async function main() {
   const automatic = resolveProjectMemoryRollout(defaults);
   assert.equal(automatic.stageAuthority, "operator-opt-in");
   assert.equal(automatic.effectiveStage, "M1");
-  assert.equal(automatic.evidenceEligibleStage, "M0");
+  assert.equal(automatic.passiveEligibleStage, "M0");
   assert.equal(automatic.fieldEffectiveness, "unproven");
   assert.equal(automatic.controls.automaticCapture, true);
   assert.equal(automatic.controls.taskRecall, true);

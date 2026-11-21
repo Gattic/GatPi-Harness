@@ -18,6 +18,11 @@ const sessionStorageAttribution = require("../session-storage-attribution");
 const stateInventory = require("../state-inventory");
 const stateRetention = require("../state-retention");
 
+// A curation run that exceeds the store's lock timeout is reported as a timeout
+// so the rollout gate can distinguish slow curation from hard failures.
+const CURATION_TIMEOUT_MS = 2000;
+const DECISION_RESOLUTIONS = Object.freeze(["saved", "updated", "rejected", "review-queued"]);
+
 class CognitiveMemoryAdapter {
   constructor({ enabled = true, storage = new MemoryJsonStorage(), storageKey = "cognitive-memory", sink = new NullSink(), clock, options = {} } = {}) {
     this.enabled = enabled; this.storage = storage; this.storageKey = storageKey; this.sink = sink;
@@ -118,22 +123,49 @@ class MemoryContentSafetyAdapter {
 }
 
 class ProjectMemoryAdapter {
-  constructor({ enabled = false, cwd = process.cwd(), vault, writeEnabled = false, clock, stateDir, selection = null, readiness = null } = {}) {
+  constructor({ enabled = false, cwd = process.cwd(), vault, writeEnabled = false, clock, stateDir, selection = null, readiness = null, sessionIdHash, telemetry = null } = {}) {
     this.enabled = Boolean(enabled && vault);
     this.cwd = cwd;
     this.vault = vault;
     this.selection = selection;
     this.readiness = readiness;
-    this.store = this.enabled ? new ProjectMemoryStore({ cwd, vault, writeEnabled, clock, stateDir }) : null;
-    this.decisionStore = this.store?.decisions || new ProjectMemoryDecisionStore({ cwd, dir: stateDir || path.join(cwd, ".pi", "project-memory"), clock });
+    this.telemetry = telemetry;
+    this.store = this.enabled ? new ProjectMemoryStore({ cwd, vault, writeEnabled, clock, stateDir, sessionIdHash }) : null;
+    this.decisionStore = this.store?.decisions || new ProjectMemoryDecisionStore({ cwd, dir: stateDir || path.join(cwd, ".pi", "project-memory"), clock, sessionIdHash });
     this.recaller = this.enabled ? new ProjectMemoryRecall({ cwd, store: this.store, stateDir, now: () => { const value = clock ? clock() : Date.now(); return value instanceof Date ? value.getTime() : Number(value); } }) : null;
   }
   metadata() { const selection = this.selection ? Object.fromEntries(Object.entries(this.selection).filter(([key]) => key !== "path")) : null; return { selection, readiness: this.readiness, selectionId: this.selection?.selectionId || null, projectKey: this.selection?.projectKey || null }; }
   status() { return this.enabled ? { ...this.metadata(), ...this.store.status() } : { ...noopResult("projectMemory.status"), ...this.metadata() }; }
-  save(input, options) { if (!this.enabled) return noopResult("projectMemory.save"); const result = this.store.upsert(input, options); if (result.applied) this.recaller.compile({ apply: true }); return result; }
-  consider(input, options) { if (!this.enabled) return noopResult("projectMemory.consider"); const result = this.store.consider(input, options); if (result.applied) this.recaller.compile({ apply: true }); return result; }
+  save(input, options) { if (!this.enabled) return noopResult("projectMemory.save"); const result = this.store.upsert(input, options); this.emitDecision(result?.decision); if (result.applied) this.compile({ apply: true }); return result; }
+  consider(input, options) { if (!this.enabled) return noopResult("projectMemory.consider"); const result = this.store.consider(input, options); this.emitDecision(result?.decision); if (result.applied) this.compile({ apply: true }); return result; }
   recall(query, options) { return this.enabled ? { ...this.metadata(), ...this.recaller.recall(query, options) } : { ...noopResult("projectMemory.recall"), items: [], candidates: 0, durationMs: 0, ...this.metadata() }; }
-  compile(options) { return this.enabled ? this.recaller.compile(options) : noopResult("projectMemory.compile"); }
+  compile(options) {
+    if (!this.enabled) return noopResult("projectMemory.compile");
+    const started = Date.now();
+    const result = this.recaller.compile(options);
+    const durationMs = Date.now() - started;
+    this.emitTelemetry({ category: "memory_curation", name: "curation.completed", outcome: result?.outcome === "blocked" ? "error" : durationMs > CURATION_TIMEOUT_MS ? "timeout" : "success", durationMs, applied: Boolean(result?.applied), itemCount: Array.isArray(result?.items) ? result.items.length : 0, reason: result?.reason || null });
+    return result;
+  }
+  emitTelemetry(event) { try { this.telemetry?.emit?.(event); } catch {} }
+  // Shadow proposals are resolved by the first real decision recorded for the
+  // same candidate, so agreement is observable without asking the operator.
+  emitDecision(decision) {
+    const proposalHash = decision?.candidateHash;
+    if (!proposalHash) return;
+    const rows = this.decisionStore.list({ limit: Infinity });
+    const shadows = rows.filter((row) => row.action === "shadowed" && row.candidateHash === proposalHash);
+    if (decision.action === "shadowed") {
+      // One proposal per candidate: repeated turns must not inflate the sample.
+      if (shadows.length !== 1) return;
+      this.emitTelemetry({ category: "memory_decision", name: "shadow.proposed", proposalHash, applied: false, sessionIdHash: decision.sessionIdHash || null });
+      return;
+    }
+    if (!DECISION_RESOLUTIONS.includes(decision.action) || !shadows.length) return;
+    const resolutions = rows.filter((row) => DECISION_RESOLUTIONS.includes(row.action) && row.candidateHash === proposalHash);
+    if (resolutions.length !== 1) return;
+    this.emitTelemetry({ category: "memory_decision", name: "shadow.outcome", proposalHash, applied: false, agreed: decision.action === "saved" || decision.action === "updated", sessionIdHash: decision.sessionIdHash || null });
+  }
   format(result, options) { return this.enabled ? formatProjectMemoryContext(result, options) : ""; }
   standing(options) { return this.enabled ? this.store.standingProjection(options) : { ...noopResult("projectMemory.standing"), items: [], candidates: 0, characters: 0 }; }
   formatStanding(result, { maxChars = 1600 } = {}) { if (!this.enabled || !result?.items?.length) return ""; return ["[L1:standing-project-memory]", ...result.items.map((item) => `- [${item.kind}; ${item.verification}; ${item.id}] ${item.title}: ${item.content}`)].join("\n").slice(0, maxChars); }

@@ -25,18 +25,20 @@ class ProjectMemoryIndex {
   // A scoped search never considers another root's entries, and never assumes an
   // unattributed entry belongs to the requested scope.
   search(query, { limit = 5, kinds, minTermCoverage, taskConditioned = false, root } = {}) {
-    const started = process.hrtime.bigint(); const rows = []; const preparedQuery = prepareQuery(query, taskConditioned); const now = this.now(); const minimumCoverage = minTermCoverage == null ? (taskConditioned ? 0 : preparedQuery.terms.length >= 2 ? 0.6 : 0) : Math.max(0, Math.min(1, Number(minTermCoverage)));
+    const started = process.hrtime.bigint(); const rows = []; let outOfScope = 0; const preparedQuery = prepareQuery(query, taskConditioned); const now = this.now(); const minimumCoverage = minTermCoverage == null ? (taskConditioned ? 0 : preparedQuery.terms.length >= 2 ? 0.6 : 0) : Math.max(0, Math.min(1, Number(minTermCoverage)));
     const eligible = new Set(recallableEntries(this.entries, now));
     for (const row of this.rows) {
       if (!preparedQuery.terms.length || !eligible.has(row.entry) || (kinds?.length && !kinds.includes(row.entry.kind))) continue;
-      if (root != null && row.entry.root !== root) continue;
       const score = scorePrepared(row, preparedQuery, { now, kinds });
       // Verification/recency bonuses must never manufacture a relevance match.
       if (score.factors.termCoverage <= 0 || score.factors.termCoverage < minimumCoverage) continue;
+      // Counted after relevance so the number reflects real cross-scope matches
+      // rather than every foreign entry in the corpus.
+      if (root != null && row.entry.root !== root) { outOfScope += 1; continue; }
       rows.push({ entry: row.entry, score });
     }
     rows.sort((a, b) => b.score.total - a.score.total || String(b.entry.updatedAt).localeCompare(String(a.entry.updatedAt)) || String(a.entry.id).localeCompare(String(b.entry.id))); const durationMs = Number(process.hrtime.bigint() - started) / 1e6;
-    return { schemaVersion: 1, query: preparedQuery.normalized, items: rows.slice(0, Math.max(0, Number(limit) || 0)).map(({ entry, score }) => ({ ...entry, score: Number(score.total.toFixed(6)), why: score.factors })), candidates: rows.length, durationMs };
+    return { schemaVersion: 1, query: preparedQuery.normalized, items: rows.slice(0, Math.max(0, Number(limit) || 0)).map(({ entry, score }) => ({ ...entry, score: Number(score.total.toFixed(6)), why: score.factors })), candidates: rows.length, outOfScope, durationMs };
   }
 }
 module.exports = { tokens, ageScore, prepareEntry, prepareQuery, scorePrepared, scoreEntry, recallableEntries, ProjectMemoryIndex };

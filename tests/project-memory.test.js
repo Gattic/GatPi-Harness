@@ -148,9 +148,11 @@ samples.sort((a, b) => a - b);
 const medianMs = samples[Math.floor(samples.length / 2)];
 assert.ok(medianMs < 50, `10k-note local ranked recall must stay below the fixed 50 ms bar (median ${medianMs}ms of ${samples.join(",")})`);
 
-const rollout = resolveProjectMemoryRollout({ PI_PROJECT_MEMORY_STAGE: "M5" }, { deterministicPassed: true, privacyPassed: true, rollbackPassed: true, reviewedGoldQualified: true, recallPrecisionAt5: 0.95, recallAt5: 0.95, localRecallP95Ms: 20, crossProjectContamination: 0, currentFactStaleRate: 0, shadowDecisionPassed: true });
+const rollout = resolveProjectMemoryRollout({ PI_PROJECT_MEMORY_STAGE: "M5" }, { kind: "rollout.evaluated", effectiveStage: "M3", insufficient: ["C", "A"] });
 assert.equal(rollout.eligibleStage, "M3");
-assert.equal(rollout.effectiveStage, "M3", "rollout fails closed below requested stage when field/curation evidence is missing");
+assert.equal(rollout.effectiveStage, "M3", "rollout fails closed below requested stage when curation evidence is missing");
 assert.equal(rollout.controls.automaticVerifiedUpserts, false);
+const artifactShaped = resolveProjectMemoryRollout({ PI_PROJECT_MEMORY_STAGE: "M5" }, { deterministicPassed: true, privacyPassed: true, rollbackPassed: true, reviewedGoldQualified: true, recallPrecisionAt5: 0.95 });
+assert.equal(artifactShaped.effectiveStage, "M0", "scorecard-shaped evidence cannot authorize a stage");
 
 console.log("project memory tests passed");

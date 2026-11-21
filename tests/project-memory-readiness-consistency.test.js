@@ -35,7 +35,9 @@ const scorecard = {
 };
 fs.writeFileSync(path.join(cwd, ".pi", "memory-effectiveness", "scorecard.json"), `${JSON.stringify(scorecard)}\n`, { mode: 0o600 });
 
-const env = { ...process.env, PI_PROJECT_MEMORY_POSTURE: "env", PI_OBSIDIAN_VAULT: vault, PI_OBSIDIAN_ALLOW_OUTSIDE: "1", PI_PROJECT_MEMORY_STAGE: "M5", PI_PROJECT_MEMORY_AUTO_SAVE: "1" };
+// Explicit writes are operator-consented at M1; the scorecard below is reported
+// but no longer selects the stage.
+const env = { ...process.env, PI_PROJECT_MEMORY_POSTURE: "env", PI_OBSIDIAN_VAULT: vault, PI_OBSIDIAN_ALLOW_OUTSIDE: "1", PI_PROJECT_MEMORY_STAGE: "M1", PI_PROJECT_MEMORY_WRITES: "1", PI_PROJECT_MEMORY_AUTO_SAVE: "1", PI_PROJECT_MEMORY_AUTOMATIC: "0" };
 const runtime = projectMemoryRuntimeConfig(cwd, env);
 const obsidian = createObsidianAdapter({ vault, allowOutsideCwd: true, hermesEnabled: false, bin: "missing-obsidian-fixture" });
 
@@ -53,7 +55,8 @@ const obsidian = createObsidianAdapter({ vault, allowOutsideCwd: true, hermesEna
   assert.equal(runtime.readiness.vaultFilesystem.ready, true);
   assert.equal(runtime.readiness.projectMemoryReads.ready, true);
   assert.equal(runtime.readiness.projectMemoryExplicitWrites.ready, true);
-  assert.equal(runtime.readiness.automaticBehaviorAuthorized.ready, true);
+  assert.equal(runtime.rollout.effectiveStage, "M1", "the scorecard cannot raise the stage");
+  assert.equal(runtime.readiness.automaticBehaviorAuthorized.ready, false);
 
   const saved = projectMemory.save({ kind: "decision", title: "Readiness consistency", content: "All memory surfaces share one selection identity.", verification: "verified", sourceFingerprints: ["fixture:readiness"], evidenceIds: ["evidence_readiness_fixture"] }, { apply: true, explicit: true });
   assert.equal(saved.applied, true, "explicitly authorized save writes canonical memory");

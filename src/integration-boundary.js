@@ -82,9 +82,9 @@ const {
   TraceAdapter,
 } = require("./integration-boundary/governance.js");
 
-function configureProjectMemoryServices(boundary, { cwd = process.cwd(), env = process.env, vault } = {}) {
+function configureProjectMemoryServices(boundary, { cwd = process.cwd(), env = process.env, vault, sessionIdHash, telemetry } = {}) {
   const runtime = projectMemoryRuntimeConfig(cwd, env, { vault });
-  boundary.projectMemory = new ProjectMemoryAdapter(runtime.adapter);
+  boundary.projectMemory = new ProjectMemoryAdapter({ ...runtime.adapter, sessionIdHash, telemetry });
   boundary.projectMemoryRollout = runtime.rollout;
   boundary.projectMemoryCandidates = new ProjectMemoryCandidatePipeline({ cwd, projectMemory: boundary.projectMemory, rollout: runtime.rollout });
   if (boundary.provenance) boundary.provenance.projectMemory = boundary.projectMemory;

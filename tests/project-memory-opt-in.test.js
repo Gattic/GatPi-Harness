@@ -49,7 +49,7 @@ async function sessionPhase(phase, root, piRoot) {
     assert.equal(result.applied, true);
     assert.equal(result.entry.content, undefined, "save receipt does not echo note bodies");
     assert.equal(result.rollout.stageAuthority, "explicit-m1-opt-in");
-    assert.equal(result.rollout.evidenceEligibleStage, "M0");
+    assert.equal(result.rollout.passiveEligibleStage, "M0");
     assert.equal((await save()).outcome, "deduped");
     assert.equal((await call("standing")).items.length, 0, "ordinary saves do not enable standing injection");
     await input("Please review this memory and queue it.");

@@ -88,7 +88,7 @@ assert.equal(roleRuntime.sidecarEnabled, true);
 
 const memory = resolveProjectMemoryRollout(loaded.values);
 assert.equal(memory.effectiveStage, "M1");
-assert.equal(memory.evidenceEligibleStage, "M0", "defaults do not fabricate field evidence");
+assert.equal(memory.passiveEligibleStage, "M0", "defaults do not fabricate field evidence");
 assert.equal(memory.stageAuthority, "operator-opt-in");
 assert.equal(memory.fieldEffectiveness, "unproven");
 assert.equal(memory.controls.explicitWrites, true);

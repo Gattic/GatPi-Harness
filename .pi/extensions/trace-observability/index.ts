@@ -38,6 +38,7 @@ export default function traceObservability(pi: ExtensionAPI) {
   let preFiles: Record<string, { hash?: string; text?: string }> = {};
   let retrievalListener: ((event: any) => void) | null = null;
   let retrievalUnsubscribe: (() => void) | null = null;
+  let projectMemoryUnsubscribe: (() => void) | null = null;
   let retrievalMeta: { sessionId: string; projectId: string } | null = null;
 
   function ensure(ctx: any) {
@@ -75,7 +76,8 @@ export default function traceObservability(pi: ExtensionAPI) {
 
   function unsubscribeRetrieval() {
     try { retrievalUnsubscribe?.(); } catch {}
-    retrievalListener = null; retrievalUnsubscribe = null; retrievalMeta = null;
+    try { projectMemoryUnsubscribe?.(); } catch {}
+    retrievalListener = null; retrievalUnsubscribe = null; projectMemoryUnsubscribe = null; retrievalMeta = null;
   }
   function subscribeRetrieval(ctx: any) {
     unsubscribeRetrieval();
@@ -87,9 +89,18 @@ export default function traceObservability(pi: ExtensionAPI) {
     retrievalMeta = { sessionId, projectId };
     retrievalListener = (event: any) => {
       if (!retrievalMeta || process.env.PI_TRACE_ENABLED === "0") return;
-      try { activeTrace.emit({ category: "retrieval", name: event?.name || "retrieval.event", subsystem: "code-context", session_id: retrievalMeta.sessionId, payload: { ...safeJson(event), sessionId: retrievalMeta.sessionId, projectId: retrievalMeta.projectId } }); } catch {}
+      try { const name = event?.name || "retrieval.event"; activeTrace.emit({ category: String(name).startsWith("recall.") ? "memory_retrieval" : "retrieval", name, subsystem: "code-context", session_id: retrievalMeta.sessionId, payload: { ...safeJson(event), sessionId: retrievalMeta.sessionId, projectId: retrievalMeta.projectId } }); } catch {}
     };
     retrievalUnsubscribe = pi.events.on("code-context:retrieval", retrievalListener);
+    // Shadow-decision and curation telemetry travels on its own channel so a
+    // memory event is never mislabelled as a code-context retrieval.
+    projectMemoryUnsubscribe = pi.events.on("project-memory:telemetry", (event: any) => {
+      if (!retrievalMeta || process.env.PI_TRACE_ENABLED === "0") return;
+      try {
+        const category = event?.category === "memory_curation" ? "memory_curation" : "memory_decision";
+        activeTrace.emit({ category, name: event?.name || "memory.event", subsystem: "project-memory", session_id: retrievalMeta.sessionId, payload: { ...safeJson(event), sessionId: retrievalMeta.sessionId, projectId: retrievalMeta.projectId } });
+      } catch {}
+    });
   }
 
   pi.on("session_start" as any, async (event: any, ctx: any) => { ensure(ctx).setCorrelation(randomUUID()); subscribeRetrieval(ctx); emit(ctx, "session", "session_start", "session", { event, cwd: ctx.cwd, trace_file: ensure(ctx).status().trace_file }); });

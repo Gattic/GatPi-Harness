@@ -144,12 +144,12 @@ function withFileLock(file, fn) {
 }
 
 class ProjectMemoryStore {
-  constructor({ cwd = process.cwd(), vault, writeEnabled = false, clock = () => new Date(), stateDir } = {}) {
+  constructor({ cwd = process.cwd(), vault, writeEnabled = false, clock = () => new Date(), stateDir, sessionIdHash } = {}) {
     if (!vault) throw new Error("ProjectMemoryStore requires an explicit resolved vault path");
     this.cwd = cwd; this.vault = path.resolve(vault); this.writeEnabled = Boolean(writeEnabled); this.clock = clock; this.identity = projectIdentity(cwd);
     this.memoryRoot = path.join(this.vault, "Memory"); this.projectsRoot = path.join(this.memoryRoot, "Projects"); this.projectDir = path.join(this.projectsRoot, projectFolderName(this.identity));
     this.reviewDir = path.join(this.projectDir, "Reviews");
-    this.decisions = new ProjectMemoryDecisionStore({ cwd, dir: stateDir || path.join(cwd, ".pi", "project-memory"), clock });
+    this.decisions = new ProjectMemoryDecisionStore({ cwd, dir: stateDir || path.join(cwd, ".pi", "project-memory"), clock, sessionIdHash });
   }
   notePath(kind) { return path.join(this.projectDir, noteFileForKind(kind)); }
   readKind(kind) {
@@ -174,23 +174,26 @@ class ProjectMemoryStore {
   }
   _upsertUnlocked(input = {}, options = {}) {
     const policy = classifyProjectMemoryCandidate({ ...input, updatedAt: input.updatedAt || this.clock() }, { explicit: Boolean(options.explicit), automatic: Boolean(options.automatic), operatorCapture: options.operatorCapture === true });
+    // Every decision made by this call carries the same provenance: whether the
+    // write was automatic and which session produced it.
+    const decide = (row) => this.decide({ ...row, automatic: options.automatic === true });
     const candidate = policy.candidate || normalizeCandidate(input, { now: this.clock() }); const validation = validateCandidate(candidate);
     const candidateHash = `sha256:${candidate.candidateHash}`;
-    const reject = (reason) => ({ ok: false, outcome: "rejected", reason, candidate, decision: this.decide({ kind: candidate.kind, action: "rejected", reason, candidateHash, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification }) });
+    const reject = (reason) => ({ ok: false, outcome: "rejected", reason, candidate, decision: decide({ kind: candidate.kind, action: "rejected", reason, candidateHash, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification }) });
     if (!validation.ok) return reject(validation.issues[0] || "invalid");
     if (policy.action === "reject") return reject(policy.reason);
-    if (policy.action === "review" || policy.action === "shadow") return { ok: true, outcome: policy.action === "review" ? "review-queued" : "shadowed", reason: policy.reason, applied: false, candidateHash, decision: this.decide({ kind: candidate.kind, action: policy.action === "review" ? "review-queued" : "shadowed", reason: policy.reason, candidateHash, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification }) };
+    if (policy.action === "review" || policy.action === "shadow") return { ok: true, outcome: policy.action === "review" ? "review-queued" : "shadowed", reason: policy.reason, applied: false, candidateHash, decision: decide({ kind: candidate.kind, action: policy.action === "review" ? "review-queued" : "shadowed", reason: policy.reason, candidateHash, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification }) };
     const notes = Object.fromEntries(MEMORY_KINDS.map((kind) => [kind, this.readKind(kind)])); const current = notes[candidate.kind];
     if (!current.managed) return reject("policy");
     if (Object.values(notes).some((note) => note.exists && !note.integrity.ok)) return reject("integrity");
     // Capture deduplication runs under the same project lock as the write, even
     // when concurrent sessions choose different titles for the same fact.
     const duplicate = current.entries.find((entry) => entry.candidateHash === candidate.candidateHash || (options.operatorCapture && normalizeKey(entry.content) === normalizeKey(candidate.content)));
-    if (duplicate) return { ok: true, outcome: "deduped", entry: duplicate, revision: current.revision, decision: this.decide({ kind: candidate.kind, action: "deduped", reason: "duplicate", candidateHash, noteRevision: current.revision, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification }) };
+    if (duplicate) return { ok: true, outcome: "deduped", entry: duplicate, revision: current.revision, decision: decide({ kind: candidate.kind, action: "deduped", reason: "duplicate", candidateHash, noteRevision: current.revision, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification }) };
     if (options.operatorCapture && Object.entries(notes).filter(([kind]) => kind !== "current").reduce((sum, [, note]) => sum + note.entries.length, 0) >= 250) return reject("capture-capacity");
     const sameTitle = current.entries.find((entry) => entry.titleHash === candidate.titleHash);
     if (sameTitle && !options.forceSupersede && !(candidate.supersedes || []).includes(sameTitle.id)) {
-      const decision = this.decide({ kind: candidate.kind, action: "review-queued", reason: "conflict", candidateHash, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification });
+      const decision = decide({ kind: candidate.kind, action: "review-queued", reason: "conflict", candidateHash, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification });
       if (options.apply && this.writeEnabled) this.appendReview("Conflict Ledger.md", { title: candidate.title, kind: candidate.kind, candidateHash, existingId: sameTitle.id, verification: candidate.verification, at: candidate.updatedAt });
       return { ok: false, outcome: "review-queued", reason: "conflict", conflictWith: sameTitle.id, decision };
     }
@@ -202,7 +205,7 @@ class ProjectMemoryStore {
     const rendered = renderNote(this.identity, candidate.kind, entries, candidate.updatedAt);
     const apply = Boolean(options.apply && this.writeEnabled);
     if (apply) { ensureManagedDirectory(this.vault, this.projectDir); atomicWrite(current.file, rendered.text, this.vault); }
-    const decision = this.decide({ kind: candidate.kind, action: apply ? action : "shadowed", reason: apply ? (options.operatorCapture ? "operator-capture" : options.explicit ? "explicit-save" : "verified-durable") : "shadow-mode", candidateHash, noteRevision: apply ? rendered.contentHash : null, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification });
+    const decision = decide({ kind: candidate.kind, action: apply ? action : "shadowed", reason: apply ? (options.operatorCapture ? "operator-capture" : options.explicit ? "explicit-save" : "verified-durable") : "shadow-mode", candidateHash, noteRevision: apply ? rendered.contentHash : null, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification });
     if (apply) this.compileCurrent({ apply: true });
     const outcome = apply ? (action === "saved" && policy.label === "saved-labeled" ? "saved-labeled" : action) : "shadowed";
     return { ok: true, outcome, applied: apply, entry, revision: rendered.contentHash, decision };
@@ -217,11 +220,12 @@ class ProjectMemoryStore {
   }
   consider(input = {}, options = {}) {
     const policy = classifyProjectMemoryCandidate({ ...input, updatedAt: input.updatedAt || this.clock() }, { automatic: options.automatic === true }); const candidate = policy.candidate || normalizeCandidate(input, { now: this.clock() }); const validation = validateCandidate(candidate); const candidateHash = `sha256:${candidate.candidateHash}`;
+    const decide = (row) => this.decide({ ...row, automatic: options.automatic === true });
     const rejectReason = !validation.ok ? validation.issues[0] : policy.action === "reject" ? policy.reason : null;
-    if (rejectReason) return { ok: false, outcome: "rejected", reason: rejectReason, decision: this.decide({ kind: candidate.kind, action: "rejected", reason: rejectReason, candidateHash, verification: candidate.verification }) };
+    if (rejectReason) return { ok: false, outcome: "rejected", reason: rejectReason, decision: decide({ kind: candidate.kind, action: "rejected", reason: rejectReason, candidateHash, verification: candidate.verification }) };
     if (options.automatic === true && policy.action === "save") return this.upsert(candidate, { apply: options.apply, explicit: false, automatic: true });
     const action = options.queueReview || policy.action === "review" ? "review-queued" : "shadowed"; const reason = action === "review-queued" ? policy.reason || "unverified" : "shadow-mode";
-    const decision = this.decide({ kind: candidate.kind, action, reason, candidateHash, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification });
+    const decision = decide({ kind: candidate.kind, action, reason, candidateHash, sourceFingerprints: candidate.sourceFingerprints, evidenceIds: candidate.evidenceIds, verification: candidate.verification });
     if (action === "review-queued" && options.apply && this.writeEnabled) this.appendReview("Review Queue.md", { title: candidate.title, kind: candidate.kind, candidateHash, verification: candidate.verification, at: candidate.updatedAt });
     return { ok: true, outcome: action, applied: false, decision };
   }

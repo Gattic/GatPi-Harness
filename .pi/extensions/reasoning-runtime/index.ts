@@ -53,6 +53,7 @@ const { ROLE_RUN_SCHEMA_VERSION, sanitizeRoleRunRecord, compactRoleToolOutcome, 
 const { classifyRoleTerminal, determineRoleRunEligibility } = require(join(LIB_ROOT, "src", "role-field-evidence.js"));
 const { runtimeSourceFingerprint } = require(join(LIB_ROOT, "src", "runtime-source-fingerprint.js"));
 const { diagnosticTextMetadata } = require(join(LIB_ROOT, "src", "managed-state-sanitizer.js"));
+const { recallTelemetryPayload } = require(join(LIB_ROOT, "src", "project-memory-recall.js"));
 const ROLE_RUNTIME_SOURCE_HASH = runtimeSourceFingerprint(process.cwd()).hash;
 const { createExtensionTelemetry, instrumentExtensionCommands, contextSessionKind, normalizeOperation } = require(join(LIB_ROOT, "src", "pi-extension-kit.js"));
 const ROLE_RUNTIME_CONFIG = resolveRoleRuntimeConfig(process.env, { cwd: process.cwd() });
@@ -151,6 +152,12 @@ type TypesafeTurn = {
 
 let runtime: Runtime | undefined;
 let askSeq = 0;
+// Session provenance for project-memory decisions. The boundary is cached per
+// checkout, so the store reads this through a provider instead of a snapshot.
+let projectMemorySessionHash: string | null = null;
+// Project-memory shadow/curation telemetry is forwarded to the trace channel by
+// the same cached boundary, so the emitter is installed once per extension load.
+let projectMemoryTelemetryEmitter: ((event: any) => void) | null = null;
 const boundaryCache = new Map<string, any>();
 const staleCleanupDone = new Set<string>();
 const STALE_CLEANUP_MARKER_KEY = "maintenance/stale-reasoning-cleanup";
@@ -539,6 +546,9 @@ function getParentSessionId(ctx: any) {
   const sessionFile = ctx?.sessionManager?.getSessionFile?.();
   if (sessionFile) return `session_${sha256(String(sessionFile)).slice(0, 12)}`;
   return "pi-session";
+}
+function sessionIdHashFor(ctx: any): string | null {
+  try { const id = getParentSessionId(ctx); return id ? createHash("sha256").update(String(id)).digest("hex").slice(0, 16) : null; } catch { return null; }
 }
 function isSubagentBranch(branch: any) {
   return branch?.metadata?.kind === "subagent" || !!branch?.metadata?.subagentId || String(branch?.name || "").startsWith("subagent ");
@@ -1635,7 +1645,7 @@ function makeBoundary(cwd: string) {
     pilots: { enabled: true, cwd },
     tasks: { enabled: process.env.PI_SPECIALIST_TASKS_ENABLED === "1", cwd, policyFile: ".pi/specialist-task-policy.json" },
   });
-  configureProjectMemoryServices(boundary, { cwd, env: process.env });
+  configureProjectMemoryServices(boundary, { cwd, env: process.env, sessionIdHash: () => projectMemorySessionHash, telemetry: { emit: (event: any) => projectMemoryTelemetryEmitter?.(event) } });
   boundary.topologies.engine.tools = makeTopologyTools(cwd, boundary);
   boundary.__sourceHash = sourceHash;
   boundary.__lastMakeBoundaryTiming = { name: "makeBoundary.rebuild", durationMs: elapsedMs(start), skills: boundary.skills?.metrics?.().skills, topologies: boundary.topologies?.listTopologies?.().length };
@@ -1774,9 +1784,11 @@ async function scheduleVerify(rt: Runtime) {
 export default function cognitiveAutomation(pi: ExtensionAPI) {
   if (!ENABLED) return;
   pi = instrumentExtensionCommands(pi, { extension: "reasoning-runtime", version: EXTENSION_VERSION }) as ExtensionAPI;
+  projectMemoryTelemetryEmitter = (event: any) => { try { pi.events?.emit?.("project-memory:telemetry", event); } catch {} };
 
   pi.on("session_start", async (_event, ctx: any) => {
     const start = Date.now();
+    projectMemorySessionHash = sessionIdHashFor(ctx);
     const boundary = makeBoundary(ctx.cwd);
     runtime = { boundary, cwd: ctx.cwd, prompt: "", touched: new Set(), pending: new Map(), autoRouteMode: autoRouteModeFromSession(ctx) || TOPOLOGY_AUTO_ROUTE_DEFAULT_MODE, autoRouteRuns: new Map(), askRuns: [], subagentRuns: new Map(), timings: [], telemetry: createExtensionTelemetry({ cwd: ctx.cwd, extension: "reasoning-runtime", version: EXTENSION_VERSION }), projectMemoryRollout: boundary.projectMemoryRollout, projectMemoryCandidates: boundary.projectMemoryCandidates };
     restoreUserScaffold(runtime, ctx);
@@ -1906,11 +1918,19 @@ export default function cognitiveAutomation(pi: ExtensionAPI) {
       return scaffold;
     }).catch((error: any) => ({ error: error.message }));
     recordTiming(runtime, "before_agent_start.scaffold", scaffoldStart, { metaPrompt });
+    // Recall is measured whenever the rollout authorizes it; the injected flag
+    // below records whether the recalled block actually reached the context.
+    const projectMemoryRecallEnabled = !metaPrompt && Boolean(runtime?.projectMemoryRollout?.controls?.taskRecall);
+    // Shadow recall runs at M1: the retrieval path computes and logs candidates
+    // without putting them in context, so M2's recall bar accrues while the
+    // stage is still inactive.
+    const projectMemoryShadowRecall = !metaPrompt && Boolean(runtime?.projectMemoryRollout?.controls?.shadowRecall);
+    const projectMemoryRecallRuns = projectMemoryRecallEnabled || projectMemoryShadowRecall;
     const [recalled, packed, skillMatches, projectMemoryRecall, standingMemory] = await Promise.all([
       Promise.resolve().then(() => { const s = Date.now(); const r = runtime!.boundary.memory.retrieve(prompt, { limit: 12, types: HOT_PATH_MEMORY_TYPES, excludeProvenanceSources: HOT_PATH_EXCLUDED_PROVENANCE }); recordTiming(runtime, "before_agent_start.memoryRetrieve", s, { metaPrompt, types: HOT_PATH_MEMORY_TYPES, excludedProvenance: HOT_PATH_EXCLUDED_PROVENANCE }); return r; }),
       Promise.resolve().then(() => { const s = Date.now(); const r = runtime!.boundary.context.pack({ tokenBudget: CONTEXT_BUDGET_TOKENS, query: prompt, includeScratch: false }); recordTiming(runtime, "before_agent_start.contextPack", s, { metaPrompt }); return r; }),
       Promise.resolve().then(() => { const s = Date.now(); const skipped = metaPrompt && SKILL_META_INJECT_MAX <= 0; const r = skipped ? { skills: [] } : runtime!.boundary.skills?.retrieve?.(prompt, { limit: metaPrompt ? SKILL_META_INJECT_MAX : SKILL_INJECT_MAX, minScore: SKILL_INJECT_MIN_SCORE }) || { skills: [] }; recordTiming(runtime, "before_agent_start.skillRetrieve", s, { metaPrompt, skipped }); return r; }),
-      Promise.resolve().then(() => { const s = Date.now(); const enabled = !metaPrompt && runtime!.projectMemoryRollout?.controls?.taskRecall; let r: any = { items: [], candidates: 0, durationMs: 0, reason: enabled ? "unavailable" : "rollout-disabled" }; if (enabled) { try { r = runtime!.boundary.projectMemory.recall(prompt, { limit: 5, taskConditioned: true }); } catch (error: any) { r = { items: [], candidates: 0, durationMs: 0, reason: error?.message || "recall-error" }; } } recordTiming(runtime, "before_agent_start.projectMemoryRecall", s, { metaPrompt, enabled, items: r.items?.length || 0, sourceKind: r.sourceKind }); return r; }),
+      Promise.resolve().then(() => { const s = Date.now(); const enabled = projectMemoryRecallRuns; let r: any = { items: [], candidates: 0, durationMs: 0, reason: enabled ? "unavailable" : "rollout-disabled" }; if (enabled) { try { r = runtime!.boundary.projectMemory.recall(prompt, { limit: 5, taskConditioned: true }); } catch (error: any) { r = { items: [], candidates: 0, durationMs: 0, reason: error?.message || "recall-error" }; } } recordTiming(runtime, "before_agent_start.projectMemoryRecall", s, { metaPrompt, enabled, shadow: projectMemoryShadowRecall, items: r.items?.length || 0, sourceKind: r.sourceKind }); return r; }),
       Promise.resolve().then(() => { const s = Date.now(); let r: any = { items: [], candidates: 0, characters: 0, reason: metaPrompt ? "meta-prompt" : "unavailable" }; if (!metaPrompt) { try { r = runtime!.boundary.projectMemory.standing({ limit: 12, maxChars: 1600 }); } catch (error: any) { r = { items: [], candidates: 0, characters: 0, reason: error?.message || "standing-error" }; } } recordTiming(runtime, "before_agent_start.standingProjectMemory", s, { metaPrompt, items: r.items?.length || 0, characters: r.characters || 0 }); return r; }),
     ]);
     const pilot = !runtime.extensionPrompt ? runtime.boundary.skillPilot?.prepare({ prompt, sessionId: getParentSessionId(ctx), requestId: runtime.pilotRequestId, interactive: ctx.mode === "tui", model: ctx.model ? { provider: ctx.model.provider, id: ctx.model.id } : null, thinkingLevel: ctx.thinkingLevel }) : null;
@@ -1922,7 +1942,9 @@ export default function cognitiveAutomation(pi: ExtensionAPI) {
     const delegatedRoleResult = renderDelegatedRoleResult(runtime.autoRouteTurnResult);
     runtime.autoRouteTurnResult = undefined;
     const failureAdvisory = formatFailureAdvisory(runtime.boundary.skills?.listFailurePatterns?.({ limit: 30 }) || [], prompt);
-    const projectMemoryAdvisory = runtime.boundary.projectMemory?.format?.(projectMemoryRecall, { maxChars: 1200 }) || "";
+    // Shadow recall is measured but never shown: only an authorized injection
+    // contributes the recalled block to the context.
+    const projectMemoryAdvisory = projectMemoryRecallEnabled ? runtime.boundary.projectMemory?.format?.(projectMemoryRecall, { maxChars: 1200 }) || "" : "";
     const standingMemoryAdvisory = runtime.boundary.projectMemory?.formatStanding?.(standingMemory, { maxChars: 1600 }) || "";
     const renderStart = Date.now();
     // The scaffold describes the user's task. Extension-authored prompts (for
@@ -1940,6 +1962,15 @@ export default function cognitiveAutomation(pi: ExtensionAPI) {
     runtime.lastInjectedContext = context;
     if (inject && scaffoldMode === "full") runtime.fullScaffoldInjected = true;
     runtime.telemetry?.contextInjection(inject ? inject.length : 0, reason, Boolean(inject), context.length, contextSessionKind(ctx), runtimeSessionToken(runtime, ctx));
+    // Recall quality is a rollout gate input, so it is reported with the payload
+    // shape the gate evaluator reads. `injected` distinguishes shadow recall
+    // (measured, not shown) from recall that actually reached the context.
+    if (projectMemoryRecallRuns) {
+      try {
+        const recallInjected = Boolean(projectMemoryRecallEnabled && inject && projectMemoryRecall?.items?.length && inject.includes("[L1:project-memory]"));
+        pi.events?.emit?.("code-context:retrieval", recallTelemetryPayload(projectMemoryRecall, { injected: recallInjected }));
+      } catch {}
+    }
     if (inject?.includes("[L2:skills]")) {
       const shownSkills = (skillMatches.skills || []).slice(0, metaPrompt ? SKILL_META_INJECT_MAX : SKILL_INJECT_MAX);
       runtime.lastSuggestedSkillIds = shownSkills.map((skill: any) => skill.skillId).filter(Boolean);
