@@ -12,9 +12,14 @@ const { createHash } = require("node:crypto");
 // Explicit exhausted usage or authentication failures make an account unusable.
 // A generic 429/rate limit can be temporary throttling, not an exhausted subscription;
 // leave those errors and the selected model alone so Pi/user retries stay on that account.
+// Cloud Code Assist (Google Antigravity) words quota exhaustion as "exhausted your capacity"
+// and rejects keys as "API key not valid", so both need their own alternatives.
 const ACCOUNT_FAILURE_PATTERN = new RegExp(
   [
     "usage[ _-]?limit",
+    "exhausted your capacity",
+    "api[ _-]?key not valid",
+    "api_key_invalid",
     "insufficient[ _-]?(?:quota|credits|balance)",
     "(?:out of|no more) (?:extra )?(?:usage|credits|quota|budget)",
     "(?:exceeded|exhausted|reached) (?:your )?(?:current )?(?:quota|usage|credit|budget)(?: limit)?",

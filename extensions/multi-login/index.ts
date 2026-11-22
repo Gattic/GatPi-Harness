@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
+import { ANTIGRAVITY_PROVIDER_ID, antigravityProvider } from "./antigravity/index";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -32,9 +33,16 @@ export default function multiLogin(pi: ExtensionAPI) {
   const anthropic = withAnthropicOAuth(bases.get("anthropic"));
   bases.set("anthropic", anthropic);
   pi.registerProvider(anthropic);
+  // Antigravity is opt-in: registering it adds models and a login method to every
+  // session, so only a config that names accounts for it installs the provider.
+  if (Object.prototype.hasOwnProperty.call(config.accounts, ANTIGRAVITY_PROVIDER_ID)) {
+    const antigravity = antigravityProvider();
+    bases.set(ANTIGRAVITY_PROVIDER_ID, antigravity);
+    pi.registerProvider(antigravity);
+  }
   for (const [baseId, count] of Object.entries(config.accounts) as [string, number][]) {
     const base = bases.get(baseId);
-    if (!base) throw new Error(`multi-login: ${config.file}: accounts.${baseId} is not a built-in provider`);
+    if (!base) throw new Error(`multi-login: ${config.file}: accounts.${baseId} is not a supported provider`);
     // Login 1 is the built-in provider itself; logins 2..count are aliases.
     for (let index = 2; index <= count; index++) {
       pi.registerProvider(createAliasProvider(base, aliasProviderId(baseId, index), index));
