@@ -62,6 +62,10 @@ live process cannot reach it:
 
 ## Follow-ups
 
+The sequenced M1 → M2 plan — steps, owners, success thresholds and evidence locations —
+lives in [`memory-rollout-m1-m2-action-plan.md`](./memory-rollout-m1-m2-action-plan.md).
+The items below are the individual follow-ups it schedules.
+
 ### F1 — Make the retrieval/telemetry subscription lifecycle-safe
 `subscribeRetrieval(ctx)` is only called from `session_start`
 (`.pi/extensions/trace-observability/index.ts`). Call it idempotently from
