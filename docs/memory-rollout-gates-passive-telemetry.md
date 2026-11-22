@@ -151,6 +151,14 @@ capture always records `automatic: true`, so a missing flag counts as an explici
 legacy rows are not rewritten, because the ledger is append-only and `decisionId` is
 content-derived.
 
+Observed 2026-11-22 (90-day window, `emit:false`): the project ledger holds 14 legacy
+saves across 3 days (2026-10-23 … 2026-10-26), all `unverified`, and none inside the
+14-day window. S1 remains `insufficient` (`explicit-saves-below-minimum`): the legacy
+rows are now counted, but no explicit save has been recorded since 2026-10-26.
+Promotion needs ≥ 20 verified explicit saves across ≥ 7 days of ordinary sessions.
+The soak fixture proves the predicate path end-to-end (21 flag-less saves over 21 days
+pass S1), but that is synthetic soak evidence, not rollout evidence.
+
 ### 5.5 Recall quality `R` (shadow or injected)
 From `recall.completed` events in `W`:
 
