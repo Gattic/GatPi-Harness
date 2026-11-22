@@ -107,6 +107,32 @@ assert(!diagnosticText.includes(responseText));
 assert(!diagnosticText.includes(toolResultText));
 assert(!/\b(role|assistant|user|tool)\b.{0,120}\b(content|transcript|messages)\b/i.test(diagnosticText));
 
-for (const item of [storage, retention, privateDefault, privacy, diagnostic]) item.close();
-for (const dir of [tmp, retTmp, privateDefaultRoot, privacyRoot, diagnosticRoot]) fs.rmSync(dir, { recursive: true, force: true });
+// Gate telemetry keeps its sanitized payload under the default privacy posture:
+// memory events carry hashes, counts, timings and booleans, never content. Every
+// other category keeps the metadata-only rule exercised above.
+const gateRoot = tmpFixture("pi-trace-gate-payload-");
+const gateStorage = new FileTraceStorage({ root: gateRoot, sessionId: "gate", compressPayloadBytes: 1_000_000, capturePayloads: false });
+const gateTrace = new TraceRuntime({ storage: gateStorage, sessionId: "gate" });
+gateTrace.emit({ category: "memory_retrieval", name: "recall.completed", subsystem: "code-context", payload: { durationMs: 21, returnedHashes: ["sha256:abc"], outOfScopeCount: 0, injected: false, content: "GATE_SECRET_CONTENT" } });
+gateTrace.emit({ category: "memory_decision", name: "shadow.outcome", subsystem: "project-memory", payload: { agreed: true, applied: false, proposalHash: "sha256:def" } });
+gateTrace.emit({ category: "memory_curation", name: "curation.preview", subsystem: "project-memory", payload: { candidateCount: 3 } });
+gateTrace.emit({ category: "model_response", name: "message_update", subsystem: "model", payload: { content: "GATE_SECRET_CONTENT" } });
+const gateEvents = ReplayIndex.readEvents(gateStorage.path());
+assert.equal(gateEvents.length, 4);
+const recallEvent = gateEvents.find((e) => e.name === "recall.completed");
+assert.equal(recallEvent.payload.durationMs, 21, "recall timing survives capturePayloads:false");
+assert.deepEqual(recallEvent.payload.returnedHashes, ["sha256:abc"]);
+assert.equal(recallEvent.payload.outOfScopeCount, 0);
+assert.equal(recallEvent.payload.injected, false);
+const shadowEvent = gateEvents.find((e) => e.name === "shadow.outcome");
+assert.equal(shadowEvent.payload.agreed, true);
+assert.equal(shadowEvent.payload.applied, false);
+assert.equal(shadowEvent.payload.proposalHash, "sha256:def");
+assert.equal(gateEvents.find((e) => e.name === "curation.preview").payload.candidateCount, 3);
+const messageEvent = gateEvents.find((e) => e.name === "message_update");
+assert.equal(messageEvent.payload, undefined, "non-gate categories stay payload-free");
+assert(!JSON.stringify(gateEvents).includes("GATE_SECRET_CONTENT"), "gate payloads are sanitized before retention");
+
+for (const item of [storage, retention, privateDefault, privacy, diagnostic, gateStorage]) item.close();
+for (const dir of [tmp, retTmp, privateDefaultRoot, privacyRoot, diagnosticRoot, gateRoot]) fs.rmSync(dir, { recursive: true, force: true });
 console.log("trace-runtime-file-storage tests passed");

@@ -20,6 +20,14 @@ const TRACE_CATEGORIES = Object.freeze([
   "memory_decision", "memory_curation", "memory_rollout",
 ]);
 
+/**
+ * Gate telemetry (recall latency/citation, shadow agreement, curation previews)
+ * carries hashes, counts, timings and booleans — never prompt or file content.
+ * Retain these payloads even when general payload capture is disabled, so the
+ * passive rollout gates stay measurable under the default privacy posture.
+ */
+const GATE_PAYLOAD_CATEGORIES = new Set(["memory_retrieval", "memory_decision", "memory_curation"]);
+
 function sha256(value) { return crypto.createHash("sha256").update(typeof value === "string" ? value : stableStringify(value)).digest("hex"); }
 function stableStringify(value) { return JSON.stringify(value, (_k, v) => typeof v === "bigint" ? String(v) : v, 2) ?? "null"; }
 function nowIso() { return new Date().toISOString(); }
@@ -117,7 +125,7 @@ class FileTraceStorage {
     return { ...this.materializeRecord(e), implementationRevision: this.implementationRevision };
   }
   materializeRecord(e) {
-    if (!this.capturePayloads) {
+    if (!this.capturePayloads && !GATE_PAYLOAD_CATEGORIES.has(e?.category)) {
       const metadata = {};
       for (const key of Object.keys(e || {})) {
         if (key !== "payload") metadata[key] = e[key];
