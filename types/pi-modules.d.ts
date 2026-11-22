@@ -28,6 +28,14 @@ declare module "@earendil-works/pi-ai" {
   export const builtinProviders: any;
   export const complete: any;
   export const StringEnum: any;
+  export const createAssistantMessageEventStream: any;
+  export const calculateCost: any;
+  export const collapseSystemMessages: any;
+  export const getCurrentTools: any;
+  export const getInitialSystemMessage: any;
+  export const getSystemMessageText: any;
+  export const withoutInitialSystemMessage: any;
+  export type AssistantMessageEventStream = any;
   export type Model<T = any> = any;
   export interface SimpleStreamOptions { signal?: any; [key: string]: any; }
   export type TranscriptContext = any;
