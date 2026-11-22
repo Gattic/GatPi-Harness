@@ -68,4 +68,24 @@ assert.match(extensionSource, /const projectMemoryRecallRuns = projectMemoryReca
 assert.match(extensionSource, /const projectMemoryAdvisory = projectMemoryRecallEnabled \?/);
 assert.match(extensionSource, /if \(projectMemoryRecallRuns\) \{/);
 
+// End-to-end gate contract: the emitted payload must survive the trace layer with
+// capturePayloads:false and satisfy the R predicate's completeness check. The
+// evaluator then reports only the volume shortfall, never an incomplete payload.
+const { TraceRuntime, FileTraceStorage, ReplayIndex } = require("../src/trace-observability");
+const { evaluateRollout } = require("../src/memory-rollout-telemetry");
+const traceRoot = tmpFixture("project-memory-recall-gate-");
+const storage = new FileTraceStorage({ root: traceRoot, sessionId: "recall-gate", compressPayloadBytes: 1_000_000, capturePayloads: false });
+const trace = new TraceRuntime({ storage, sessionId: "recall-gate" });
+trace.emit({ category: "memory_retrieval", name: "recall.completed", subsystem: "code-context", session_id: "session-1", payload: recallTelemetryPayload(result, { injected: false }) });
+const gateEvents = ReplayIndex.readEvents(storage.path());
+assert.equal(gateEvents.length, 1);
+assert.equal(gateEvents[0].payload.injected, false, "shadow recall stays measurable under the default privacy posture");
+assert.equal(typeof gateEvents[0].payload.durationMs, "number");
+assert(Array.isArray(gateEvents[0].payload.returnedHashes));
+assert.equal(Number.isInteger(gateEvents[0].payload.outOfScopeCount), true);
+const evaluated = evaluateRollout({ sources: { traces: gateEvents }, evaluatedAt: new Date() });
+assert.equal(evaluated.predicates.R.status, "insufficient");
+assert.equal(evaluated.predicates.R.reasons[0], "recall-samples-below-minimum", "completeness is satisfied; only sample volume is short");
+storage.close(); fs.rmSync(traceRoot, { recursive: true, force: true });
+
 console.log("project-memory recall telemetry tests passed");
