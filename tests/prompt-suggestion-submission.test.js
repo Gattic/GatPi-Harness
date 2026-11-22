@@ -27,6 +27,7 @@ const runtimePackage = (name, workspace) => {
 };
 const { createJiti } = require(require.resolve("jiti", { paths: [piRoot] }));
 const { tmpFixture } = require("./helpers/tmp-fixture");
+const { MAX_DIRECTION_CHARS } = require("../src/prompt-suggestion-model.js");
 const aiRoot = runtimePackage("pi-ai", "ai");
 const alias = {
   typebox: require.resolve("typebox", { paths: [piRoot] }),
@@ -82,7 +83,7 @@ const alias = {
   const registry = {
     find: (provider, modelId) => provider === suggestionModel.provider && modelId === suggestionModel.id ? suggestionModel : undefined,
     hasConfiguredAuth: () => true,
-    complete: (_model, _context, options) => new Promise((resolve) => pending.push({ signal: options.signal, resolve })),
+    complete: (_model, context, options) => new Promise((resolve) => pending.push({ signal: options.signal, context, resolve })),
   };
   const ctx = {
     cwd, isIdle: () => !agentActive && !compacting,
@@ -263,9 +264,46 @@ const alias = {
     const savedBranch = branch.splice(0);
     assert.match(requestSuggestion(), /conversation/);
     branch.push(...savedBranch);
+
+    // A direction request asks the configured model for a shaped suggestion and
+    // never falls back to the generic local prompt, which would ignore it.
+    const directionRequest = (direction) => {
+      let handled = false, error;
+      events.emit("prompt-suggestion:request", { direction, respond: (reason) => { handled = true; error = reason; } });
+      assert.equal(handled, true, "direction requests must receive an explicit response");
+      return error;
+    };
+    const beforeDirection = pending.length;
+    assert.equal(directionRequest("   "), "A direction-based suggestion needs a non-empty direction");
+    assert.equal(directionRequest(42), "A direction must be text");
+    assert.equal(directionRequest("x".repeat(MAX_DIRECTION_CHARS + 1)), `A direction-based suggestion accepts at most ${MAX_DIRECTION_CHARS} characters`);
+    assert.match(directionRequest("api_key=abcdefghijklmnopqrst"), /privacy/);
+    assert.equal(pending.length, beforeDirection, "refused directions make no provider request");
+    assert.equal(directionRequest("focus on the failing tests"), null);
+    assert.equal(pending.length, beforeDirection + 1, "a direction request asks the configured model");
+    const shapedRequest = pending.at(-1);
+    assert.match(shapedRequest.context.messages[0].content[0].text, /Direction for the next prompt:\nfocus on the failing tests/, "the direction reaches the provider packet");
+    assert.match(shapedRequest.context.systemPrompt, /make the prompt follow it/, "the model is told to follow the direction");
+    shapedRequest.resolve({ stopReason: "stop", content: [{ type: "text", text: "Fix the failing tests and rerun them" }] });
+    await new Promise(setImmediate);
+    assert.equal(published.at(-1), "Fix the failing tests and rerun them");
+    assert.equal(editor.status().direction, "focus on the failing tests");
+    assert.equal(editor.getText(), "", "a direction request never inserts or submits a prompt");
+
+    // The pi TUI command takes the direction inline; with no argument it prompts for one.
+    const directionCommand = commands.get("prompt-suggestion-direction");
+    const beforeDirectionCommand = pending.length;
+    await directionCommand.handler("keep the change small", ctx);
+    assert.equal(pending.length, beforeDirectionCommand + 1, "the direction command requests a shaped suggestion");
+    assert.match(pending.at(-1).context.messages[0].content[0].text, /Direction for the next prompt:\nkeep the change small/, "the command's direction reaches the provider packet");
+    pending.at(-1).resolve({ stopReason: "stop", content: [{ type: "text", text: "Keep the change small and verify it" }] });
+    await new Promise(setImmediate);
+    assert.equal(published.at(-1), "Keep the change small and verify it");
+
+    const beforeShutdown = pending.length;
     emit("session_shutdown");
     assert.match(requestSuggestion(), /unavailable/);
-    assert.equal(pending.length, beforeRequest + 1, "busy, empty, and ended sessions make no request");
+    assert.equal(pending.length, beforeShutdown, "busy, empty, and ended sessions make no request");
   } finally {
     releasePreflight?.();
     await submission;

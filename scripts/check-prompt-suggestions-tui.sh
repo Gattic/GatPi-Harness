@@ -7,7 +7,8 @@ ext="$(pwd)/extensions/prompt-suggestions/index.ts"
 log="${TMPDIR:-/tmp}/pi-prompt-suggestions-tui-$$.log"
 auto_log="${TMPDIR:-/tmp}/pi-prompt-suggestions-auto-tui-$$.log"
 requests_log="${TMPDIR:-/tmp}/pi-prompt-suggestions-model-requests-$$.log"
-trap 'rm -f "$log" "$log.clean" "$auto_log" "$auto_log.clean" "$requests_log"' EXIT
+direction_log="${TMPDIR:-/tmp}/pi-prompt-suggestions-direction-tui-$$.log"
+trap 'rm -f "$log" "$log.clean" "$auto_log" "$auto_log.clean" "$direction_log" "$direction_log.clean" "$requests_log"' EXIT
 
 if ! command -v script >/dev/null 2>&1; then
   printf 'skip - script(1) unavailable for prompt suggestions TUI smoke; install util-linux/bsdutils to run it\n'
@@ -19,7 +20,7 @@ server_pid=""
 cleanup() {
   if [[ -n "$server_pid" ]]; then kill "$server_pid" 2>/dev/null || true; fi
   rm -rf "$workdir"
-  rm -f "$log" "$log.clean" "$auto_log" "$auto_log.clean" "$requests_log"
+  rm -f "$log" "$log.clean" "$auto_log" "$auto_log.clean" "$direction_log" "$direction_log.clean" "$requests_log"
 }
 trap cleanup EXIT
 
@@ -168,6 +169,36 @@ if (( prompt_requests < 2 )); then
 fi
 if ! grep -Fq 'Confirm automatic suggestions now appear without Ctrl+R' "$auto_log.clean"; then
   printf 'automatic model refinement was not shown without manual retry; log: %s\n' "$auto_log" >&2
+  exit 1
+fi
+
+# A direction request must reach the model packet, shape the suggestion, and
+# never be written into the session as a prompt or into the editor.
+: >"$requests_log"
+(
+  sleep 6
+  printf '/prompt-suggestion-direction focus on the failing tests\r'
+  sleep 4
+  printf '\003'
+  sleep 1
+  printf '\003'
+) | timeout 180 script -q -f -c "cd '$workdir' && PI_PROMPT_SUGGESTIONS_CONFIG='$config_file' PI_PROMPT_SUGGESTIONS_MODEL='' pi --session '$session_file' --no-extensions -e '$provider_ext' -e '$ext'" "$direction_log" >/dev/null || true
+
+if [[ ! -s "$direction_log" ]]; then
+  printf 'direction prompt suggestion TUI validation did not produce a session log: %s\n' "$direction_log" >&2
+  exit 1
+fi
+direction_requests="$(grep -Fc 'Direction for the next prompt:' "$requests_log" || true)"
+if (( direction_requests != 1 )); then
+  printf 'the direction command did not shape exactly one prompt suggestion request; observed %s; request log: %s\n' "$direction_requests" "$requests_log" >&2
+  exit 1
+fi
+if ! grep -Fq 'focus on the failing tests' "$requests_log"; then
+  printf 'the direction did not reach the model packet; request log: %s\n' "$requests_log" >&2
+  exit 1
+fi
+if grep -Fq 'focus on the failing tests' "$session_file"; then
+  printf 'the direction was written into the session as a prompt; session file: %s\n' "$session_file" >&2
   exit 1
 fi
 

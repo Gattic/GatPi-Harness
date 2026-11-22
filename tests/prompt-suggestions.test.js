@@ -11,7 +11,7 @@ assert.match(source, /requestModelSuggestion\(/, "prompt refinement should call 
 assert.match(source, /registry: options\.registry, config: loaded\.config/, "prompt refinement should pass the model registry and machine-wide configuration");
 assert.doesNotMatch(source, /PI_HERMES_MODEL|PI_HERMES_PROVIDER|PI_HERMES_PROMPT_TIMEOUT_MS|SHARED_HERMES_POLICY/, "the extension must not configure a Hermes provider or suggestion deadline");
 const requestBody = source.match(/async function requestPromptModelSuggestion[\s\S]*?\n}/)?.[0] || "";
-assert.match(requestBody, /try \{[\s\S]*const packet = promptSuggestionPacket\(sessionManager, cwd\)/, "prompt packet construction should be contained by the non-fatal request boundary");
+assert.match(requestBody, /try \{[\s\S]*const packet = promptSuggestionPacket\(sessionManager, cwd, options\.direction\)/, "prompt packet construction should be contained by the non-fatal request boundary");
 assert.doesNotMatch(source, /requestPromptModelSuggestion\(promptSuggestionPacket\(/, "render-time code must not construct provider packets outside the non-fatal request boundary");
 assert.match(source, /readModelConfig\(\)/, "prompt refinement should read the machine-wide model configuration");
 assert.match(source, /readPromptSuggestionTelemetryEvents/, "prompt policy should preserve only explicitly compatible historical suggestion evidence");
@@ -48,12 +48,12 @@ assert.match(source, /sessionMessages\(sessionManager\)\.slice\(-8\)/, "restored
 assert.match(source, /REFINE_MAX_CONTEXT_CHARS/, "restored recent context should retain the original bounded context control");
 assert.match(source, /REFINE_ENABLED/, "model refinement should be independently configurable");
 assert.match(source, /PI_PROMPT_SUGGESTIONS_REFINE/, "model refinement should have an environment toggle");
-assert.match(source, /const localSuggestion = bestNextStepPromptSuggestion/, "local deterministic suggestions should be produced before model refinement");
+assert.match(source, /const localSuggestion = direction \? null : bestNextStepPromptSuggestion/, "local deterministic suggestions should be produced before model refinement unless a direction request forbids the fallback");
 assert.doesNotMatch(source, /extractActionablePrompt|publicActiveObjective|publicAssistantOutcome|isSatisfiedRuntimeRefresh/, "v5 flavor-shaping heuristics should be removed from local prompt selection");
 assert.match(source, /emptyPromptSuggestionSource = "local"/, "local suggestion source should be tracked");
 assert.match(source, /emptyPromptSuggestionSource = "model"/, "model refinement source should be tracked");
 assert.match(source, /matchesKey\(data, this\.retryKey\) && this\.retrySuggestion\(\)/, "retry key should retrigger prompt suggestions from the editor");
-assert.match(source, /scheduleEmptyPromptSuggestion\(\{ force: true, bypassSubagentRefinementSkip: true \}\)/, "retry should force a fresh suggestion request");
+assert.match(source, /scheduleEmptyPromptSuggestion\(\{ force: true, bypassSubagentRefinementSkip: true, direction: shaped \}\)/, "retry should force a fresh suggestion request, carrying any direction");
 assert.match(source, /insertTextAtCursor\(suggestion\)/, "accepting a suggestion should insert the complete suggestion text");
 assert.doesNotMatch(source, /\.split\("\\n"\)\[0\]/, "prompt suggestion cleaning must not discard multiline suggestions");
 assert.match(source, /lines\.join\("\\n"\)/, "prompt suggestion cleaning should preserve line breaks");
@@ -109,6 +109,11 @@ assert.match(source, /recentSubagentToolResults/, "prompt suggestions should ski
 const packetBody = source.match(/function promptSuggestionPacket[\s\S]*?\n}\n/)?.[0] || "";
 assert.match(packetBody, /publicRecentContext: publicSessionExcerpt\(sessionManager\)/, "provider packets should carry only the prebuilt scanner-safe excerpt rather than raw message objects");
 assert.doesNotMatch(packetBody, /\.content|\.output|textFromContent/, "provider packets must not directly serialize raw session message fields");
+assert.match(source, /registerCommand\("prompt-suggestion-direction"/, "the desktop editor should offer a direction command");
+assert.match(source, /requestSuggestion\(direction\?: unknown\)/, "the editor should accept a bounded direction for a suggestion request");
+assert.match(source, /const localSuggestion = direction \? null : bestNextStepPromptSuggestion/, "a direction request must not fall back to the generic local prompt");
+assert.match(packetBody, /direction: shaped \|\| null/, "provider packets should carry only a scanner-redacted bounded direction");
+assert.match(source, /promptTextIsSafe\(shaped, MAX_DIRECTION_CHARS\)/, "directions should be privacy scanned before a provider request");
 assert.match(source, /looksVerified/, "verified/passing assistant summaries should suppress failure suggestions");
 assert.doesNotMatch(source, /failing\|failed\|failure\|regression\|test failure/, "bare regression mentions should not produce failure suggestions");
 

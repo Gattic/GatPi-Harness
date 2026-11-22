@@ -13,9 +13,10 @@ const MAX_CONTEXT_CHARS = 12000;
 const DEFAULT_CONTEXT_CHARS = 6000;
 const MAX_OUTPUT_CHARS = 12000;
 const MAX_SKILL_CONTEXT_CHARS = 800;
+const MAX_DIRECTION_CHARS = 2000;
 const PUBLIC_MESSAGE_CHARS = 900;
 
-const SYSTEM_PROMPT = `You are suggesting the user's next prompt in a command-line coding assistant. Return ONLY one concise, complete prompt for the best next step. It may be multiple lines when a structured prompt is genuinely more useful. Do not quote it. Aim for at most 240 characters, but always finish the prompt and never end it with an ellipsis. If there is no useful next step, return an empty string.`;
+const SYSTEM_PROMPT = `You are suggesting the user's next prompt in a command-line coding assistant. Return ONLY one concise, complete prompt for the best next step. It may be multiple lines when a structured prompt is genuinely more useful. Do not quote it. Aim for at most 240 characters, but always finish the prompt and never end it with an ellipsis. If there is no useful next step, return an empty string. When a direction for the next prompt is supplied, make the prompt follow it: it carries the user's intent, opinions, and constraints.`;
 
 const PROVIDER_PATTERN = /^[A-Za-z0-9_.-]{1,80}$/;
 const MODEL_ID_PATTERN = /^[A-Za-z0-9_.:/@+-]{1,200}$/;
@@ -110,7 +111,7 @@ function inspectModelConfig(registry, { env = process.env } = {}) {
 
 function validatePacket(packet, maxContextChars = MAX_CONTEXT_CHARS) {
   if (!packet || typeof packet !== "object" || Array.isArray(packet)) throw modelError("invalid-packet", "prompt suggestion packet must be an object");
-  const allowed = new Set(["publicRecentContext", "skillContext"]);
+  const allowed = new Set(["publicRecentContext", "skillContext", "direction"]);
   const extra = Object.keys(packet).filter((key) => !allowed.has(key));
   if (extra.length) throw modelError("invalid-packet", `prompt suggestion packet has unsupported fields: ${extra.join(",")}`);
   const bounded = (field, max) => {
@@ -123,6 +124,7 @@ function validatePacket(packet, maxContextChars = MAX_CONTEXT_CHARS) {
   return {
     publicRecentContext: bounded("publicRecentContext", contextMax),
     skillContext: bounded("skillContext", MAX_SKILL_CONTEXT_CHARS),
+    direction: bounded("direction", MAX_DIRECTION_CHARS),
   };
 }
 
@@ -167,11 +169,12 @@ async function requestModelSuggestion({ registry, config, packet, signal, maxCon
   const bounded = validatePacket(packet, maxContextChars);
   if (bounded.publicRecentContext) scanPromptText(bounded.publicRecentContext, MAX_CONTEXT_CHARS);
   if (bounded.skillContext) scanPromptText(bounded.skillContext, MAX_SKILL_CONTEXT_CHARS);
+  if (bounded.direction) scanPromptText(bounded.direction, MAX_DIRECTION_CHARS);
 
   const model = registry.find(config.provider, config.modelId);
   if (!model) throw modelError("model-unavailable", `configured prompt suggestion model is not available: ${formatModelRef(config)}`);
 
-  const userText = `Recent chat context:\n${bounded.publicRecentContext || "(none)"}${bounded.skillContext ? `\n\n${bounded.skillContext}` : ""}`;
+  const userText = `Recent chat context:\n${bounded.publicRecentContext || "(none)"}${bounded.skillContext ? `\n\n${bounded.skillContext}` : ""}${bounded.direction ? `\n\nDirection for the next prompt:\n${bounded.direction}` : ""}`;
   let response;
   try {
     response = await registry.complete(model, {
@@ -199,6 +202,7 @@ module.exports = {
   CONFIG_FILENAME,
   DEFAULT_CONTEXT_CHARS,
   MAX_CONTEXT_CHARS,
+  MAX_DIRECTION_CHARS,
   MAX_OUTPUT_CHARS,
   MAX_SKILL_CONTEXT_CHARS,
   PUBLIC_MESSAGE_CHARS,
