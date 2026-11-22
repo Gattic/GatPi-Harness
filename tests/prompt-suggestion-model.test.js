@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { tmpFixture } = require("./helpers/tmp-fixture");
 const {
+  MAX_DIRECTION_CHARS,
   configPath,
   formatModelRef,
   inspectModelConfig,
@@ -85,6 +86,22 @@ assert.equal(parseModelRef("provider/model with space"), null);
   assert.match(calls[0].context.systemPrompt, /Return ONLY one concise, complete prompt for the best next step/, "the model receives the original suggestion instruction");
   assert.match(calls[0].context.messages[0].content[0].text, /Recent chat context:\n\[user\] Inspect the project/, "the model receives the bounded public context");
   assert.equal(calls[0].options.signal instanceof AbortSignal, true, "cancellation propagates to the provider call");
+
+  const shaped = await requestModelSuggestion({ registry: recordingRegistry, config: loaded.config, packet: { ...packet, direction: "focus on the failing tests, keep it short" } });
+  assert.equal(shaped.value, "Run the focused tests and verify the result.");
+  assert.equal(calls.length, 2);
+  assert.match(calls[1].context.systemPrompt, /When a direction for the next prompt is supplied/, "the model is told to follow the supplied direction");
+  assert.match(calls[1].context.messages[0].content[0].text, /Direction for the next prompt:\nfocus on the failing tests, keep it short/, "the direction reaches the model with the bounded context");
+  await assert.rejects(
+    () => requestModelSuggestion({ registry, config: loaded.config, packet: { ...packet, direction: "api_key=abcdefghijklmnopqrst" } }),
+    (error) => error.reasonCode === "privacy",
+    "secret-bearing directions are rejected before a provider call",
+  );
+  await assert.rejects(
+    () => requestModelSuggestion({ registry, config: loaded.config, packet: { ...packet, direction: "x".repeat(MAX_DIRECTION_CHARS + 1) } }),
+    (error) => error.reasonCode === "invalid-packet",
+    "overlong directions are rejected",
+  );
 
   await assert.rejects(
     () => requestModelSuggestion({ registry, config: { provider: "anthropic", modelId: "missing" }, packet }),

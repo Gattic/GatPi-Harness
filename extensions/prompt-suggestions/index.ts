@@ -15,7 +15,7 @@ type SuggestionListener = (suggestion: string | null) => void;
 
 const require = createRequire(import.meta.url);
 const { refinementPolicy, DEFAULT_POLICY: REFINEMENT_POLICY_DEFAULTS } = require("../../src/prompt-suggestion-policy.js");
-const { DEFAULT_CONTEXT_CHARS, MAX_CONTEXT_CHARS, PUBLIC_MESSAGE_CHARS, configPath, formatModelRef, inspectModelConfig, parseModelRef, promptTextIsSafe, readModelConfig, redactPromptText, requestModelSuggestion, writeModelConfig } = require("../../src/prompt-suggestion-model.js");
+const { DEFAULT_CONTEXT_CHARS, MAX_CONTEXT_CHARS, MAX_DIRECTION_CHARS, PUBLIC_MESSAGE_CHARS, configPath, formatModelRef, inspectModelConfig, parseModelRef, promptTextIsSafe, readModelConfig, redactPromptText, requestModelSuggestion, writeModelConfig } = require("../../src/prompt-suggestion-model.js");
 const { createExtensionTelemetry, instrumentExtensionCommands } = require("../../src/pi-extension-kit.js");
 const { readPromptSuggestionTelemetryEvents } = require("../../src/extension-telemetry.js");
 
@@ -50,7 +50,7 @@ type PromptTelemetry = (source: "local" | "model" | "none", action: "generated" 
 type PromptSuggestionOutcome = "succeeded" | "blocked" | "not-applicable" | "cancelled" | "timed-out" | "infrastructure-failed";
 type PromptSuggestionResult = { ok: true; suggestion: string; outcome: "succeeded"; reasonCode: "ready" } | { ok: false; suggestion: null; outcome: Exclude<PromptSuggestionOutcome, "succeeded">; reasonCode: string };
 type ModelRegistryLike = { find(provider: string, modelId: string): unknown; complete(model: unknown, context: unknown, options?: unknown): Promise<{ stopReason?: string; errorMessage?: string; content?: unknown }>; hasConfiguredAuth?(model: unknown): boolean; getAvailable?(): unknown[] };
-type PromptSuggestionRequestOptions = { signal?: AbortSignal; registry?: ModelRegistryLike; config?: { provider: string; modelId: string } };
+type PromptSuggestionRequestOptions = { signal?: AbortSignal; registry?: ModelRegistryLike; config?: { provider: string; modelId: string }; direction?: string | null };
 
 const ADVISORY_FAILURE_REASONS = new Set(["disabled", "privacy", "authentication", "authentication-proof-missing", "provider-model", "transport", "timeout", "cancelled", "missing-binary", "unavailable", "unexpected-response", "backoff-active", "invalid-suggestion", "invalid-config", "invalid-packet", "model-not-configured", "model-unavailable", "unknown"]);
 function advisoryFailureReason(error: unknown): string {
@@ -228,7 +228,7 @@ function recentSubagentToolResults(sessionManager: SessionManagerLike): boolean 
 
 export async function requestPromptModelSuggestion(sessionManager: SessionManagerLike, cwd: string, options: PromptSuggestionRequestOptions = {}): Promise<PromptSuggestionResult> {
   try {
-    const packet = promptSuggestionPacket(sessionManager, cwd);
+    const packet = promptSuggestionPacket(sessionManager, cwd, options.direction);
     const loaded = options.config ? { ok: true as const, config: options.config } : readModelConfig();
     if (!loaded.ok) throw Object.assign(new Error(loaded.error), { code: `PROMPT_SUGGESTION_${loaded.reasonCode.replace(/-/g, "_").toUpperCase()}`, reasonCode: loaded.reasonCode });
     const result = await requestModelSuggestion({ registry: options.registry, config: loaded.config, packet, signal: options.signal, maxContextChars: REFINE_MAX_CONTEXT_CHARS });
@@ -265,10 +265,14 @@ function currentRefinementPolicy(cwd: string) {
   return refinementPolicy(events, { mode: REFINE_MODE, minAttempts: REFINE_MIN_ATTEMPTS, minAcceptanceRate: REFINE_MIN_ACCEPTANCE_RATE, maxFailureRate: REFINE_MAX_FAILURE_RATE });
 }
 
-function promptSuggestionPacket(sessionManager: SessionManagerLike, cwd: string): Record<string, unknown> {
+function promptSuggestionPacket(sessionManager: SessionManagerLike, cwd: string, direction?: string | null): Record<string, unknown> {
+  // The direction is the operator's own intent; it is scanner-redacted and bounded
+  // before it leaves the process, like the session excerpt.
+  const shaped = typeof direction === "string" ? redactPromptText(direction, MAX_DIRECTION_CHARS).trim() : "";
   return {
     publicRecentContext: publicSessionExcerpt(sessionManager),
     skillContext: skillSuggestionContext(cwd).trim() || null,
+    direction: shaped || null,
   };
 }
 
@@ -284,6 +288,8 @@ class PromptSuggestionEditor extends CustomEditor {
   private emptyPromptSuggestionState: string | null = null;
   private emptyPromptSuggestion: string | null = null;
   private emptyPromptSuggestionSource: "local" | "model" | null = null;
+  /** The direction that shaped the cached suggestion, if any. */
+  private direction: string | null = null;
   private emptyPromptAbort: AbortController | null = null;
   private readonly keybindingsRef: any;
   private readonly isIdleRef: ModelIdleChecker;
@@ -366,6 +372,7 @@ class PromptSuggestionEditor extends CustomEditor {
       cachedState: this.emptyPromptSuggestionState,
       pendingState: this.pendingEmptyPromptState,
       source: this.emptyPromptSuggestionSource,
+      direction: this.direction,
       hasSuggestion: Boolean(this.emptyPromptSuggestion),
       inFlight: this.isSuggestionInFlight(),
       idle: this.isModelIdle(),
@@ -380,13 +387,14 @@ class PromptSuggestionEditor extends CustomEditor {
 
   dispose(): void {
     this.cancelEmptyPromptSuggestion();
+    this.direction = null;
     if (this.publishedSuggestion !== null) {
       this.publishedSuggestion = null;
       this.onSuggestionChange(null);
     }
   }
 
-  private scheduleEmptyPromptSuggestion(options: { force?: boolean; bypassSubagentRefinementSkip?: boolean } = {}): void {
+  private scheduleEmptyPromptSuggestion(options: { force?: boolean; bypassSubagentRefinementSkip?: boolean; direction?: string } = {}): void {
     if (!this.isModelIdle()) return;
     if (this.suggestionsConsumed) return;
     if (DISABLED || this.getText().length > 0 || this.dismissedForText === "") return;
@@ -394,11 +402,16 @@ class PromptSuggestionEditor extends CustomEditor {
     if (!options.force && (this.pendingEmptyPromptState === state || this.emptyPromptSuggestionState === state)) return;
     if (sessionMessages(this.sessionManager).length === 0) return;
 
+    const direction = options.direction?.trim() || null;
+    this.direction = direction;
+
     // Integration contract: keep the editor responsive even when the configured
     // model is slow or unavailable. A deterministic local next-step suggestion
     // is shown first; the model may refine it later for the same empty-prompt state.
+    // A direction request cannot use that local prompt: it would ignore the
+    // operator's intent, so only the configured model can produce it.
     const localStartedAt = Date.now();
-    const localSuggestion = bestNextStepPromptSuggestion(this.sessionManager);
+    const localSuggestion = direction ? null : bestNextStepPromptSuggestion(this.sessionManager);
     const localLatencyMs = Date.now() - localStartedAt;
     this.telemetry("local", "generated", localSuggestion ? "succeeded" : "not-applicable", localLatencyMs);
     if (localSuggestion) {
@@ -431,7 +444,7 @@ class PromptSuggestionEditor extends CustomEditor {
     this.pendingEmptyPromptState = state;
     this.tuiRef.requestRender();
     const refinementStartedAt = Date.now();
-    void requestPromptModelSuggestion(this.sessionManager, this.cwd, { signal: controller.signal, registry: this.registry, config: loaded.config }).then((result) => {
+    void requestPromptModelSuggestion(this.sessionManager, this.cwd, { signal: controller.signal, registry: this.registry, config: loaded.config, direction }).then((result) => {
       const refinementLatencyMs = Date.now() - refinementStartedAt;
       if (this.emptyPromptAbort !== controller) {
         this.telemetry("model", "skipped", "cancelled", refinementLatencyMs);
@@ -503,11 +516,27 @@ class PromptSuggestionEditor extends CustomEditor {
     this.telemetry(this.emptyPromptSuggestionSource || "none", "dismissed", "succeeded");
     this.dismissedForText = this.getText();
     this.cancelEmptyPromptSuggestion();
+    this.direction = null;
     return true;
   }
 
-  retrySuggestion(): boolean {
-    if (DISABLED || !this.isModelIdle() || this.getText().length > 0 || sessionMessages(this.sessionManager).length === 0) return false;
+  /**
+   * Request a suggestion, optionally shaped by the operator's direction.
+   * Returns null when generation was accepted, or the user-facing reason it was refused;
+   * the suggestion itself arrives later through publishSuggestion().
+   */
+  requestSuggestion(direction?: unknown): string | null {
+    if (DISABLED || !this.isModelIdle() || this.getText().length > 0 || sessionMessages(this.sessionManager).length === 0) {
+      return "Prompt suggestions require an enabled extension, idle pi, an existing conversation, and an empty desktop editor";
+    }
+    if (direction !== undefined && direction !== null && typeof direction !== "string") return "A direction must be text";
+    const shaped = typeof direction === "string" ? direction.trim() : undefined;
+    if (shaped !== undefined) {
+      if (!shaped) return "A direction-based suggestion needs a non-empty direction";
+      if (shaped.length > MAX_DIRECTION_CHARS) return `A direction-based suggestion accepts at most ${MAX_DIRECTION_CHARS} characters`;
+      if (!promptTextIsSafe(shaped, MAX_DIRECTION_CHARS)) return "The direction was rejected by the privacy scanner";
+      if (!readModelConfig().ok) return "A direction-based suggestion needs a configured prompt-suggestion model";
+    }
     this.telemetry(this.emptyPromptSuggestionSource || "none", "retried", "succeeded");
     this.suggestionsConsumed = false;
     this.dismissedForText = null;
@@ -517,10 +546,14 @@ class PromptSuggestionEditor extends CustomEditor {
     this.emptyPromptSuggestionSource = null;
     // Manual retry is user-initiated, so it may ask the configured model even
     // when automatic refinement was skipped after subagent-heavy results.
-    this.scheduleEmptyPromptSuggestion({ force: true, bypassSubagentRefinementSkip: true });
+    this.scheduleEmptyPromptSuggestion({ force: true, bypassSubagentRefinementSkip: true, direction: shaped });
     this.publishSuggestion();
     this.tuiRef.requestRender();
-    return true;
+    return null;
+  }
+
+  retrySuggestion(): boolean {
+    return this.requestSuggestion() === null;
   }
 
   private acceptSuggestion(): boolean {
@@ -530,6 +563,7 @@ class PromptSuggestionEditor extends CustomEditor {
     this.insertTextAtCursor(suggestion);
     this.cancelEmptyPromptSuggestion();
     this.dismissedForText = null;
+    this.direction = null;
     return true;
   }
 
@@ -560,6 +594,7 @@ class PromptSuggestionEditor extends CustomEditor {
     this.emptyPromptSuggestionState = null;
     this.emptyPromptSuggestion = null;
     this.emptyPromptSuggestionSource = null;
+    this.direction = null;
     this.publishSuggestion();
     this.tuiRef.requestRender();
   }
@@ -656,15 +691,16 @@ export default function promptSuggestionsExtension(pi: ExtensionAPI) {
     editor = null;
   });
 
-  // Remote clients request the same retry as Ctrl+R; never touch or submit editor text.
+  // Remote clients request the same retry as Ctrl+R, optionally shaped by a direction;
+  // never touch or submit editor text.
   pi.events.on(SUGGESTION_REQUEST_EVENT, (data) => {
-    const request = data as { respond?: (error: string | null) => void } | null;
+    const request = data as { direction?: unknown; respond?: (error: string | null) => void } | null;
     if (typeof request?.respond !== "function") return;
     if (!editor) {
       request.respond("Prompt suggestions are unavailable; the session editor is not active");
       return;
     }
-    request.respond(editor.retrySuggestion() ? null : "Prompt suggestions require an enabled extension, idle pi, an existing conversation, and an empty desktop editor");
+    request.respond(editor.requestSuggestion(request.direction));
   });
 
   pi.registerCommand("prompt-suggestions", {
@@ -702,6 +738,18 @@ export default function promptSuggestionsExtension(pi: ExtensionAPI) {
       } catch (error) {
         ctx.ui.notify(`Could not save prompt suggestion model: ${(error as Error).message}`, "error");
       }
+    },
+  });
+
+  pi.registerCommand("prompt-suggestion-direction", {
+    description: "Suggest the next prompt in your direction: /prompt-suggestion-direction [direction]",
+    handler: async (args, ctx) => {
+      if (!editor) { ctx.ui.notify("Prompt suggestions are unavailable; the session editor is not active", "error"); return; }
+      let direction = String(args || "").trim();
+      if (!direction) direction = String((await ctx.ui.input("Direction for the next prompt suggestion", "for example: focus on the failing tests, keep it short")) || "").trim();
+      if (!direction) { ctx.ui.notify("No direction entered", "info"); return; }
+      const failure = editor.requestSuggestion(direction);
+      ctx.ui.notify(failure ?? "Requested a suggestion shaped by your direction", failure ? "error" : "info");
     },
   });
 }
