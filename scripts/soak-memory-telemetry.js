@@ -42,7 +42,7 @@ function sortedJson(values) { return JSON.stringify([...(values || [])].map(Stri
 function percentile(values, p) { if (!values.length) return null; const ordered = [...values].sort((a, b) => a - b); const rank = Math.max(0, Math.ceil(p * ordered.length) - 1); return ordered[Math.min(ordered.length - 1, rank)]; }
 
 function parseArgs(argv) {
-  const args = { root: path.join(REPO, ".pi", "soak", "memory-telemetry"), days: 14, sessions: 14, completions: 30, saves: 20, saveDays: 7, realRuns: 2, seed: 1337, piCwd: null, baselineCwd: path.resolve(REPO, "..", ".."), skipReal: false, quiet: false };
+  const args = { root: path.join(REPO, ".pi", "soak", "memory-telemetry"), days: 14, sessions: 14, completions: 30, saves: 20, saveDays: 7, shadowOutcomes: 21, shadowDays: 7, realRuns: 2, seed: 1337, piCwd: null, baselineCwd: path.resolve(REPO, "..", ".."), skipReal: false, quiet: false };
   for (let i = 2; i < argv.length; i++) {
     const key = argv[i]; const value = argv[i + 1];
     if (key === "--skip-real") { args.skipReal = true; continue; }
@@ -54,6 +54,8 @@ function parseArgs(argv) {
     else if (key === "--completions") args.completions = Number(value);
     else if (key === "--saves") args.saves = Number(value);
     else if (key === "--save-days") args.saveDays = Number(value);
+    else if (key === "--shadow-outcomes") args.shadowOutcomes = Number(value);
+    else if (key === "--shadow-days") args.shadowDays = Number(value);
     else if (key === "--real-runs") args.realRuns = Number(value);
     else if (key === "--seed") args.seed = Number(value);
     else if (key === "--pi-cwd") args.piCwd = path.resolve(value);
@@ -125,7 +127,7 @@ function buildFixture({ root, args, revision }) {
   // Samples must not land in the future: the gates ignore rows after `now`.
   const clamp = (ms) => Math.min(ms, nowMs - 60000);
   const random = mulberry32(args.seed);
-  const summary = { root, traceDir, stateDir, copiedRecord, copiedBaseline, realRuns: [], synthetic: { sessions: 0, completions: 0, days: 0, saves: 0, saveDays: 0 }, citations: 0 };
+  const summary = { root, traceDir, stateDir, copiedRecord, copiedBaseline, realRuns: [], synthetic: { sessions: 0, completions: 0, days: 0, saves: 0, saveDays: 0, shadowOutcomes: 0, shadowDays: 0, shadowSessions: 0 }, citations: 0 };
 
   // Real entrypoint: pi -p with the headless injection opt-in and a fixed trace dir.
   if (!args.skipReal && args.realRuns > 0) {
@@ -169,6 +171,29 @@ function buildFixture({ root, args, revision }) {
   }
   summary.synthetic.completions = recallIndex;
   summary.synthetic.days = perSession.length;
+
+  // Deterministic shadow decisions: SD measures agreement while candidates stay
+  // unapplied, so every row is emitted with applied=false and no vault write.
+  const shadowPerDay = distribute(args.shadowOutcomes, args.shadowDays);
+  let shadowIndex = 0;
+  for (let day = 0; day < shadowPerDay.length; day++) {
+    const dayMs = today - (shadowPerDay.length - 1 - day) * DAY;
+    const sessionId = hashHex(`soak-shadow-session-${args.seed}-${day}`).slice(0, 20);
+    const runtime = createTraceRuntime({
+      root: traceDir, cwd: root, sessionId, implementationRoot: REPO,
+      capturePayloads: true, rotateBytes: 1 << 30, maxTotalBytes: 1 << 30, maxFiles: 500, maxAgeDays: 90, compressPayloadBytes: 1 << 20,
+    });
+    for (let slot = 0; slot < shadowPerDay[day]; slot++) {
+      const at = new Date(clamp(dayMs + (10 + slot) * 3600000)).toISOString();
+      const proposalHash = `sha256:${hashHex(`soak-shadow-${args.seed}-${day}-${slot}`)}`;
+      runtime.emit({ timestamp: at, category: "memory_decision", name: "shadow.outcome", session_id: sessionId, subsystem: "project-memory", payload: { agreed: true, applied: false, proposalHash } });
+      shadowIndex += 1;
+    }
+    runtime.close();
+    summary.synthetic.shadowSessions += 1;
+  }
+  summary.synthetic.shadowOutcomes = shadowIndex;
+  summary.synthetic.shadowDays = shadowPerDay.length;
 
   // Deterministic explicit saves through the production store and decision ledger.
   let saveClock = nowMs;
