@@ -14,7 +14,12 @@
  */
 
 import type { AntigravityModel } from "./models";
-import { ANTIGRAVITY_ENDPOINT, ANTIGRAVITY_MODELS } from "./models";
+import {
+	ANTIGRAVITY_ENDPOINT,
+	currentAntigravityModels,
+	discoverAntigravityModels,
+	setAntigravityModels,
+} from "./models";
 import {
 	type AntigravityCredential,
 	type AntigravityInteraction,
@@ -49,6 +54,18 @@ export function antigravityProvider(deps: AntigravityProviderDeps = {}) {
 					const credential = await loginAntigravity(interaction, fetchImpl, {
 						startCallbackServer: deps.startCallbackServer,
 					});
+					// Seed the catalog now so the model picker reflects the plan right after login.
+					try {
+						const models = await discoverAntigravityModels({
+							accessToken: credential.access,
+							projectId: credential.projectId,
+							fetchImpl,
+							force: true,
+						});
+						if (models) setAntigravityModels(credential.projectId, models);
+					} catch {
+						// Discovery is best-effort: the static snapshot stays until a later refresh.
+					}
 					return { ...credential, type: "oauth" as const };
 				},
 				refresh: async (credential: AntigravityCredential, signal: AbortSignal) =>
@@ -58,7 +75,41 @@ export function antigravityProvider(deps: AntigravityProviderDeps = {}) {
 				}),
 			},
 		},
-		getModels: () => ANTIGRAVITY_MODELS as AntigravityModel[],
+		getModels: () => currentAntigravityModels() as AntigravityModel[],
+		refreshModels: async (context: {
+			credential?: { type?: string; access?: unknown; projectId?: unknown };
+			stored?: { models?: unknown };
+			allowNetwork: boolean;
+			force?: boolean;
+			signal: AbortSignal;
+			publish(publication: { persist?: unknown; update?: () => void }): Promise<boolean>;
+		}) => {
+			const credential = context.credential;
+			if (credential?.type !== "oauth") return;
+			const projectId = typeof credential.projectId === "string" ? credential.projectId : undefined;
+			if (!projectId) return;
+			if (!context.allowNetwork) {
+				// Offline phase: restore the persisted catalog before any network access.
+				const storedModels = context.stored?.models;
+				if (Array.isArray(storedModels) && storedModels.length > 0) {
+					setAntigravityModels(projectId, storedModels as AntigravityModel[]);
+				}
+				return;
+			}
+			if (typeof credential.access !== "string" || !credential.access) return;
+			const models = await discoverAntigravityModels({
+				accessToken: credential.access,
+				projectId,
+				fetchImpl,
+				signal: context.signal,
+				force: context.force,
+			});
+			if (!models) return;
+			await context.publish({
+				persist: { models, checkedAt: Date.now() },
+				update: () => setAntigravityModels(projectId, models),
+			});
+		},
 		stream: (model: AntigravityModel, context: unknown, options?: AntigravityStreamOptions) =>
 			streamAntigravity(model, context, options, fetchImpl),
 		streamSimple: (model: AntigravityModel, context: unknown, options?: AntigravityStreamOptions) =>

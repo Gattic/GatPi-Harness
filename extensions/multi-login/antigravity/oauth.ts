@@ -16,6 +16,7 @@ import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { ANTIGRAVITY_CLIENT_METADATA, antigravityUserAgent } from "./models";
 
 export interface AntigravityCredential {
 	type?: "oauth";
@@ -229,13 +230,10 @@ export async function discoverProject(
 	const headers = {
 		Authorization: `Bearer ${accessToken}`,
 		"Content-Type": "application/json",
-		"User-Agent": "google-api-nodejs-client/9.15.1",
-		"X-Goog-Api-Client": "google-cloud-sdk vscode_cloudshelleditor/0.1",
-		"Client-Metadata": JSON.stringify({ ideType: "IDE_UNSPECIFIED", platform: "PLATFORM_UNSPECIFIED", pluginType: "GEMINI" }),
+		"User-Agent": antigravityUserAgent(),
+		"Client-Metadata": JSON.stringify(ANTIGRAVITY_CLIENT_METADATA),
 	};
-	const body = JSON.stringify({
-		metadata: { ideType: "IDE_UNSPECIFIED", platform: "PLATFORM_UNSPECIFIED", pluginType: "GEMINI" },
-	});
+	const body = JSON.stringify({ metadata: ANTIGRAVITY_CLIENT_METADATA });
 	for (const endpoint of CODE_ASSIST_ENDPOINTS) {
 		signal?.throwIfAborted();
 		const data = await fetchJson<LoadCodeAssistPayload>(fetchImpl, `${endpoint}/v1internal:loadCodeAssist`, {
@@ -291,8 +289,15 @@ export async function refreshAntigravityToken(
 	});
 	if (!response.ok) throw new Error(`Antigravity token refresh failed: ${await response.text()}`);
 	const data = (await response.json()) as TokenResponse;
+	// A credential written before project discovery carried the IDE identity falls back to the
+	// shared default project; re-discover so the account's own companion project is used.
+	const projectId =
+		credential.projectId && credential.projectId !== DEFAULT_PROJECT_ID
+			? credential.projectId
+			: await discoverProject(data.access_token, fetchImpl, signal);
 	return {
 		...credential,
+		projectId,
 		refresh: data.refresh_token || credential.refresh,
 		access: data.access_token,
 		expires: Date.now() + data.expires_in * 1000 - 5 * 60 * 1000,

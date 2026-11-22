@@ -20,12 +20,9 @@ import {
 	withoutInitialSystemMessage,
 } from "@earendil-works/pi-ai";
 
-import { ANTIGRAVITY_ENDPOINTS, type AntigravityModel } from "./models";
+import { ANTIGRAVITY_ENDPOINTS, antigravityUserAgent, type AntigravityModel } from "./models";
 
 export type FetchLike = typeof globalThis.fetch;
-
-/** Antigravity version the request identifies as; override for a different IDE build. */
-const DEFAULT_ANTIGRAVITY_VERSION = "1.107.0";
 
 const ANTIGRAVITY_SYSTEM_INSTRUCTION =
 	"You are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding." +
@@ -424,8 +421,7 @@ function getAntigravityThinkingLevel(effort: string, modelId: string): string {
 }
 
 function getAntigravityHeaders(): Record<string, string> {
-	const version = process.env.PI_AI_ANTIGRAVITY_VERSION || DEFAULT_ANTIGRAVITY_VERSION;
-	return { "User-Agent": `antigravity/${version} darwin/arm64` };
+	return { "User-Agent": antigravityUserAgent() };
 }
 
 function needsClaudeThinkingBetaHeader(model: AntigravityModel): boolean {

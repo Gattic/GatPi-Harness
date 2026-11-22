@@ -95,7 +95,7 @@ function stateFromAuthUrl(url) {
   const { antigravityProvider, ANTIGRAVITY_PROVIDER_ID } = antigravity;
   const { buildAuthorizationUrl, parseAuthorizationInput, discoverProject, refreshAntigravityToken, antigravityClient, antigravityCredentialsFile, DEFAULT_PROJECT_ID } = oauth;
   const { buildRequest, convertMessages, streamAntigravity, streamSimpleAntigravity } = streamModule;
-  const { ANTIGRAVITY_MODELS, ANTIGRAVITY_ENDPOINTS } = modelsModule;
+  const { STATIC_ANTIGRAVITY_MODELS, ANTIGRAVITY_ENDPOINTS, currentAntigravityModels, resetAntigravityModelCache, discoverAntigravityModels, parseProvisionedModelIds, modelForId } = modelsModule;
 
   // --- Authorization URL matches Antigravity's client contract -------------
   {
@@ -276,13 +276,29 @@ function stateFromAuthUrl(url) {
       refreshAntigravityToken({ refresh: "r", access: "a", expires: 0 }, fetchMock),
       /missing the Cloud Code Assist project id/,
     );
+
+    // A credential that only ever saw the fallback project re-discovers the account's own.
+    const rediscovery = [];
+    const rediscoveringFetch = async (url) => {
+      rediscovery.push(String(url));
+      if (String(url).includes("loadCodeAssist")) return jsonResponse({ cloudaicompanionProject: "aicode-consumers" });
+      return jsonResponse({ access_token: "access-4", expires_in: 3600 });
+    };
+    const rediscovered = await refreshAntigravityToken(
+      { refresh: "refresh-4", access: "old", expires: 0, projectId: DEFAULT_PROJECT_ID },
+      rediscoveringFetch,
+    );
+    assert.equal(rediscovered.projectId, "aicode-consumers", "the fallback project is replaced by the account's project");
+    assert.equal(rediscovery.length, 2);
   }
 
   // --- Project discovery tries prod, then the sandbox endpoint -------------
   {
     const seen = [];
-    const project = await discoverProject("token", async (url) => {
+    const requests = [];
+    const project = await discoverProject("token", async (url, init) => {
       seen.push(String(url));
+      requests.push(init);
       if (String(url).includes("daily-cloudcode")) return jsonResponse({ cloudaicompanionProject: "proj-sandbox" });
       return textResponse("nope", 404);
     });
@@ -291,6 +307,14 @@ function stateFromAuthUrl(url) {
       "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist",
       "https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:loadCodeAssist",
     ]);
+    const metadata = JSON.parse(requests[0].headers["Client-Metadata"]);
+    assert.deepEqual(metadata, { ideType: "ANTIGRAVITY", platform: "DARWIN_ARM64", pluginType: "CLOUD_CODE", ideName: "antigravity" }, "the IDE identity is what makes the endpoint report the account's project");
+    assert.deepEqual(JSON.parse(requests[0].body), { metadata });
+    assert.match(requests[0].headers["User-Agent"], /^antigravity\//u);
+
+    // No endpoint reports a project: fall back to the shared default.
+    const fallback = await discoverProject("token", async () => jsonResponse({ allowedTiers: [] }));
+    assert.equal(fallback, DEFAULT_PROJECT_ID);
   }
 
   // --- Request envelope carries Antigravity's fingerprints -----------------
@@ -305,8 +329,8 @@ function stateFromAuthUrl(url) {
       { role: "user", content: "hello", timestamp: 1 },
     ],
   });
-  const gemini = ANTIGRAVITY_MODELS.find((entry) => entry.id === "gemini-3-flash");
-  const claude = ANTIGRAVITY_MODELS.find((entry) => entry.id === "claude-sonnet-4-6");
+  const gemini = STATIC_ANTIGRAVITY_MODELS.find((entry) => entry.id === "gemini-3-flash");
+  const claude = STATIC_ANTIGRAVITY_MODELS.find((entry) => entry.id === "claude-sonnet-4-6");
   {
     const request = buildRequest(gemini, systemContext(), "proj-1", {
       thinking: { enabled: true, level: "HIGH" },
@@ -616,12 +640,154 @@ function stateFromAuthUrl(url) {
       for (const operation of ["login", "refresh", "toAuth"]) assert.equal(typeof alias.auth.oauth[operation], "function");
       assert.equal(alias.auth.apiKey, undefined, "aliases store only their own OAuth credential");
       assert.ok(alias.getModels().every((entry) => entry.provider === alias.id));
-      assert.equal(alias.getModels().length, ANTIGRAVITY_MODELS.length);
+      assert.equal(alias.getModels().length, STATIC_ANTIGRAVITY_MODELS.length, "no discovery ran, so the static snapshot is served");
     } finally {
       if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
       else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
       fs.rmSync(agentDir, { recursive: true, force: true });
     }
+  }
+
+  // --- Dynamic catalog from the account's provisioned models ---------------
+  {
+    resetAntigravityModelCache();
+    assert.equal(currentAntigravityModels().length, STATIC_ANTIGRAVITY_MODELS.length, "the static snapshot is the pre-discovery catalog");
+
+    const quota = {
+      buckets: [
+        { modelId: "gemini-4-neon", remainingFraction: 0.99 },
+        { modelId: "gemini-4-neon", remainingFraction: 0.5 },
+        { modelId: "claude-opus-5-5-high" },
+        { modelId: "tab_flash_lite_preview" },
+        { modelId: "chat_20706" },
+        { modelId: "  " },
+        { remainingFraction: 1 },
+      ],
+    };
+    assert.deepEqual(parseProvisionedModelIds(quota), ["gemini-4-neon", "claude-opus-5-5-high"], "deduped, tab/chat models and blanks dropped");
+    assert.deepEqual(parseProvisionedModelIds({}), []);
+    assert.deepEqual(parseProvisionedModelIds(null), []);
+    assert.deepEqual(parseProvisionedModelIds({ buckets: "nope" }), []);
+
+    const neon = modelForId("gemini-4-neon");
+    assert.equal(neon.name, "Gemini 4 Neon (Antigravity)");
+    assert.equal(neon.reasoning, true);
+    assert.deepEqual(neon.input, ["text", "image"]);
+    assert.equal(neon.contextWindow, 1048576);
+    const opus = modelForId("claude-opus-5-5-high");
+    assert.equal(opus.name, "Claude Opus 5.5 High (Antigravity)");
+    assert.equal(opus.contextWindow, 200000);
+    assert.deepEqual(opus.cost, { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 });
+    const lite = modelForId("gemini-3.5-flash-lite");
+    assert.equal(lite.name, "Gemini 3.5 Flash Lite (Antigravity)");
+    assert.deepEqual(lite.cost, { input: 0.1, output: 0.4, cacheRead: 0.025, cacheWrite: 0 });
+    const gpt = modelForId("gpt-oss-120b-medium");
+    assert.equal(gpt.reasoning, false);
+    assert.deepEqual(gpt.input, ["text"]);
+    assert.equal(modelForId("claude-sonnet-4-6").name, "Claude Sonnet 4.6 (Antigravity)", "static entries win over inference");
+
+    // Live fetch: quota ids are the entitlement; the catalog supplies names and limits.
+    const calls = [];
+    const liveFetch = async (url, init) => {
+      const target = String(url);
+      calls.push({ url: target, method: init.method, userAgent: init.headers["User-Agent"], body: init.body });
+      if (target.includes("fetchAvailableModels")) {
+        return jsonResponse({
+          models: {
+            "gemini-4-neon": { displayName: "Gemini 4 Neon (XHigh)", supportsImages: true, supportsThinking: true, maxTokens: 2097152, maxOutputTokens: 65536 },
+            "claude-sonnet-5-5-high": { displayName: "Claude Sonnet 5.5 (High)", supportsImages: true, supportsThinking: true, maxTokens: 1000000, maxOutputTokens: 128000 },
+            tab_jump_flash_lite_preview: { maxTokens: 16384, maxOutputTokens: 4096 },
+            chat_20706: { maxTokens: 16384 },
+          },
+        });
+      }
+      return jsonResponse({ buckets: [{ modelId: "gemini-4-neon" }, { modelId: "claude-sonnet-5-5-high" }, { modelId: "tab_jump_flash_lite_preview" }, { modelId: "chat_20706" }] });
+    };
+    const discovered = await discoverAntigravityModels({ accessToken: "token-1", projectId: "proj-1", fetchImpl: liveFetch, force: true });
+    assert.deepEqual(discovered.map((entry) => entry.id), ["gemini-4-neon", "claude-sonnet-5-5-high"], "tab and chat models excluded");
+    assert.equal(discovered[0].name, "Gemini 4 Neon (XHigh) (Antigravity)", "the endpoint's own display name wins");
+    assert.equal(discovered[0].contextWindow, 2097152);
+    assert.equal(discovered[0].maxTokens, 65536);
+    assert.equal(discovered[1].contextWindow, 1000000);
+    assert.equal(discovered[1].cost.input, 3, "cost still comes from the model family");
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].url, `${ANTIGRAVITY_ENDPOINTS[0]}/v1internal:retrieveUserQuota`);
+    assert.equal(calls[1].url, `${ANTIGRAVITY_ENDPOINTS[0]}/v1internal:fetchAvailableModels`);
+    assert.equal(calls[0].method, "POST");
+    assert.match(calls[0].userAgent, /^antigravity\//u);
+    assert.deepEqual(JSON.parse(calls[0].body), { project: "proj-1" });
+    assert.deepEqual(JSON.parse(calls[1].body), { project: "proj-1" });
+    assert.equal(currentAntigravityModels().length, 2, "the discovered list becomes the synchronous catalog");
+    assert.deepEqual(currentAntigravityModels().map((entry) => entry.id), ["gemini-4-neon", "claude-sonnet-5-5-high"]);
+
+    // Cache: a second call within the TTL does not touch the network.
+    const cached = await discoverAntigravityModels({ accessToken: "token-1", projectId: "proj-1", fetchImpl: async () => { throw new Error("network used"); } });
+    assert.equal(cached.length, 2);
+
+    // Endpoint cascade: a failing endpoint falls through to the next one.
+    const cascadeUrls = [];
+    const cascadeFetch = async (url) => {
+      cascadeUrls.push(String(url));
+      if (cascadeUrls.length === 1) return textResponse("blocked", 403);
+      if (String(url).includes("fetchAvailableModels")) return jsonResponse({ models: { "gemini-3-flash": { displayName: "Gemini 3 Flash" } } });
+      return jsonResponse({ buckets: [{ modelId: "gemini-3-flash" }] });
+    };
+    const cascaded = await discoverAntigravityModels({ accessToken: "token-1", projectId: "proj-2", fetchImpl: cascadeFetch, force: true });
+    assert.deepEqual(cascaded.map((entry) => entry.id), ["gemini-3-flash"]);
+    assert.equal(cascadeUrls.length, 3);
+    assert.equal(cascadeUrls[1], `${ANTIGRAVITY_ENDPOINTS[1]}/v1internal:retrieveUserQuota`);
+    assert.equal(cascadeUrls[2], `${ANTIGRAVITY_ENDPOINTS[1]}/v1internal:fetchAvailableModels`);
+
+    // Without a catalog the quota ids still form a catalog, with inferred metadata.
+    const quotaOnly = await discoverAntigravityModels({
+      accessToken: "token-1",
+      projectId: "proj-6",
+      fetchImpl: async (url) => (String(url).includes("fetchAvailableModels") ? textResponse("forbidden", 403) : jsonResponse({ buckets: [{ modelId: "gemini-4-carbon" }, { modelId: "chat_23310" }] })),
+      force: true,
+    });
+    assert.deepEqual(quotaOnly.map((entry) => entry.id), ["gemini-4-carbon"]);
+    assert.equal(quotaOnly[0].name, "Gemini 4 Carbon (Antigravity)");
+
+    // An unnamed catalog entry (tiered alias) keeps inferred metadata.
+    const unnamed = await discoverAntigravityModels({
+      accessToken: "token-1",
+      projectId: "proj-7",
+      fetchImpl: async (url) => (String(url).includes("fetchAvailableModels") ? jsonResponse({ models: { "gemini-3.8-flash-tiered": { supportsThinking: true, maxTokens: 1048576 } } }) : jsonResponse({ buckets: [{ modelId: "gemini-3.8-flash-tiered" }] })),
+      force: true,
+    });
+    assert.deepEqual(unnamed.map((entry) => entry.id), ["gemini-3.8-flash-tiered"]);
+    assert.equal(unnamed[0].name, "Gemini 3.8 Flash Tiered (Antigravity)", "an unnamed model keeps its inferred name");
+    assert.equal(unnamed[0].contextWindow, 1048576);
+
+    // Failure keeps the previous catalog and reports nothing new.
+    const before = currentAntigravityModels();
+    const failed = await discoverAntigravityModels({
+      accessToken: "token-1",
+      projectId: "proj-3",
+      fetchImpl: async () => textResponse("denied", 403),
+      force: true,
+    });
+    assert.equal(failed, undefined);
+    assert.equal(currentAntigravityModels(), before, "previous catalog retained on failure");
+
+    const empty = await discoverAntigravityModels({
+      accessToken: "token-1",
+      projectId: "proj-4",
+      fetchImpl: async () => jsonResponse({ buckets: [] }),
+      force: true,
+    });
+    assert.equal(empty, undefined, "an empty quota response is not a catalog");
+
+    // Abort is honored.
+    const controller = new AbortController();
+    controller.abort();
+    await assert.rejects(
+      discoverAntigravityModels({ accessToken: "token-1", projectId: "proj-5", fetchImpl: async () => jsonResponse({}), force: true, signal: controller.signal }),
+      /abort/iu,
+    );
+
+    resetAntigravityModelCache();
+    assert.equal(currentAntigravityModels().length, STATIC_ANTIGRAVITY_MODELS.length);
   }
 
   // --- Cloud Code Assist exhaustion and invalid keys trigger failover ------
@@ -631,5 +797,5 @@ function stateFromAuthUrl(url) {
   assert.equal(isAccountFailure({ stopReason: "error", errorMessage: "429 Too Many Requests" }), false, "generic throttling stays on the account");
   assert.equal(isAccountFailure({ stopReason: "error", errorMessage: "503 service unavailable" }), false);
 
-  console.log("google-antigravity tests passed (credentials resolution, auth URL, callback/manual login, refresh, project discovery, envelope, conversion, SSE transport, endpoint cascade, multi-login wiring, failover classification)");
+  console.log("google-antigravity tests passed (credentials resolution, auth URL, callback/manual login, refresh, project discovery, envelope, conversion, SSE transport, endpoint cascade, dynamic catalog discovery and caching, multi-login wiring, failover classification)");
 })();
