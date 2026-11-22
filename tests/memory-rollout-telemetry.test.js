@@ -82,6 +82,12 @@ const nineteenSaves = baseSources().decisions.filter((row) => row.automatic === 
 assert.equal(evaluate(baseSources({ decisions: nineteenSaves })).predicates.S1.reasons[0], "explicit-saves-below-minimum");
 const unverifiedSaves = baseSources().decisions.filter((row) => row.automatic === false).map((row, index) => (index < 2 ? { ...row, verification: "unverified" } : row));
 assert.equal(evaluate(baseSources({ decisions: unverifiedSaves })).predicates.S1.reasons[0], "explicit-save-precision-below-bar");
+// Rows written before the `automatic` field existed carry no flag; automatic
+// capture records `automatic: true`, so a missing flag is an explicit save.
+const legacySaves = baseSources().decisions.filter((row) => row.automatic === false).slice(0, 20).map(({ automatic, ...row }) => row);
+assert.equal(evaluate(baseSources({ decisions: legacySaves })).predicates.S1.status, "pass", "rows without an automatic flag count as explicit saves");
+const automaticOnly = baseSources().decisions.filter((row) => row.automatic === true);
+assert.equal(evaluate(baseSources({ decisions: automaticOnly })).predicates.S1.reasons[0], "explicit-saves-below-minimum", "automatic saves never count as explicit");
 
 console.log("memory rollout telemetry predicate tests passed");
 

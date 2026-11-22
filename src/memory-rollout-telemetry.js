@@ -85,7 +85,10 @@ function privacyBaseline({ sources, nowMs, windowDays }) {
 }
 
 function explicitSaves({ sources, nowMs, windowDays }) {
-  const saves = (sources.decisions || []).filter((row) => row.action === "saved" && row.automatic === false && inWindow(row.at, nowMs, windowDays));
+  // Rows written before the `automatic` provenance field existed carry no flag.
+  // Automatic capture always records `automatic: true`, so a missing flag counts
+  // as a non-automatic (explicit) save while `automatic === true` stays excluded.
+  const saves = (sources.decisions || []).filter((row) => row.action === "saved" && row.automatic !== true && inWindow(row.at, nowMs, windowDays));
   const days = new Set(saves.map((row) => dayOf(row.at)));
   const verified = saves.filter((row) => row.verification === "verified").length;
   if (saves.length < 20) return insufficient("explicit-saves-below-minimum", { saves: saves.length });

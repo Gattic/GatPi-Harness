@@ -139,12 +139,17 @@ advisory backlog with provenance (`high-provenance-*.json`) and cannot block pro
 
 ### 5.4 Explicit save precision `S1`
 ```
-saves   = decisions in W where action === "saved" && automatic === false
+saves   = decisions in W where action === "saved" && automatic !== true
 S1 = saves.length >= 20
      && observedDays(saves) >= 7
      && verified(saves) / saves.length >= 0.95
 ```
 `verified(save)` means `verification === "verified"`.
+
+Rows written before the `automatic` provenance field existed carry no flag. Automatic
+capture always records `automatic: true`, so a missing flag counts as an explicit save;
+legacy rows are not rewritten, because the ledger is append-only and `decisionId` is
+content-derived.
 
 ### 5.5 Recall quality `R` (shadow or injected)
 From `recall.completed` events in `W`:
