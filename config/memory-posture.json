@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "stage": "M1",
   "writes": true,
-  "automatic": true,
+  "automatic": false,
   "autoSave": true,
-  "recordedAt": "2026-10-25",
-  "rationale": "Operator-authorized selective source-bound capture and task-conditioned recall. M2-M5 evidence promotion, verified upserts, review-queue writes, Hermes curation, and maintenance remain blocked by the stale memory-effectiveness scorecard."
+  "recordedAt": "2026-11-22",
+  "rationale": "Operator posture for the 14-day passive window: explicit writes stay enabled and automatic capture is off, so shadow recall computes and logs candidates without injecting them (SD measurable). Requesting M2 now would drop the M1 operator opt-in and fail closed to M0; flip stage to M2 only after S1 and R pass."
 }

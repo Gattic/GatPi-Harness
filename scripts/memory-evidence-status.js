@@ -87,7 +87,7 @@ console.log(`D ${evaluation.predicates.D.status} · P ${evaluation.predicates.P.
 console.log("");
 console.log(`posture: requested ${rollout.requestedStage} · eligible ${rollout.eligibleStage} · effective ${rollout.effectiveStage} · authority ${rollout.stageAuthority}`);
 if (stageIndex(rollout.requestedStage) < stageIndex("M2")) {
-  console.log("ceiling: requested stage caps effective stage; set PI_PROJECT_MEMORY_STAGE=M2 (or higher) before the 14-day run.");
+  console.log("ceiling: requested stage caps effective stage; raise it to M2 only after S1 and R pass. Requesting M2 during accrual drops the M1 operator opt-in and fails closed to M0.");
 }
 const ready = stageIndex(evaluation.candidateStage) >= stageIndex("M2") && stageIndex(rollout.requestedStage) >= stageIndex(evaluation.candidateStage);
 console.log(ready ? "promotion ready: candidate and ceiling allow the next stage" : "promotion not ready");
