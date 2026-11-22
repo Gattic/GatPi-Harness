@@ -23,7 +23,7 @@ const REPO = path.resolve(__dirname, "..");
 const { recallTelemetryPayload } = require(path.join(REPO, "src", "project-memory-recall"));
 const { createTraceRuntime } = require(path.join(REPO, "src", "trace-observability"));
 const { ProjectMemoryStore } = require(path.join(REPO, "src", "project-memory-store"));
-const { ProjectMemoryDecisionStore } = require(path.join(REPO, "src", "project-memory-decisions"));
+const { ProjectMemoryDecisionStore, appendPrivate } = require(path.join(REPO, "src", "project-memory-decisions"));
 const { recordWriteAudit } = require(path.join(REPO, "src", "project-memory-write-audit"));
 const { collectRolloutSources, evaluateRollout, scanPrivacy, loadPrivacyBaseline } = require(path.join(REPO, "src", "memory-rollout-telemetry"));
 const { currentMemorySourceEvidence } = require(path.join(REPO, "src", "memory-effectiveness-source"));
@@ -42,7 +42,7 @@ function sortedJson(values) { return JSON.stringify([...(values || [])].map(Stri
 function percentile(values, p) { if (!values.length) return null; const ordered = [...values].sort((a, b) => a - b); const rank = Math.max(0, Math.ceil(p * ordered.length) - 1); return ordered[Math.min(ordered.length - 1, rank)]; }
 
 function parseArgs(argv) {
-  const args = { root: path.join(REPO, ".pi", "soak", "memory-telemetry"), days: 14, sessions: 14, completions: 30, saves: 20, saveDays: 7, shadowOutcomes: 21, shadowDays: 7, realRuns: 2, seed: 1337, piCwd: null, baselineCwd: path.resolve(REPO, "..", ".."), skipReal: false, quiet: false };
+  const args = { root: path.join(REPO, ".pi", "soak", "memory-telemetry"), days: 14, sessions: 14, completions: 30, saves: 20, saveDays: 7, legacySaves: 21, legacyDays: 30, shadowOutcomes: 21, shadowDays: 7, realRuns: 2, seed: 1337, piCwd: null, baselineCwd: path.resolve(REPO, "..", ".."), skipReal: false, quiet: false };
   for (let i = 2; i < argv.length; i++) {
     const key = argv[i]; const value = argv[i + 1];
     if (key === "--skip-real") { args.skipReal = true; continue; }
@@ -54,6 +54,8 @@ function parseArgs(argv) {
     else if (key === "--completions") args.completions = Number(value);
     else if (key === "--saves") args.saves = Number(value);
     else if (key === "--save-days") args.saveDays = Number(value);
+    else if (key === "--legacy-saves") args.legacySaves = Number(value);
+    else if (key === "--legacy-days") args.legacyDays = Number(value);
     else if (key === "--shadow-outcomes") args.shadowOutcomes = Number(value);
     else if (key === "--shadow-days") args.shadowDays = Number(value);
     else if (key === "--real-runs") args.realRuns = Number(value);
@@ -127,7 +129,7 @@ function buildFixture({ root, args, revision }) {
   // Samples must not land in the future: the gates ignore rows after `now`.
   const clamp = (ms) => Math.min(ms, nowMs - 60000);
   const random = mulberry32(args.seed);
-  const summary = { root, traceDir, stateDir, copiedRecord, copiedBaseline, realRuns: [], synthetic: { sessions: 0, completions: 0, days: 0, saves: 0, saveDays: 0, shadowOutcomes: 0, shadowDays: 0, shadowSessions: 0 }, citations: 0 };
+  const summary = { root, traceDir, stateDir, copiedRecord, copiedBaseline, realRuns: [], synthetic: { sessions: 0, completions: 0, days: 0, saves: 0, saveDays: 0, legacySaves: 0, legacyDays: 0, shadowOutcomes: 0, shadowDays: 0, shadowSessions: 0 }, citations: 0 };
 
   // Real entrypoint: pi -p with the headless injection opt-in and a fixed trace dir.
   if (!args.skipReal && args.realRuns > 0) {
@@ -216,6 +218,34 @@ function buildFixture({ root, args, revision }) {
   summary.synthetic.saves = saveIndex;
   summary.synthetic.saveDays = perDay.length;
 
+  // Legacy rows emulate decisions written before the `automatic` provenance
+  // field existed: they carry no flag, so the S1 gate counts them as explicit.
+  const legacyPerDay = distribute(args.legacySaves, args.legacyDays);
+  let legacyIndex = 0;
+  for (let day = 0; day < legacyPerDay.length; day++) {
+    const at = new Date(clamp(today - (legacyPerDay.length - 1 - day) * DAY + 12 * 3600000)).toISOString();
+    for (let slot = 0; slot < legacyPerDay[day]; slot++) {
+      const row = {
+        schemaVersion: 1,
+        projectKey: store.identity?.projectKey || "soak-project",
+        kind: "decision",
+        action: "saved",
+        reason: "explicit-save",
+        candidateHash: null,
+        noteRevision: hashHex(`soak-legacy-note-${args.seed}-${legacyIndex}`),
+        sourceFingerprints: [],
+        evidenceIds: [],
+        verification: "verified",
+        at,
+      };
+      row.decisionId = `memdec_${hashHex(JSON.stringify(row)).slice(0, 16)}`;
+      appendPrivate(path.join(stateDir, "decisions.jsonl"), row);
+      legacyIndex += 1;
+    }
+  }
+  summary.synthetic.legacySaves = legacyIndex;
+  summary.synthetic.legacyDays = legacyPerDay.length;
+
   // Fresh sanitized audit after the copied baseline keeps B observable.
   recordWriteAudit({ cwd: root });
 
@@ -231,10 +261,10 @@ function countMetrics(sources, nowMs, windowDays) {
   const sessionOf = (event) => { const hashed = String(event?.payload?.sessionIdHash || ""); if (SESSION_HASH.test(hashed)) return hashed; return event?.session_id ? hashHex(event.session_id).slice(0, 16) : null; };
   const rows = [];
 
-  const s1 = w(decisions, (row) => row.action === "saved" && row.automatic === false);
+  const s1 = w(decisions, (row) => row.action === "saved" && row.automatic !== true);
   const s1Days = new Set(s1.map((row) => dayOf(row.at)));
   const s1Verified = s1.filter((row) => row.verification === "verified").length;
-  rows.push(["S1", "explicit saves (action=saved, automatic=false)", s1.length], ["S1", "distinct save days", s1Days.size], ["S1", "verified precision", s1.length ? s1Verified / s1.length : null]);
+  rows.push(["S1", "explicit saves (action=saved, automatic !== true)", s1.length], ["S1", "distinct save days", s1Days.size], ["S1", "verified precision", s1.length ? s1Verified / s1.length : null]);
 
   const rc = w(traces, (event) => event.category === "memory_retrieval" && event.name === "recall.completed");
   const incomplete = rc.filter((event) => !Number.isFinite(event.payload?.durationMs) || !Array.isArray(event.payload?.returnedHashes) || !Number.isInteger(event.payload?.outOfScopeCount) || typeof event.payload?.injected !== "boolean");
