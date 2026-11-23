@@ -137,6 +137,36 @@ declares `automatic:false`. It was fixed in `ea269d6` by pinning
 `PI_PROJECT_MEMORY_POSTURE=env` and `PI_PROJECT_MEMORY_AUTOMATIC=1` in the test fixture,
 so the enabled path is exercised without depending on the live posture file.
 
+## Remediation path for the strict gate
+
+The strict gate (`scripts/check-memory-evidence.sh`, `--strict`, or
+`PI_MEMORY_EVIDENCE_STRICT=1`) fails while any criterion is short on count or distinct UTC
+days. Evidence is append-only and real: never seed, backdate, or count `.pi/soak/**` rows,
+and headless `pi -p` fails closed to M0 without recording recall.
+
+A qualifying day is the UTC date of at least one qualifying event for that criterion. The
+window is rolling 14×24h, so an event drops out after 14 days and a skipped day moves the
+earliest floor forward. Check daily with `node scripts/memory-evidence-window.js` (per-day
+grid and floors) and `node scripts/memory-evidence-status.js` (authoritative predicate
+verdicts).
+
+| Criterion | Requirement | Qualifying event | How to record it |
+|---|---|---|---|
+| S1 | ≥20 explicit saves, ≥7 days, precision ≥0.95 | decisions row `action:"saved"`, `automatic` absent/false, `verification:"verified"` | 3 verified explicit saves per day via `memory_curator` save with `apply:true`, `explicit:true`, `verification:"verified"`; 7 days yields 21 |
+| R | ≥30 `recall.completed`, ≥10 sessions, ≥14 days, p95 ≤50 ms, out-of-scope 0, citation ≥0.40, stale ≤0.05 | trace `memory_retrieval`/`recall.completed` with `durationMs`, `returnedHashes`, `outOfScopeCount`, `injected` | 3 recall-triggering prompts per day in an interactive session (shadow at M1); later decisions in the same session must cite returned hashes through `evidenceIds` |
+| SD | ≥20 `shadow.outcome` with `applied:false`, ≥5 sessions, ≥7 days, agreement ≥0.90 | trace `memory_decision`/`shadow.outcome`, emitted when a real save/update resolves a `shadowed` candidate with the same `candidateHash` | let shadow recall propose candidates, then explicitly save/update those candidates in later turns (agreeing); 3 per day over 7 days |
+| C | ≥14 `kind:"settle"` previews, ≥14 days, stable consecutive `candidateHashes`, accounting ≥0.95, `diagnosticOnly`+`vaultReady` | diagnostics `kind:"settle"`, written on `agent_settled` | complete at least one agent turn each UTC day; keep the candidate set stable between settles (avoid new durable entries that change `candidateHashes`) |
+| A | ≥30 automatic saves, ≥10 sessions, ≥14 days, verified ≥0.98, curation success ≥0.90, timeout ≤0.10 | decisions row `action:"saved"`, `automatic:true`, `applied:true`, plus `curation.completed` outcomes | none under the current M1 posture (`automatic:false`); A accrues only after M5 is authorized with automatic capture on |
+
+Current standing (window ending 2026-11-23): S1 0/20 (0/7 days), R 6/30 (1/14), SD 0/20
+(0/7), C 186/14 (9/14, days-bound), A 0/30 (0/14). C needs five more elapsed days; the
+others need both volume and days.
+
+Ordering matters: S1 and R unlock M2 eligibility, SD unlocks M3, C unlocks M4, and A
+unlocks M5. Raise the requested stage only after S1 and R pass — requesting M2 during
+accrual drops the explicit M1 opt-in and fails closed to M0. The ceiling is
+`min(requested, eligible, hold)`.
+
 ## Tracking
 
 These follow-ups are documentation only. A GitHub issue could not be opened from this
