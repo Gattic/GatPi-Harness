@@ -126,10 +126,17 @@ Both runs were executed from the canonical checkout at `ea269d6` (332 test files
 |---|---|---|---|
 | Default (gate off) | `scripts/check-all.sh` | 0 | `all deterministic checks passed (332 test files)` in 406s |
 | Opt-in (gate on) | `PI_MEMORY_EVIDENCE_STRICT=1 scripts/check-all.sh` | 1 | suite green (332 files); gate printed `strict: incomplete criteria: S1, R, SD, C, A`; total 448s |
+| Re-run after remediation doc (`da3fac6`) | `PI_MEMORY_EVIDENCE_STRICT=1 scripts/check-all.sh` | 1 | suite green (332 files); same gate failure; total 391s |
 
 The opt-in run fails only on the evidence gate, as intended: the suite itself passes and
 the failure names the five incomplete criteria. The default run stays green because the
 gate is off, so the `D` predicate that reads the full-suite record is unaffected.
+
+The remediation-doc re-run confirms the gate still fails on the same five criteria. One
+intermediate re-run (420s) also hit a transient benchmark timing spike
+(`tests/project-memory-benchmark.test.js`: recall p95 50.8 ms against the 50 ms bar;
+standalone runs measure ~28 ms), which cleared on the clean re-run — treat that test as
+load-sensitive rather than a code regression.
 
 The first default run exposed one stale test: `tests/project-memory-automatic.test.js`
 assumed automatic capture was enabled by ambient defaults, but the operator posture now
