@@ -118,6 +118,25 @@ gate into a promotion job with `scripts/check-memory-evidence.sh`, or set
 deterministic suite (and the `D` predicate that reads its record) stays green while the
 window accrues. Soak output under `.pi/soak/**` is never counted as rollout evidence.
 
+### Gate runs (2026-11-23)
+
+Both runs were executed from the canonical checkout at `ea269d6` (332 test files).
+
+| Run | Command | Exit | Result |
+|---|---|---|---|
+| Default (gate off) | `scripts/check-all.sh` | 0 | `all deterministic checks passed (332 test files)` in 406s |
+| Opt-in (gate on) | `PI_MEMORY_EVIDENCE_STRICT=1 scripts/check-all.sh` | 1 | suite green (332 files); gate printed `strict: incomplete criteria: S1, R, SD, C, A`; total 448s |
+
+The opt-in run fails only on the evidence gate, as intended: the suite itself passes and
+the failure names the five incomplete criteria. The default run stays green because the
+gate is off, so the `D` predicate that reads the full-suite record is unaffected.
+
+The first default run exposed one stale test: `tests/project-memory-automatic.test.js`
+assumed automatic capture was enabled by ambient defaults, but the operator posture now
+declares `automatic:false`. It was fixed in `ea269d6` by pinning
+`PI_PROJECT_MEMORY_POSTURE=env` and `PI_PROJECT_MEMORY_AUTOMATIC=1` in the test fixture,
+so the enabled path is exercised without depending on the live posture file.
+
 ## Tracking
 
 These follow-ups are documentation only. A GitHub issue could not be opened from this
