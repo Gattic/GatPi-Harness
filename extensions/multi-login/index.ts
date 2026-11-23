@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
 import { ANTIGRAVITY_PROVIDER_ID, antigravityProvider } from "./antigravity/index";
+import { ANTIGRAVITY_ACP_PROVIDER_ID, antigravityAcpProvider } from "./antigravity-acp/index";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -39,6 +40,13 @@ export default function multiLogin(pi: ExtensionAPI) {
     const antigravity = antigravityProvider();
     bases.set(ANTIGRAVITY_PROVIDER_ID, antigravity);
     pi.registerProvider(antigravity);
+  }
+  // The ACP server has its own OAuth token and is independent of the Cloud
+  // Code Assist provider above. Register it only when the config names it.
+  if (Object.prototype.hasOwnProperty.call(config.accounts, ANTIGRAVITY_ACP_PROVIDER_ID)) {
+    const acp = antigravityAcpProvider();
+    bases.set(ANTIGRAVITY_ACP_PROVIDER_ID, acp);
+    pi.registerProvider(acp);
   }
   for (const [baseId, count] of Object.entries(config.accounts) as [string, number][]) {
     const base = bases.get(baseId);
