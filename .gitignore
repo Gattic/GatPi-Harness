@@ -71,6 +71,10 @@ summaryexample_files/
 # (skills/ holds the unpacked pack: skills/skills, skills/tools, catalog metadata).
 /skill-bundle.zip
 
+# Pi-installed runtime system skills (namespace: system) are local-only; the
+# tracked Skill Foundry pack lives in skills/skills with catalog.json metadata.
+skills/system/
+
 # Pi runtime state. Tracked source under .pi/ is re-included explicitly.
 # Roadmap and fleet/verification evidence stay local-only: never force-add them.
 .pi/*
