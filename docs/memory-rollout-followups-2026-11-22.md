@@ -200,3 +200,14 @@ this session's own turns.
 These follow-ups are documentation only. A GitHub issue could not be opened from this
 environment (`gh` is not installed and no `GH_TOKEN`/`GITHUB_TOKEN` is set); the text
 above is ready to paste into an issue or to split into one issue per follow-up.
+### Daily readiness check
+
+Run `node scripts/memory-readiness.js` once per day (read-only). It re-runs the
+authoritative predicates (D/P/B/S1/R/SD/C/A) and prints each gate's count/need,
+days/need, days remaining and earliest floor, plus whether M2 (D && P && B && S1
+&& R) is eligible and whether the requested stage allows promotion. `--json`
+emits the same result for logging; `--strict` exits 1 while M2 is not ready. It
+writes nothing and never seeds or backdates evidence.
+
+Example at 2026-11-23: S1 2/20 (1/7 days, earliest 2026-11-29), R 6/30 (1/14
+days, 3 sessions, earliest 2026-12-06); M2 not eligible, blocked by S1 and R.
