@@ -44,7 +44,7 @@ function m2Fixture() {
 
   let now = BASE;
   const clock = () => new Date(now);
-  const sessionHash = sha256("shadow-proposal-session");
+  let sessionHash = sha256("shadow-proposal-session");
   const trace = new TraceRuntime({
     storage: new FileTraceStorage({ root: path.join(cwd, ".pi", "traces"), sessionId: "shadow-proposal-test", cwd }),
   });
@@ -82,7 +82,7 @@ function m2Fixture() {
       .filter((file) => file.endsWith(".jsonl"))
       .flatMap((file) => fs.readFileSync(path.join(dir, file), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line)));
   };
-  return { tmp, cwd, env, adapter, pipeline, entry, readTrace, setNow: (value) => { now = value; } };
+  return { tmp, cwd, env, adapter, pipeline, entry, readTrace, setNow: (value) => { now = value; }, setSessionHash: (value) => { sessionHash = value; } };
 }
 
 test("M2 records a shadow proposal in the decision ledger", () => {
@@ -146,6 +146,114 @@ test("the recorded proposal is consumed as a shadow outcome", () => {
   assert.equal(evaluation.predicates.SD.metrics.days, 1);
   assert.ok(!evaluation.predicates.SD.reasons.includes("shadow-outcomes-missing"));
   assert.ok(evaluation.predicates.SD.reasons.includes("shadow-samples-below-minimum"));
+
+  fs.rmSync(fixture.tmp, { recursive: true, force: true });
+});
+
+test("SD moves from below-minimum to pass as agreed outcomes accrue", () => {
+  const fixture = m2Fixture();
+  let now = BASE;
+  for (let day = 0; day < 7; day++) {
+    fixture.setSessionHash(sha256(`agreed-session-${day}`));
+    for (let sample = 0; sample < 3; sample++) {
+      now = BASE + day * DAY + (sample + 1) * 60000;
+      fixture.setNow(now);
+      const entry = {
+        ...fixture.entry,
+        id: `cog-agreed-${day}-${sample}`,
+        title: `Agreed proposal ${day}-${sample}`,
+        content: `Durable agreed content ${day}-${sample}.`,
+      };
+      assert.equal(fixture.pipeline.settle([entry]).decisions[0].outcome, "shadowed");
+      const saved = fixture.adapter.save(
+        { kind: "decision", title: entry.title, content: entry.content, verification: "verified" },
+        { apply: true, explicit: true },
+      );
+      assert.equal(saved.decision.action, "saved");
+    }
+    if (day === 0) {
+      const partial = evaluateProjectMemoryRollout({ cwd: fixture.cwd, env: fixture.env, now, refresh: true, emit: false, privacy: null, baseline: null });
+      assert.equal(partial.predicates.SD.status, "insufficient");
+      assert.ok(partial.predicates.SD.reasons.includes("shadow-samples-below-minimum"));
+      assert.equal(partial.predicates.SD.metrics.outcomes, 3);
+      assert.equal(partial.predicates.SD.metrics.sessions, 1);
+      assert.equal(partial.predicates.SD.metrics.days, 1);
+    }
+  }
+
+  const healthy = evaluateProjectMemoryRollout({ cwd: fixture.cwd, env: fixture.env, now, refresh: true, emit: false, privacy: null, baseline: null });
+  assert.equal(healthy.predicates.SD.status, "pass");
+  assert.equal(healthy.predicates.SD.metrics.outcomes, 21);
+  assert.equal(healthy.predicates.SD.metrics.sessions, 7);
+  assert.equal(healthy.predicates.SD.metrics.days, 7);
+  assert.equal(healthy.predicates.SD.metrics.agreement, 1);
+
+  fs.rmSync(fixture.tmp, { recursive: true, force: true });
+});
+
+test("agreed:false outcomes are recorded and consumed into the agreement bar", () => {
+  const fixture = m2Fixture();
+  // Seed the conflicting titles so the first real decision for those
+  // candidates is a review-queued conflict rather than a save.
+  for (let day = 0; day < 3; day++) {
+    const existing = fixture.adapter.save(
+      { kind: "decision", title: `Shared title ${day}`, content: `First durable fact ${day}.`, verification: "verified" },
+      { apply: true, explicit: true },
+    );
+    assert.equal(existing.decision.action, "saved");
+  }
+
+  const disagreements = [];
+  let now = BASE;
+  for (let day = 0; day < 7; day++) {
+    fixture.setSessionHash(sha256(`disagreement-session-${day}`));
+    for (let sample = 0; sample < 3; sample++) {
+      now = BASE + day * DAY + (sample + 1) * 60000;
+      fixture.setNow(now);
+      const conflict = day < 3 && sample === 0;
+      const entry = {
+        ...fixture.entry,
+        id: `cog-disagreement-${day}-${sample}`,
+        title: conflict ? `Shared title ${day}` : `Agreed proposal ${day}-${sample}`,
+        content: conflict ? `Conflicting durable fact ${day}.` : `Durable agreed content ${day}-${sample}.`,
+      };
+      assert.equal(fixture.pipeline.settle([entry]).decisions[0].outcome, "shadowed");
+      const saved = fixture.adapter.save(
+        { kind: "decision", title: entry.title, content: entry.content, verification: "verified" },
+        { apply: true, explicit: true },
+      );
+      if (conflict) {
+        assert.equal(saved.decision.action, "review-queued");
+        disagreements.push(saved.decision);
+      } else {
+        assert.equal(saved.decision.action, "saved");
+      }
+    }
+  }
+  assert.equal(disagreements.length, 3);
+
+  // The disagreement decisions are persisted with the proposal's candidate hash.
+  const ledger = fixture.adapter.decisions({ limit: Infinity });
+  for (const decision of disagreements) {
+    const row = ledger.find((entry) => entry.decisionId === decision.decisionId);
+    assert.equal(row.action, "review-queued");
+    assert.equal(row.candidateHash, decision.candidateHash);
+  }
+
+  // Each agreed:false outcome reaches the trace with its proposal hash.
+  const outcomes = fixture.readTrace().filter((event) => event.name === "shadow.outcome");
+  assert.equal(outcomes.length, 21);
+  const rejected = outcomes.filter((event) => event.payload.agreed === false);
+  assert.equal(rejected.length, 3);
+  for (const decision of disagreements) {
+    assert.ok(rejected.some((event) => event.payload.proposalHash === decision.candidateHash), "each disagreement is consumed");
+  }
+
+  const evaluation = evaluateProjectMemoryRollout({ cwd: fixture.cwd, env: fixture.env, now, refresh: true, emit: false, privacy: null, baseline: null });
+  assert.equal(evaluation.predicates.SD.status, "fail");
+  assert.ok(evaluation.predicates.SD.reasons.includes("shadow-agreement-below-bar"));
+  assert.ok(!evaluation.predicates.SD.reasons.includes("shadow-samples-below-minimum"), "the sample gate is passed");
+  assert.ok(Math.abs(evaluation.predicates.SD.metrics.agreement - 18 / 21) < 1e-9);
 
   fs.rmSync(fixture.tmp, { recursive: true, force: true });
 });
