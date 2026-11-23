@@ -1,6 +1,6 @@
 # Skill catalog
 
-**139 task skills**; regenerated from `catalog.json`.
+**153 task skills**; regenerated from `catalog.json`.
 
 ## delivery (5)
 
@@ -26,10 +26,11 @@
 - [`ui-motion-direction`](skills/ui-motion-direction/SKILL.md) — Design comprehensible, accessible interface motion that supports user intent and a coherent brand personality.
 - [`ux-research-usability`](skills/ux-research-usability/SKILL.md) — Plan and synthesize user research without mistaking anecdotes for population facts.
 
-## engineering (29)
+## engineering (30)
 
 - [`api-contract-engineering`](skills/api-contract-engineering/SKILL.md) — Design evolvable HTTP/RPC/event interfaces with explicit failures and safe compatibility.
 - [`artifact-version-delta-analysis`](skills/artifact-version-delta-analysis/SKILL.md) — Identify verifiable implementation and behavior differences between two supplied builds or Evidence bundles
+- [`blender-extension-development`](skills/blender-extension-development/SKILL.md) — Build, validate and package Blender extensions (add-ons) that register cleanly, follow the extension manifest rules and can be tested headless.
 - [`build`](skills/build/SKILL.md) — Diagnose and fix repository build, toolchain, dependency, sanitizer, static-analysis and CI failures from the repository's own build contract without hiding failures.
 - [`change-verify`](skills/change-verify/SKILL.md) — Prove with repository-defined, risk-proportionate checks what an existing code or documentation change does and does not establish, without repairing it.
 - [`ci-release-engineering`](skills/ci-release-engineering/SKILL.md) — Build reproducible CI, supply-chain checks and staged delivery with rollback readiness.
@@ -73,15 +74,23 @@
 - [`paid-media-measurement`](skills/paid-media-measurement/SKILL.md) — Evaluate paid acquisition efficiency with transparent attribution and uncertainty.
 - [`positioning-message-architecture`](skills/positioning-message-architecture/SKILL.md) — Translate competitive differentiation into provable audience-specific value propositions.
 
-## media (27)
+## media (40)
 
+- [`3d-asset-quality-gate`](skills/3d-asset-quality-gate/SKILL.md) — Gate a 3D mesh or asset on measured geometry, UV, weight and material checks plus a visual review before it is baked, rigged, exported or delivered.
 - [`3d-modeling-topology`](skills/3d-modeling-topology/SKILL.md) — Produce 3D meshes with correct scale, topology and downstream deformation/render use.
 - [`asset-rights-content-authenticity`](skills/asset-rights-content-authenticity/SKILL.md) — Document creative media origin and rights while preventing misleading provenance claims.
+- [`atmosphere-weather-lighting`](skills/atmosphere-weather-lighting/SKILL.md) — Set physically grounded time-of-day, night, fog and weather looks for 3D scenes without altering the scene's own assets.
 - [`audio-design-mix`](skills/audio-design-mix/SKILL.md) — Deliver clear, balanced sound design and mixes for speech, music and effects.
 - [`blender-cinematic-video-pipeline`](skills/blender-cinematic-video-pipeline/SKILL.md) — Produce validated Blender animation projects and encoded videos using staged previews, physics checks, resource-aware rendering and reproducible delivery.
+- [`camera-tracking-matchmove`](skills/camera-tracking-matchmove/SKILL.md) — Solve camera motion from footage with measured reprojection error and set up a matched 3D scene ready for integration.
+- [`character-garment-fitting`](skills/character-garment-fitting/SKILL.md) — Build fitted, skinned garments that follow a character body through poses and morphs without poke-through.
 - [`comfyui-graph-engineering`](skills/comfyui-graph-engineering/SKILL.md) — Design portable, efficient ComfyUI node graphs with validated input/output contracts.
+- [`environment-terrain-scatter`](skills/environment-terrain-scatter/SKILL.md) — Build game- or render-ready environments from heightfield terrain, rule-based instance scatter and grid-consistent modular kits.
+- [`facial-blendshape-rigging`](skills/facial-blendshape-rigging/SKILL.md) — Author and validate facial blendshape sets such as ARKit 52 and visemes with exact naming, clean deltas, drivers and engine-ready export.
+- [`game-engine-asset-export`](skills/game-engine-asset-export/SKILL.md) — Export 3D assets from Blender to Unreal, Unity, Godot, web/glTF, Roblox or USD with correct scale, axes, normals, skeleton and animation data, verified by re-import.
 - [`generative-model-evaluation`](skills/generative-model-evaluation/SKILL.md) — Benchmark creative AI models for quality, latency, cost, controls and policy fit using blind tests.
 - [`greenscreen-keying`](skills/greenscreen-keying/SKILL.md) — Create clean transparent mattes with realistic edges, hair detail and spill suppression.
+- [`hair-groom-cards`](skills/hair-groom-cards/SKILL.md) — Produce strand hair or fur grooms and real-time hair cards with atlas textures from a character surface.
 - [`image-art-direction`](skills/image-art-direction/SKILL.md) — Convert a visual objective into a coherent art direction brief before asset generation.
 - [`image-edit-compositing`](skills/image-edit-compositing/SKILL.md) — Modify existing imagery while preserving protected content, masks and believable visual integration.
 - [`image-generation-iteration`](skills/image-generation-iteration/SKILL.md) — Produce and refine generated images through controlled, reproducible changes.
@@ -93,11 +102,16 @@
 - [`multi-camera-motion-capture`](skills/multi-camera-motion-capture/SKILL.md) — Design and validate multi-camera motion capture with calibrated geometry and uncertainty.
 - [`multilingual-dubbing-localization`](skills/multilingual-dubbing-localization/SKILL.md) — Adapt speech and timing to another language without mistranslating meaning or mismatching lip timing.
 - [`pbr-material-lookdev`](skills/pbr-material-lookdev/SKILL.md) — Create calibrated physically based materials and texture sets for consistent rendering.
-- [`procedural-3d-blender`](skills/procedural-3d-blender/SKILL.md) — Build parameterized 3D content with reproducible Blender scripts and non-destructive controls.
+- [`physics-simulation-baking`](skills/physics-simulation-baking/SKILL.md) — Set up, bake and verify rigid-body, cloth, fluid and node-based simulations so results are reproducible and exportable.
+- [`procedural-3d-blender`](skills/procedural-3d-blender/SKILL.md) — Build parameterized 3D content with reproducible, version-checked Blender scripts, Geometry Nodes and non-destructive controls.
+- [`realtime-asset-optimization`](skills/realtime-asset-optimization/SKILL.md) — Bring 3D assets within a named real-time platform budget for triangles, materials, textures, bones and draw calls while preserving silhouette and shading.
+- [`retopology-uv-unwrap`](skills/retopology-uv-unwrap/SKILL.md) — Turn dense, sculpted, scanned or generated meshes into budgeted game or animation meshes with deformation-ready edge flow, clean UVs and consistent texel density.
 - [`rigging-animation-retarget`](skills/rigging-animation-retarget/SKILL.md) — Create or validate character rigs and retarget motion while protecting anatomical constraints.
 - [`speech-transcription-diarization`](skills/speech-transcription-diarization/SKILL.md) — Produce high-fidelity timestamped transcripts with speaker boundaries and privacy safeguards.
+- [`stylized-npr-rendering`](skills/stylized-npr-rendering/SKILL.md) — Produce controlled toon, cel and anime-style shading with outlines that renders consistently and transfers to real-time engines.
 - [`text-to-speech-voice-direction`](skills/text-to-speech-voice-direction/SKILL.md) — Produce natural synthetic voice using pronunciation, pacing and reproducible voice settings.
 - [`text-to-video-production`](skills/text-to-video-production/SKILL.md) — Generate controlled short-form video shots with reference continuity and technical QC.
+- [`texture-map-baking`](skills/texture-map-baking/SKILL.md) — Bake accurate texture maps from high-poly or procedural sources onto UV-mapped meshes with controlled ray distance, tangent convention and channel packing.
 - [`video-edit-color-delivery`](skills/video-edit-color-delivery/SKILL.md) — Finish multi-shot video with coherent pacing, color, audio and platform-specific exports.
 - [`video-storyboard-shotlist`](skills/video-storyboard-shotlist/SKILL.md) — Plan shootable or generatable video sequences with continuity and edit-ready timing.
 - [`voice-clone-consent`](skills/voice-clone-consent/SKILL.md) — Establish authorization and quality controls for permitted personalized voice synthesis.

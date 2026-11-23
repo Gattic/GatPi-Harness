@@ -1,4 +1,4 @@
-# Skill Foundry 3.0 — 139 Agent Skills (131 supplied + 8 pi-harness local)
+# Skill Foundry 3.0 — 153 Agent Skills (131 supplied + 22 pi-harness local)
 
 **Updated:** 2026-11-18. A complete replacement for the October 27 Skill Foundry 2.0 library: all 121 prior supplied skills are preserved, 10 original motion, isometric, shader, Blender and kinematics skills are added, and 23 established workflows are strengthened. The library remains inspired by the original 18 repositories **plus** [`morluto/rea`](https://github.com/morluto/rea) (evidence discipline, target-first routing, scoped tool readiness and specialist reverse-engineering patterns); 3.0 adds three public motion sources whose coverage and limits are recorded in [research/motion-sources-2026-11-18.json](research/motion-sources-2026-11-18.json).
 
@@ -6,7 +6,24 @@ The supplied pack contains **131 usable `SKILL.md` files**, **131 unexecuted eva
 
 This project offers **portable task instructions** and local helper scripts. Installing a skill does **not** install an MCP server, browser, Blender, LottieFiles Creator, GPU or paid model.
 
-> **pi-harness local additions:** eight restored legacy skills are not part of the supplied pack: `handoff` (meta); `git-checkpoint`, `change-verify`, `long-run`, `durable-bug-hunt`, `build` and `typesafe-ai` (engineering); and `experiment-gate-lifecycle` (research). Each is a catalog entry adapted to this standard plus a hand-maintained `skills/<name>/references/` contract that preserves the legacy workflow. This repository copy therefore holds **139 skills: 131 supplied + 8 local**, and 1075 designed evaluation cases (1019 supplied + 56 local). `typesafe-ai` is third-party MIT material, Copyright (c) 2026 TypeSafe AI; its license stays in `skills/typesafe-ai/LICENSE`, the one exception to the statement above that no third-party skill files are redistributed. Provenance and rationale: `docs/skill-bundle-migration.md` in the harness repository.
+> **pi-harness local additions:** eight restored legacy skills are not part of the supplied pack: `handoff` (meta); `git-checkpoint`, `change-verify`, `long-run`, `durable-bug-hunt`, `build` and `typesafe-ai` (engineering); and `experiment-gate-lifecycle` (research). Each is a catalog entry adapted to this standard plus a hand-maintained `skills/<name>/references/` contract that preserves the legacy workflow. `typesafe-ai` is third-party MIT material, Copyright (c) 2026 TypeSafe AI; its license stays in `skills/typesafe-ai/LICENSE`, one of two exceptions to the statement above that no third-party skill files are redistributed. Provenance and rationale: `docs/skill-bundle-migration.md` in the harness repository.
+
+> **Blender integration (2026-11-23):** fourteen further local skills cover the 3D asset pipeline, and seven supplied 3D skills were revised. Their entrypoints are original, but they bundle reference guides, Blender scripts, an add-on template and in-Blender tests adapted from [EL4CTEO/blender-skills](https://github.com/EL4CTEO/blender-skills) (MIT, Copyright (c) 2026 EL4CTEO) — the second exception to the no-redistribution statement. Every affected skill directory carries `THIRD_PARTY_NOTICES.md`, and each file's origin, digest and changes are in [research/blender-skills-provenance.json](research/blender-skills-provenance.json). This repository copy holds **153 skills: 131 supplied (7 of them revised here) + 22 local**, and 1211 designed evaluation cases.
+
+## Blender integration (2026-11-23)
+
+- **14 skills added:** `3d-asset-quality-gate`, `retopology-uv-unwrap`, `texture-map-baking`, `realtime-asset-optimization`, `game-engine-asset-export`, `facial-blendshape-rigging`, `character-garment-fitting`, `hair-groom-cards`, `stylized-npr-rendering`, `environment-terrain-scatter`, `atmosphere-weather-lighting`, `physics-simulation-baking`, `camera-tracking-matchmove` (media) and `blender-extension-development` (engineering).
+- **7 existing skills revised:** `procedural-3d-blender`, `3d-modeling-topology`, `pbr-material-lookdev`, `lighting-render-optimization` and `rigging-animation-retarget` (2.0.0), `blender-cinematic-video-pipeline` (1.1.0) and `task-skill-router` (1.3.0, with end-to-end 3D asset playbooks).
+- **Bundled per skill:** 29 field guides, 15 reference documents, 42 Blender scripts with a shared helper, and an extension template. Each script exposes `run(**kwargs)` and prints one JSON result line.
+- **Measured, not assumed:** the scripts target Blender 5.2 LTS+ upstream. This pack ran them on Blender 5.1.2, fixed what failed there and records what is 5.2+ or 5.3-only in [version-compatibility.md](skills/procedural-3d-blender/references/version-compatibility.md). Result on 5.1.2: 79 passed, 0 failed, 1 skipped (needs 5.2) of 80 in-Blender tests. Nothing was run on 5.2 or 5.3, and no engine import was exercised.
+- Source review, coverage decisions and limits: [research/blender-skills-review.md](research/blender-skills-review.md). Change list: [CHANGES_2026-11-23.md](CHANGES_2026-11-23.md).
+
+### 3D asset workflows
+
+- Game prop: `3d-modeling-topology` → `retopology-uv-unwrap` → `texture-map-baking` → `pbr-material-lookdev` → `3d-asset-quality-gate` → `realtime-asset-optimization` → `game-engine-asset-export`.
+- Game character: modeling → retopology → baking → `rigging-animation-retarget` → `facial-blendshape-rigging`, `character-garment-fitting`, `hair-groom-cards` as needed → optimization → export.
+- Environment or mood shot: `environment-terrain-scatter` → `atmosphere-weather-lighting` → `lighting-render-optimization`.
+- Every geometry-changing stage is gated by `3d-asset-quality-gate`; `task-skill-router` orders the stages from `references/3d-asset-playbooks.md`.
 
 ## What changed in 3.0
 
@@ -28,7 +45,7 @@ This project offers **portable task instructions** and local helper scripts. Ins
 
 - **20 original specialized skills added:** shipped artifacts, native binary and runtime evidence, JS/Electron, .NET, Android APK, packaged Python, firmware, ELF/PE mitigation declarations, browser scenarios, HAR capture/API inference, exported browser JavaScript, evidence lineage, independent feature reconstruction, binary version differences, AgentEnv simulations, crash triage, model headers and privacy data flows.
 - **21 original skills materially improved:** systematic debugging, code review, routing, source provenance, security, research, web QA, observability, testing and skill evaluation.
-- Those **41** skills carry two domain-specific edge/negative tests in addition to the base seven, as do the ten 3.0 additions (51 in total); the remaining skills keep their base seven.
+- Those **41** skills carry two domain-specific edge/negative tests in addition to the base seven, as do the ten 3.0 additions (51 in total); the remaining skills keep their base seven. The 2026-11-23 Blender integration adds two domain tests to five revised skills and to all fourteen new ones (70 in total).
 - Revised and new skills carry a `revision`, `special_rules` (rendered as **Specialist protocol and proof boundaries**) and `source_inspiration` (rendered as **Provenance notes**).
 - **20 field guides** under `skills/<name>/references/field-guide.md` and an offline ZIP/binary manifest helper at `skills/shipped-artifact-provenance/scripts/artifact_inventory.py`.
 
@@ -36,32 +53,35 @@ This project offers **portable task instructions** and local helper scripts. Ins
 
 | Work | Actual status |
 | --- | --- |
-| 139 `SKILL.md` files exist and satisfy this package's structural contracts | **PASS** |
-| 139 evaluation suites contain the intended designed cases | **PASS: generated and validated as data** |
-| Offline generator/installer/Git fixture/evidence-ledger/release-manifest/motion and SEO helper tests | **PASS: 28 tests** (23 supplied + 5 local) |
-| 131 supplied entrypoints equal the supplied bodies apart from the trigger-only description and generated delegation section; 131 supplied evaluation suites byte-equal | **PASS** |
+| 153 `SKILL.md` files exist and satisfy this package's structural contracts | **PASS** |
+| 153 evaluation suites contain the intended designed cases | **PASS: generated and validated as data** |
+| Offline generator/installer/Git fixture/evidence-ledger/release-manifest/motion, SEO helper and Blender bundle tests | **PASS: 32 tests** (23 supplied + 9 local); the opt-in native Blender test is skipped unless `SKILL_FOUNDRY_BLENDER` is set |
+| 124 supplied entrypoints and 126 supplied evaluation suites are unchanged since the 3.0 parity check against the supplied pack; the 7 entrypoints and 5 suites revised on 2026-11-23 differ from it by design | **PASS** (git history) |
 | 23 revised skill entrypoints and 10 new skill entrypoints | **CREATED** |
+| 7 revised and 14 new 3D/Blender skill entrypoints (2026-11-23) | **CREATED** |
+| Bundled Blender scripts on Blender 5.1.2 (`tests/blender/run_all.py`, one build on one machine) | **PASS: 79 passed, 0 failed, 1 skipped** of 80 (the skipped test needs 5.2) |
+| Bundled Blender scripts on Blender 5.2 or 5.3; any engine import of exported assets | **NOT TESTED** by this pack (upstream statements only) |
 | REA installed, MCP connected, native providers exercised | **NOT TESTED** (not available here) |
 | All evaluation cases run against real agents and scored | **NOT TESTED** |
 | All 19 full repository Git trees and the three motion sources exhaustively audited | **NOT DONE** (needs network access or local clones) |
-| Blender renders, Lottie/dotLottie playback, interactive browser scenes and WebGL effects | **NOT TESTED** in this environment |
+| Lottie/dotLottie playback, interactive browser scenes, WebGL effects and the visual quality of Blender renders | **NOT TESTED** in this environment |
 
 An installed skill **never** implies an MCP tool, engine, application account, runtime or permission exists. Check the live tool list and obtain approvals where required.
 
-## Inventory (139 total: 131 supplied + 8 local)
+## Inventory (153 total: 131 supplied + 22 local)
 
 | Domain | Supplied | Local | Total |
 | --- | ---: | ---: | ---: |
-| Engineering | 23 | 6 | 29 |
+| Engineering | 23 | 7 | 30 |
 | Research | 8 | 1 | 9 |
 | Web / SEO | 16 | 0 | 16 |
 | Design | 13 | 0 | 13 |
-| Image / video / 3D / audio | 27 | 0 | 27 |
+| Image / video / 3D / audio | 27 | 13 | 40 |
 | Marketing / advertising | 12 | 0 | 12 |
 | Cybersecurity | 19 | 0 | 19 |
 | Delivery / operations | 5 | 0 | 5 |
 | Skill architecture / orchestration | 8 | 1 | 9 |
-| **Total** | **131** | **8** | **139** |
+| **Total** | **131** | **22** | **153** |
 
 See [CATALOG.md](CATALOG.md) for the exact names and descriptions; choose a skill from the **requested deliverable**, not incidental topic vocabulary.
 
@@ -69,34 +89,37 @@ See [CATALOG.md](CATALOG.md) for the exact names and descriptions; choose a skil
 
 ```text
 skills/
-├── skills/               # 139 independently usable directories with SKILL.md
+├── skills/               # 153 independently usable directories with SKILL.md
 │   ├── rea-capability-routing/
 │   ├── shipped-artifact-provenance/
 │   ├── ui-motion-direction/
 │   ├── skill-factory/
 │   ├── handoff/
 │   └── ...
-├── evals/                # 139 unexecuted routing + behavioral test specifications
+├── evals/                # 153 unexecuted routing + behavioral test specifications
 ├── catalog.json          # single structured editable source for skills
 ├── specialists.json      # generated subagent roster rendered into every skill
 ├── CATALOG.md            # all names with summaries and links
 ├── manifest.json         # machine-readable skill inventory
+├── CHANGES_2026-11-23.md # local change log for the Blender integration
 ├── CHANGES_2026-11-18.md # supplied change log for the 3.0 release
 ├── CHANGES_2026-10-27.md # supplied change log for the 2.0 release
 ├── CHANGE_INDEX*.json    # supplied new/modified/unchanged name lists for both releases
 ├── standards/            # authoring/eval/evidence/quality/routing/trust policies and the claim-ledger schema
-├── research/             # 18-source review, REA assessment and provenance, 3.0 motion sources
+├── research/             # 18-source review, REA assessment and provenance, 3.0 motion sources, Blender source review and file ledger
 ├── tools/
 │   ├── regenerate.py     # deterministic skill/eval build from catalog.json
 │   ├── validate_skills.py# portable static contract checking
 │   ├── check_evidence_ledger.py # validate a normalized claim ledger against its listed files
 │   ├── verify_release.py # check an extracted supplied pack against its RELEASE_FILES.json
+│   ├── check_blender_bundle.py # bundled Blender files against the provenance ledger and notices
 │   ├── audit_repositories.py  # full tracked-source audit, when network/clones available
 │   └── install.py        # selectively copy skills into agent discovery folders
-├── tests/                # offline generator, installer, auditor, ledger, release and helper tests
+├── tests/                # offline generator, installer, auditor, ledger, release, helper and bundle tests
+│   └── blender/          # tests that run inside Blender (opt-in, see below)
 ├── source-audit/         # audit status, workflow; generated reports go here
 ├── AGENTS.md
-└── LICENSE              # applies only to our original work; not linked upstream projects
+└── LICENSE              # applies only to our original work; bundled third-party files keep their own notices
 ```
 
 ## Install only what you need
@@ -115,7 +138,7 @@ python tools/install.py --target /path/to/project/.agents/skills \
 python tools/install.py --target /path/to/project/.agents/skills --all --dry-run
 ```
 
-Existing target folders are not overwritten without `--force`. Use `--force` only if intentionally replacing your existing local skill folders. Installing all 139 may worsen activation quality if your agent indiscriminately loads instructions; prefer selecting by current project domain. Never pretend installation also grants web accounts, GPU tools, model weights, external APIs or publishing rights.
+Existing target folders are not overwritten without `--force`. Use `--force` only if intentionally replacing your existing local skill folders. Installing all 153 may worsen activation quality if your agent indiscriminately loads instructions; prefer selecting by current project domain. Never pretend installation also grants web accounts, GPU tools, model weights, external APIs or publishing rights.
 
 The Pi harness installs its managed catalog through `scripts/install-agent-skills.sh`, which reconciles `skills/skills/managed-skills.txt` into `~/.claude/skills` and `~/.agents/skills` and preserves unmanaged entries.
 
@@ -125,11 +148,25 @@ Requires **Python 3.10+**; `git` is required for the upstream audit.
 
 ```bash
 python tools/validate_skills.py
+python tools/check_blender_bundle.py
 python -m unittest discover -s tests -v
 python tools/regenerate.py
 ```
 
 To improve an existing skill, edit its entry in [`catalog.json`](catalog.json), then rerun `tools/regenerate.py` and validation. The generator intentionally overwrites each generated `SKILL.md` and `evals/<name>.json`, so edit the catalog instead of only the generated file. It renders `revision`, `special_rules`, `source_inspiration`, `domain_tests` and optional `routing_examples`, which replace the generated prompt of the routing case with the same id (`P1`–`P3`, `N1`–`N2`). Add deeper implementation examples under that skill's `references/` or `scripts/` and register their relative paths in its catalog `refs` array; `tools/regenerate.py` leaves those supplemental files intact.
+
+### Blender scripts (needs Blender)
+
+```bash
+# Run one bundled script headless; prints only its JSON result
+BLENDER_EXE=/path/to/blender python skills/procedural-3d-blender/scripts/run_in_blender.py \
+  --blend asset.blend skills/3d-asset-quality-gate/scripts/qa_check.py -- --objects Chair --profile game
+
+# Run the in-Blender test suite for the bundled scripts
+SKILL_FOUNDRY_BLENDER=/path/to/blender python -m unittest discover -s tests -p 'test_blender_bundle.py' -v
+```
+
+The suite is opt-in: without `SKILL_FOUNDRY_BLENDER` the native test is skipped, which is **NOT TESTED**, not a pass. The wrapper points `TMPDIR` and `BLENDER_USER_RESOURCES` at a scratch directory, removes it after a passing run and keeps it after a failing one. One test opens a Blender window for a few seconds (motion tracking cannot run in background mode). After editing a bundled file, run `python tools/check_blender_bundle.py --refresh` and add a change tag to its entry in `research/blender-skills-provenance.json` if it now differs from upstream; `_bpyx.py` is edited in `procedural-3d-blender/scripts/` and copied over the other copies.
 
 ### Read-only archive inventory fallback (offline)
 

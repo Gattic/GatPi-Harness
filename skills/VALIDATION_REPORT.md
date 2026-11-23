@@ -1,6 +1,6 @@
 # Skill Foundry 3.0 validation — November 18, 2026
 
-> **pi-harness note:** the report below is reproduced as supplied and describes the 131-skill ZIP. This repository copy holds 139 skills (131 supplied + 8 local) and 1075 designed cases; here `python tools/validate_skills.py` reports `PASS: 139 skills` and the offline suite runs 28 tests (the 23 supplied plus five local SEO-helper regressions in `tests/test_helpers.py`). `RELEASE_FILES.json` is not kept: `python tools/verify_release.py` passed on the extracted ZIP before adaptation and does not apply to this adapted tree. See `docs/skill-bundle-migration.md` in the harness repository.
+> **pi-harness note:** the report below is reproduced as supplied and describes the 131-skill ZIP. This repository copy holds 153 skills (131 supplied + 22 local) and 1211 designed cases; here `python tools/validate_skills.py` reports `PASS: 153 skills` and the offline suite runs 32 tests (the 23 supplied, five local SEO-helper regressions in `tests/test_helpers.py` and four Blender bundle checks in `tests/test_blender_bundle.py`) plus one opt-in native Blender test that is skipped unless `SKILL_FOUNDRY_BLENDER` is set. `RELEASE_FILES.json` is not kept: `python tools/verify_release.py` passed on the extracted ZIP before adaptation and does not apply to this adapted tree. See `docs/skill-bundle-migration.md` in the harness repository.
 
 ## Verified in local environment
 

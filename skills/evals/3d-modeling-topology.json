@@ -6,29 +6,29 @@
   "positive": [
     {
       "id": "P1",
-      "prompt": "We're asset modeling for games, animation, product visualization, AR or 3D printing. Please deliver Native 3D asset and verify it before reporting success.",
+      "prompt": "Model a game-ready sci-fi crate at real scale with bevels, boolean panel cuts and weighted normals, and show the triangle count and shading check.",
       "expected_skill": "3d-modeling-topology"
     },
     {
       "id": "P2",
-      "prompt": "Our team needs to produce 3D meshes with correct scale, topology and downstream deformation/render use. Work from usage, target formats, polygon/print budget; document uncertainty and provide a usable final artifact.",
+      "prompt": "I need a clean subdivision-ready model of a ceramic mug for a product render, with correct wall thickness and a handle that subdivides without pinching.",
       "expected_skill": "3d-modeling-topology"
     },
     {
       "id": "P3",
-      "prompt": "Create a production-quality workflow for 3d modeling topology with a real output, not just ideas. Show evidence that the output meets the brief.",
+      "prompt": "Block out and refine a stylized character head I can later retopologize, keeping proportions against a 1.75 m reference figure.",
       "expected_skill": "3d-modeling-topology"
     }
   ],
   "negative": [
     {
       "id": "N1",
-      "prompt": "I am only asking about this: 2D illustration without actual scene/mesh deliverables. Do not do adjacent production work.",
+      "prompt": "Draw a flat 2D vector illustration of a crate for our slide deck; no mesh, scene or 3D file is needed.",
       "expected_skill": "NOT 3d-modeling-topology"
     },
     {
       "id": "N2",
-      "prompt": "For background, our team previously did 3d modeling topology. Today's task is to summarize an unrelated supplied paragraph in plain English. No other deliverables.",
+      "prompt": "This scanned statue already exists as a dense mesh; I only need new UV seams and a texel density check on it.",
       "expected_skill": "NOT 3d-modeling-topology"
     }
   ],
@@ -58,5 +58,27 @@
     "output": "Produces Native 3D asset or explicitly identifies why it cannot.",
     "verification": "Mesh opens at correct scale and satisfies topology, manifold and budget requirements for its stated use.",
     "safety": "Never invent tests, permissions, files, remote updates or third-party facts."
-  }
+  },
+  "domain": [
+    {
+      "id": "D1",
+      "prompt": "Run the sculpt brush strokes for the dragon's scales in background Blender on our build server tonight.",
+      "assertions": [
+        "does_not_enter_sculpt_mode_headless",
+        "offers_object_level_or_live_session_path",
+        "reports_blocker_honestly"
+      ],
+      "expected_behavior": "Explain that Sculpt Mode brushwork cannot run in background mode, offer procedural object-level operations or a live session, and mark brush detail as not done."
+    },
+    {
+      "id": "D2",
+      "prompt": "The bevel on my scaled-up door looks blobby and the boolean window cut returns nothing. Just raise the bevel segments until it looks fine.",
+      "assertions": [
+        "checks_unapplied_scale_before_tuning",
+        "checks_cutter_is_closed_and_normals",
+        "does_not_mask_cause_with_more_segments"
+      ],
+      "expected_behavior": "Diagnose unapplied or non-uniform scale and an open or inverted cutter as the causes before changing bevel settings, then verify the result."
+    }
+  ]
 }

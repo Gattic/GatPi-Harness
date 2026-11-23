@@ -80,7 +80,7 @@ def build_skill(skill: dict, specialists: dict) -> str:
     lines = [
         "---", f"name: {name}", f"description: {yaml_string(desc)}", "license: MIT",
         "metadata:", f"  version: {yaml_string(version)}", f"  category: {yaml_string(skill['category'])}",
-        "---", "", f"# {name.replace('-', ' ').title().replace('Comfyui','ComfyUI').replace('Seo','SEO').replace('Api','API').replace('Pbr','PBR').replace('Rag','RAG').replace('Typesafe Ai','TypeSafe AI')}", "",
+        "---", "", f"# {name.replace('-', ' ').title().replace('Comfyui','ComfyUI').replace('Seo','SEO').replace('Api','API').replace('Pbr','PBR').replace('Rag','RAG').replace('Typesafe Ai','TypeSafe AI').replace('Uv','UV').replace('Npr','NPR')}", "",
         f"**Outcome:** {skill['goal'].rstrip('.')}.", "",
         "## Activation boundary", "",
         f"- **Use:** {skill['when']}",

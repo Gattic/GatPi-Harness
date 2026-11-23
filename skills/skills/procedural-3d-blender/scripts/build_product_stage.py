@@ -1,4 +1,4 @@
-"""Deterministically create a simple, lit procedural product display in Blender 4.x.
+"""Deterministically create a simple, lit procedural product display (written for Blender 4.x, run on 5.1.2).
 
 Standalone invocation:
   blender --background --python build_product_stage.py -- \
@@ -7,7 +7,9 @@ Standalone invocation:
     --radius 1.5 --height 0.24 --samples 32
 
 The named demo collection is replaced, but unrelated objects/collections are
-not deleted. Blender itself is required; this file is not runnable in CPython.
+not deleted; they are hidden from the render only while it runs, so the default
+startup cube does not cover the stage. Blender itself is required; this file is
+not runnable in CPython.
 """
 from __future__ import annotations
 
@@ -66,8 +68,9 @@ def relocate(obj: bpy.types.Object, col: bpy.types.Collection) -> None:
 
 def pbr(name: str, rgb: tuple[float,float,float], metallic: float, roughness: float) -> bpy.types.Material:
     mat=bpy.data.materials.new(name)
-    mat.use_nodes=True
-    node=mat.node_tree.nodes.get('Principled BSDF')
+    if mat.node_tree is None:  # Blender 4.x; 5.x materials are created with a node tree
+        mat.use_nodes=True
+    node=next((n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'),None)  # node names are localized
     if node is None:
         raise RuntimeError('Principled BSDF missing in pinned Blender build')
     node.inputs['Base Color'].default_value=(*rgb,1.0)
@@ -182,7 +185,15 @@ def main() -> None:
     col=create_scene(args)
     bpy.ops.wm.save_as_mainfile(filepath=str(args.output))
     bpy.context.scene.render.filepath=str(args.render)
-    bpy.ops.render.render(write_still=True)
+    members=set(col.objects)
+    hidden=[obj for obj in bpy.context.scene.objects if obj not in members and not obj.hide_render]
+    for obj in hidden:
+        obj.hide_render=True
+    try:
+        bpy.ops.render.render(write_still=True)
+    finally:
+        for obj in hidden:
+            obj.hide_render=False
     if not args.output.is_file() or not args.render.is_file():
         raise RuntimeError('Blender save or render did not produce the required files')
     print(f"PASS: {len(col.objects)} demo objects; blend={args.output}; render={args.render}")

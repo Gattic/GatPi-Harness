@@ -1,19 +1,25 @@
 {
   "catalog_version": "2.0.0",
   "generator": "tools/regenerate.py",
-  "skill_count": 139,
+  "skill_count": 153,
   "categories": {
-    "media": 27,
+    "media": 40,
     "delivery": 5,
     "web-seo": 16,
     "marketing": 12,
     "security": 19,
     "meta": 9,
-    "engineering": 29,
+    "engineering": 30,
     "design": 13,
     "research": 9
   },
   "skills": [
+    {
+      "name": "3d-asset-quality-gate",
+      "category": "media",
+      "path": "skills/3d-asset-quality-gate/SKILL.md",
+      "eval": "evals/3d-asset-quality-gate.json"
+    },
     {
       "name": "3d-modeling-topology",
       "category": "media",
@@ -93,6 +99,12 @@
       "eval": "evals/asset-rights-content-authenticity.json"
     },
     {
+      "name": "atmosphere-weather-lighting",
+      "category": "media",
+      "path": "skills/atmosphere-weather-lighting/SKILL.md",
+      "eval": "evals/atmosphere-weather-lighting.json"
+    },
+    {
       "name": "audio-design-mix",
       "category": "media",
       "path": "skills/audio-design-mix/SKILL.md",
@@ -109,6 +121,12 @@
       "category": "media",
       "path": "skills/blender-cinematic-video-pipeline/SKILL.md",
       "eval": "evals/blender-cinematic-video-pipeline.json"
+    },
+    {
+      "name": "blender-extension-development",
+      "category": "engineering",
+      "path": "skills/blender-extension-development/SKILL.md",
+      "eval": "evals/blender-extension-development.json"
     },
     {
       "name": "brand-identity-system",
@@ -147,6 +165,12 @@
       "eval": "evals/build.json"
     },
     {
+      "name": "camera-tracking-matchmove",
+      "category": "media",
+      "path": "skills/camera-tracking-matchmove/SKILL.md",
+      "eval": "evals/camera-tracking-matchmove.json"
+    },
+    {
       "name": "campaign-strategy",
       "category": "marketing",
       "path": "skills/campaign-strategy/SKILL.md",
@@ -163,6 +187,12 @@
       "category": "engineering",
       "path": "skills/change-verify/SKILL.md",
       "eval": "evals/change-verify.json"
+    },
+    {
+      "name": "character-garment-fitting",
+      "category": "media",
+      "path": "skills/character-garment-fitting/SKILL.md",
+      "eval": "evals/character-garment-fitting.json"
     },
     {
       "name": "ci-release-engineering",
@@ -291,6 +321,12 @@
       "eval": "evals/email-lifecycle-marketing.json"
     },
     {
+      "name": "environment-terrain-scatter",
+      "category": "media",
+      "path": "skills/environment-terrain-scatter/SKILL.md",
+      "eval": "evals/environment-terrain-scatter.json"
+    },
+    {
       "name": "evidence-led-research",
       "category": "research",
       "path": "skills/evidence-led-research/SKILL.md",
@@ -309,6 +345,12 @@
       "eval": "evals/experiment-gate-lifecycle.json"
     },
     {
+      "name": "facial-blendshape-rigging",
+      "category": "media",
+      "path": "skills/facial-blendshape-rigging/SKILL.md",
+      "eval": "evals/facial-blendshape-rigging.json"
+    },
+    {
       "name": "firmware-region-forensics",
       "category": "security",
       "path": "skills/firmware-region-forensics/SKILL.md",
@@ -319,6 +361,12 @@
       "category": "engineering",
       "path": "skills/frontend-state-architecture/SKILL.md",
       "eval": "evals/frontend-state-architecture.json"
+    },
+    {
+      "name": "game-engine-asset-export",
+      "category": "media",
+      "path": "skills/game-engine-asset-export/SKILL.md",
+      "eval": "evals/game-engine-asset-export.json"
     },
     {
       "name": "generative-model-evaluation",
@@ -349,6 +397,12 @@
       "category": "marketing",
       "path": "skills/growth-experimentation/SKILL.md",
       "eval": "evals/growth-experimentation.json"
+    },
+    {
+      "name": "hair-groom-cards",
+      "category": "media",
+      "path": "skills/hair-groom-cards/SKILL.md",
+      "eval": "evals/hair-groom-cards.json"
     },
     {
       "name": "handoff",
@@ -531,6 +585,12 @@
       "eval": "evals/performance-profiling.json"
     },
     {
+      "name": "physics-simulation-baking",
+      "category": "media",
+      "path": "skills/physics-simulation-baking/SKILL.md",
+      "eval": "evals/physics-simulation-baking.json"
+    },
+    {
       "name": "positioning-message-architecture",
       "category": "marketing",
       "path": "skills/positioning-message-architecture/SKILL.md",
@@ -597,6 +657,12 @@
       "eval": "evals/rea-evidence-lineage-review.json"
     },
     {
+      "name": "realtime-asset-optimization",
+      "category": "media",
+      "path": "skills/realtime-asset-optimization/SKILL.md",
+      "eval": "evals/realtime-asset-optimization.json"
+    },
+    {
       "name": "recorded-agentenv-simulation",
       "category": "meta",
       "path": "skills/recorded-agentenv-simulation/SKILL.md",
@@ -619,6 +685,12 @@
       "category": "web-seo",
       "path": "skills/responsive-design-system/SKILL.md",
       "eval": "evals/responsive-design-system.json"
+    },
+    {
+      "name": "retopology-uv-unwrap",
+      "category": "media",
+      "path": "skills/retopology-uv-unwrap/SKILL.md",
+      "eval": "evals/retopology-uv-unwrap.json"
     },
     {
       "name": "rigging-animation-retarget",
@@ -717,6 +789,12 @@
       "eval": "evals/structured-data-schema.json"
     },
     {
+      "name": "stylized-npr-rendering",
+      "category": "media",
+      "path": "skills/stylized-npr-rendering/SKILL.md",
+      "eval": "evals/stylized-npr-rendering.json"
+    },
+    {
       "name": "systematic-debugging",
       "category": "engineering",
       "path": "skills/systematic-debugging/SKILL.md",
@@ -763,6 +841,12 @@
       "category": "media",
       "path": "skills/text-to-video-production/SKILL.md",
       "eval": "evals/text-to-video-production.json"
+    },
+    {
+      "name": "texture-map-baking",
+      "category": "media",
+      "path": "skills/texture-map-baking/SKILL.md",
+      "eval": "evals/texture-map-baking.json"
     },
     {
       "name": "typesafe-ai",
