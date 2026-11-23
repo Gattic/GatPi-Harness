@@ -28,9 +28,12 @@ async function main() {
   const noSaves = resolveProjectMemoryRollout({ ...defaults, PI_PROJECT_MEMORY_AUTO_SAVE: "0" });
   assert.equal(noSaves.controls.automaticCapture, false);
   assert.equal(noSaves.controls.taskRecall, true, "capture can be disabled without disabling recall");
-  const route = routeToolSurface({ prompt: "Implement the database adapter", allToolNames: ["read", "memory_curator"], initialActiveToolNames: ["read", "memory_curator"], currentActiveToolNames: ["read"], env: defaults, reset: true });
+  // Pin env precedence so the router contract does not depend on the live
+  // config/memory-posture.json (the operator posture turns automatic capture off).
+  const routerEnv = { ...defaults, PI_PROJECT_MEMORY_POSTURE: "env" };
+  const route = routeToolSurface({ prompt: "Implement the database adapter", allToolNames: ["read", "memory_curator"], initialActiveToolNames: ["read", "memory_curator"], currentActiveToolNames: ["read"], env: routerEnv, reset: true });
   assert(route.activeTools.includes("memory_curator"), "automatic capture is not gated on memory keywords");
-  const disabledRoute = routeToolSurface({ prompt: "Implement the database adapter", allToolNames: ["read", "memory_curator"], initialActiveToolNames: ["read", "memory_curator"], currentActiveToolNames: ["read"], env: { ...defaults, PI_MEMORY_CURATOR: "0" }, reset: true });
+  const disabledRoute = routeToolSurface({ prompt: "Implement the database adapter", allToolNames: ["read", "memory_curator"], initialActiveToolNames: ["read", "memory_curator"], currentActiveToolNames: ["read"], env: { ...routerEnv, PI_MEMORY_CURATOR: "0" }, reset: true });
   assert(!disabledRoute.activeTools.includes("memory_curator"));
 
   const root = tmpFixture("pi-memory-automatic-");
@@ -39,7 +42,7 @@ async function main() {
   const other = path.join(root, "other");
   for (const dir of [path.join(cwd, ".git"), path.join(other, ".git"), path.join(vault, ".obsidian"), path.join(root, "alternate-vault/.obsidian")]) fs.mkdirSync(dir, { recursive: true });
   const oldEnv = { ...process.env };
-  Object.assign(process.env, defaults, { PI_PROJECT_MEMORY: "1", PI_PROJECT_MEMORY_READS: "1", PI_OBSIDIAN_VAULT: vault, PI_OBSIDIAN_ALLOW_OUTSIDE: "1", PI_MEMORY_CURATOR: "1", PI_MEMORY_EXPLORER: "1", PI_EXTENSION_TELEMETRY: "0", PI_MEMORY_MAINTENANCE_PREVIEW_INTERVAL_HOURS: "0" });
+  Object.assign(process.env, defaults, { PI_PROJECT_MEMORY: "1", PI_PROJECT_MEMORY_AUTOMATIC: "1", PI_PROJECT_MEMORY_POSTURE: "env", PI_PROJECT_MEMORY_READS: "1", PI_OBSIDIAN_VAULT: vault, PI_OBSIDIAN_ALLOW_OUTSIDE: "1", PI_MEMORY_CURATOR: "1", PI_MEMORY_EXPLORER: "1", PI_EXTENSION_TELEMETRY: "0", PI_MEMORY_MAINTENANCE_PREVIEW_INTERVAL_HOURS: "0" });
   const globalRoot = execFileSync("npm", ["root", "-g"], { encoding: "utf8" }).trim();
   const piRoot = fs.realpathSync(path.join(globalRoot, "@earendil-works/pi-coding-agent"));
   const { createJiti } = require(require.resolve("jiti", { paths: [piRoot] }));
