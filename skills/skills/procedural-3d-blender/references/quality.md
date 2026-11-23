@@ -1,6 +1,6 @@
 # Blender procedural asset QA contract
 
-**Scope:** Blender 4.x product-display demo (see `../scripts/build_product_stage.py`). Requires installed Blender; `python` alone cannot import `bpy`.
+**Scope:** product-display demo written for Blender 4.x and last run on Blender 5.1.2 (see `../scripts/build_product_stage.py`). Requires installed Blender; `python` alone cannot import `bpy`.
 
 ```bash
 blender --background --python skills/procedural-3d-blender/scripts/build_product_stage.py -- --output /tmp/stage.blend --render /tmp/stage.png --radius 1.5 --height 0.24 --samples 32

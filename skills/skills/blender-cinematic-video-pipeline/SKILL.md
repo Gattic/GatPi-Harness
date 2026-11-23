@@ -3,7 +3,7 @@ name: blender-cinematic-video-pipeline
 description: "Use when a user requests an authored procedural Blender animation or cinematic product video as actual files. Do not use when a user only wants a still 3D model, or an external text-to-video shot unrelated to Blender."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: "media"
 ---
 
@@ -40,7 +40,7 @@ metadata:
 
 6. Render a low-cost playblast/animatic and inspect timing, apparent physical interactions and audio sync before committing expensive output.
 
-7. Render final frames with chosen denoising/color pipeline; assemble using FFmpeg or another verified encoder and probe codec, pixel format, fps, aspect ratio and duration.
+7. Render final frames with chosen denoising/color pipeline; assemble using FFmpeg, Blender's Video Sequencer (`scripts/vse_edit.py`) or another verified encoder and probe codec, pixel format, fps, aspect ratio and duration.
 
 8. Deliver source scene, scripts, video, 12-frame contact sheet, command manifest, dependency/licensing notes, QC log and measured compute costs if available.
 
@@ -50,6 +50,10 @@ metadata:
 - No full final render before a checked low-cost preview when costs are significant.
 - A GPU flag is not evidence of GPU execution: read device configuration and logs.
 - Spectrograms cannot prove absence of speech; use listening or appropriate speech detection when required.
+- Render image frames first and assemble afterwards: a crash during a direct movie render loses the whole file.
+- `scripts/vse_edit.py` builds the cut in its own edit scene under the Standard view transform so footage passes through unchanged; grade deliberately with strip modifiers instead.
+- In Blender 5.x set `image_settings.media_type` to `VIDEO` before choosing the FFmpeg file format, and match the edit frame rate to the footage before cutting.
+- Bundled guides and scripts target Blender 5.2 LTS+ (upstream-verified on 5.3) and were re-run in this pack on 5.1.2; record `bpy.app.version_string` and check `procedural-3d-blender/references/version-compatibility.md` before using a 5.2+ or 5.3-only API on an older build.
 
 ## Deliverables
 
@@ -114,9 +118,13 @@ the relevant part of this skill in the child task and keep this skill's acceptan
 ## Optional references
 
 - [references/production-checklist.md](references/production-checklist.md)
+- [references/vse-editing-guide.md](references/vse-editing-guide.md)
+- [scripts/vse_edit.py](scripts/vse_edit.py)
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 ## Provenance notes
 
 Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
 
 - https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d
+- https://github.com/EL4CTEO/blender-skills

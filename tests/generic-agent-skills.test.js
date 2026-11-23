@@ -18,8 +18,9 @@ const discovered = fs.readdirSync(source, { withFileTypes: true })
   .map((entry) => entry.name).sort();
 const managed = fs.readFileSync(path.join(source, "managed-skills.txt"), "utf8").trim().split(/\r?\n/);
 
-// The 131 supplied pack skills plus eight legacy skills restored and adapted to
-// the pack standard because no supplied skill covers their workflows.
+// The 131 supplied pack skills, eight legacy skills restored and adapted to the
+// pack standard because no supplied skill covers their workflows, and fourteen
+// 3D skills added with the EL4CTEO/blender-skills integration.
 const restored = {
   handoff: "handoff-contract.md",
   "git-checkpoint": "checkpoint-contract.md",
@@ -30,8 +31,15 @@ const restored = {
   build: "build-contract.md",
   "typesafe-ai": "typesafe-guide.md",
 };
-assert.equal(expected.length, 131 + Object.keys(restored).length, "catalog holds the 131-skill pack plus the restored legacy skills");
-for (const name of Object.keys(restored)) assert.ok(expected.includes(name), `restored skill must be in the catalog: ${name}`);
+const blenderAdditions = [
+  "3d-asset-quality-gate", "retopology-uv-unwrap", "texture-map-baking", "realtime-asset-optimization",
+  "game-engine-asset-export", "facial-blendshape-rigging", "character-garment-fitting", "hair-groom-cards",
+  "stylized-npr-rendering", "environment-terrain-scatter", "atmosphere-weather-lighting",
+  "physics-simulation-baking", "blender-extension-development", "camera-tracking-matchmove",
+];
+assert.equal(expected.length, 131 + Object.keys(restored).length + blenderAdditions.length,
+  "catalog holds the 131-skill pack, the restored legacy skills and the Blender additions");
+for (const name of [...Object.keys(restored), ...blenderAdditions]) assert.ok(expected.includes(name), `local skill must be in the catalog: ${name}`);
 assert.equal(new Set(expected).size, expected.length, "catalog names must be unique");
 assert.deepEqual(discovered, expected, "no missing bundle skills or retained legacy skills");
 assert.deepEqual(managed, expected, "installer manifest must exactly match the sorted catalog");
@@ -141,6 +149,26 @@ keeps("typesafe-ai", ["https://docs.typesafe.ai/llms.txt", "The live TypeSafe do
   "Keep API credentials server-side in web apps."]);
 assert.match(skillText("typesafe-ai"), /^# TypeSafe AI$/m);
 
+// The Blender guides and scripts are third-party MIT material: every skill directory
+// that carries them must ship the notice, because skills install one directory at a time.
+const blenderLedger = JSON.parse(fs.readFileSync(path.join(pack, "research", "blender-skills-provenance.json"), "utf8"));
+const blenderSkills = [...new Set(blenderLedger.files.map((file) => file.path.split("/"))
+  .filter((parts) => parts[0] === "skills").map((parts) => parts[1]))];
+for (const name of blenderAdditions) assert.ok(blenderSkills.includes(name), `Blender addition must carry bundled files: ${name}`);
+for (const name of blenderSkills) {
+  const entry = catalog.find((item) => item.name === name);
+  assert.ok(entry && entry.refs.includes("THIRD_PARTY_NOTICES.md"), `${name} must list its third-party notice`);
+  const notice = fs.readFileSync(path.join(source, name, "THIRD_PARTY_NOTICES.md"), "utf8");
+  assert.ok(notice.includes("MIT License\n\nCopyright (c) 2026 EL4CTEO\n"), `${name} notice must keep the upstream copyright`);
+  assert.ok(notice.includes(blenderLedger.source.commit), `${name} notice must pin the upstream commit`);
+}
+// Version honesty: the bundled scripts target Blender 5.2+, so the measured boundary must stay discoverable.
+const compatibility = fs.readFileSync(path.join(source, "procedural-3d-blender", "references", "version-compatibility.md"), "utf8");
+for (const required of ["Measured 5.1.2", "NOT TESTED", "set_gn_input()", "omitted_options"]) {
+  assert.ok(compatibility.includes(required), `version compatibility record must keep: ${required}`);
+}
+execFileSync("python3", ["tools/check_blender_bundle.py"], options);
+
 const migration = fs.readFileSync(path.join(root, "docs", "skill-bundle-migration.md"), "utf8");
 for (const required of ["legacy-skills.tar.gz", "manifest.json", "Coverage decisions", "NOT TESTED"]) {
   assert.ok(migration.includes(required), `migration record must include ${required}`);
@@ -149,4 +177,4 @@ const report = fs.readFileSync(path.join(root, "docs", "session-derived-skills.m
 assert.ok(report.includes("Historical report:"), "legacy study must not advertise retired skills");
 assert.ok(report.includes("No prompts, assistant responses, reasoning, raw commands, tool output, credentials, or transcript excerpts"));
 assert.ok(report.includes("## Limitations"));
-console.log(`generic agent skills tests passed (131 pack skills + ${Object.keys(restored).length} restored; static/offline validation only)`);
+console.log(`generic agent skills tests passed (131 pack skills + ${Object.keys(restored).length} restored + ${blenderAdditions.length} Blender additions; static/offline validation only)`);

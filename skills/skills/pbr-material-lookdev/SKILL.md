@@ -3,7 +3,7 @@ name: pbr-material-lookdev
 description: "Use when 3D look development, game-engine materials or texturing. Do not use when object has no material or rendering requirement."
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "2.0.0"
   category: "media"
 ---
 
@@ -30,15 +30,25 @@ metadata:
 
 1. Identify target renderer/workflow, material class, real reference properties, UV mapping and texel-density budget.
 
-2. Choose metallic/roughness or specular workflow and linear/sRGB handling for each map type.
+2. Choose metallic/roughness or specular workflow and linear/sRGB handling for each map type: base color and emission are sRGB; roughness, metallic, normal, AO, height, opacity and packed maps are Non-Color.
 
-3. Build base color, roughness, metallic, normals, height, opacity and AO maps only where physically appropriate.
+3. Build base color, roughness, metallic, normals, height, opacity and AO maps only where physically appropriate, starting from measured values in `references/pbr-values.md`; `scripts/build_pbr_material.py` wires a texture set or a measured preset.
 
-4. Check texture seamlessness, UV distortion, scale of surface details and map handedness.
+4. Author the surface story in layers from the inside out — base, edge wear, rust, grime, dust — each mask with a physical cause and noise breakup (`scripts/smart_material.py`), and place decals off the surface, never coplanar (`scripts/decal.py`).
 
-5. Test appearance under standardized neutral, hard and colored lighting plus target engine tone mapping.
+5. Check texture seamlessness, UV distortion, scale of surface details and map handedness (OpenGL versus DirectX normals), plus channel packing for the target engine.
 
-6. Export packed textures/material graph with channels, color space, resolution and renderer compatibility notes.
+6. Test appearance under standardized neutral, hard and colored lighting plus target engine tone mapping; judge albedo under Khronos PBR Neutral or Standard rather than a stylized look.
+
+7. Export packed textures/material graph with channels, color space, resolution and renderer compatibility notes; bake procedural nodes to textures with `texture-map-baking` before any engine export.
+
+## Specialist protocol and proof boundaries
+
+- Metallic is 0 or 1 except on transition pixels; dielectric base color stays roughly within sRGB 30–240 and raw-metal base color above sRGB 180; a perfectly constant roughness is a defect to break up.
+- Packing is engine-specific: glTF and Unreal ORM is R=AO, G=roughness, B=metallic; Unity URP keeps smoothness in alpha; Roblox takes separate grayscale maps. Confirm against the target instead of assuming one layout.
+- Only image-texture → Principled BSDF chains export; procedural, mix and math nodes disappear in engines unless baked.
+- `scripts/smart_material.py` edits materials in place and records the originals so `--remove` restores them exactly; a shared material changes every object that uses it, so duplicate it first when only one object should change.
+- Bundled guides and scripts target Blender 5.2 LTS+ (upstream-verified on 5.3) and were re-run in this pack on 5.1.2; record `bpy.app.version_string` and check `procedural-3d-blender/references/version-compatibility.md` before using a 5.2+ or 5.3-only API on an older build.
 
 ## Deliverables
 
@@ -50,7 +60,7 @@ metadata:
 
 ## Acceptance gate
 
-**Pass only if:** Material behaves plausibly over lighting conditions and matches target engine color space.
+**Pass only if:** Material behaves plausibly over lighting conditions and matches target engine color space, with every data map Non-Color and the channel packing confirmed for the target.
 
 Demonstrate the gate using inspected outputs or an executable check wherever possible. Distinguish **PASS**, **FAIL**, **NOT TESTED**, and **BLOCKED**. Do not infer success from plausibility, a generated plan, or an unobserved tool invocation.
 
@@ -100,3 +110,20 @@ If your harness does not expose these roles or tools, perform the work inline an
 In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a task graph with executable acceptance,
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
+
+## Optional references
+
+- [references/pbr-materials-guide.md](references/pbr-materials-guide.md)
+- [references/pbr-values.md](references/pbr-values.md)
+- [references/texturing-guide.md](references/texturing-guide.md)
+- [references/trims-tiling-painting.md](references/trims-tiling-painting.md)
+- [scripts/build_pbr_material.py](scripts/build_pbr_material.py)
+- [scripts/smart_material.py](scripts/smart_material.py)
+- [scripts/decal.py](scripts/decal.py)
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+
+## Provenance notes
+
+Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
+
+- https://github.com/EL4CTEO/blender-skills

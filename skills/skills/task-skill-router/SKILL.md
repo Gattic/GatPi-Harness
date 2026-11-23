@@ -3,7 +3,7 @@ name: task-skill-router
 description: "Use when a request spans disciplines, multiple possible workflows, or a broad project. Do not use when a single unambiguous skill already covers the deliverable."
 license: MIT
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
   category: "meta"
 ---
 
@@ -47,6 +47,7 @@ metadata:
 - Route evidence-lineage comparison after analysis only when more than one artifact/session actually needs comparison.
 - Route UI state motion to ui-motion-direction; full video to blender-cinematic-video-pipeline; SVG explainers to interactive-isometric-explainer; mechanical constraints to mechanical-animation-kinematics.
 - Use anatomy geometry audit only where actual spatial diagrams or moving assemblies exist.
+- For an end-to-end 3D asset request (game prop, character, Roblox asset, web/AR model, product turntable, mood or weather shot) order the stages with `references/3d-asset-playbooks.md`, give each stage one owning skill, and gate every geometry-changing stage with `3d-asset-quality-gate` before the next owner starts.
 
 ## Deliverables
 
@@ -106,6 +107,11 @@ In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a 
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
 
+## Optional references
+
+- [references/3d-asset-playbooks.md](references/3d-asset-playbooks.md)
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+
 ## Provenance notes
 
 Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
@@ -114,3 +120,4 @@ Original Skill Foundry workflow informed by these public sources; this skill doe
 - https://github.com/LottieFiles/motion-design-skill/blob/main/skills/motion-design/SKILL.md
 - https://github.com/wheresryan22/anatomy/blob/main/SKILL.md
 - https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d
+- https://github.com/EL4CTEO/blender-skills

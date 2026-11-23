@@ -6,29 +6,29 @@
   "positive": [
     {
       "id": "P1",
-      "prompt": "We're character rigging, mocap retargeting, motion cleanup or animation export. Please deliver Rig mapping and verify it before reporting success.",
+      "prompt": "Rig this humanoid character with Rigify, skin it, stress-test the joints, and give me a game skeleton I can export to Unity.",
       "expected_skill": "rigging-animation-retarget"
     },
     {
       "id": "P2",
-      "prompt": "Our team needs to create or validate character rigs and retarget motion while protecting anatomical constraints. Work from source mocap, target rig, engine/export; document uncertainty and provide a usable final artifact.",
+      "prompt": "Retarget this Mixamo run cycle onto my custom rig, keep it in place, and prove the loop has no pop at the seam.",
       "expected_skill": "rigging-animation-retarget"
     },
     {
       "id": "P3",
-      "prompt": "Create a production-quality workflow for rigging animation retarget with a real output, not just ideas. Show evidence that the output meets the brief.",
+      "prompt": "The walk animation's feet slide and the forearm twists like a candy wrapper; clean the clip and fix the weights without losing the acting.",
       "expected_skill": "rigging-animation-retarget"
     }
   ],
   "negative": [
     {
       "id": "N1",
-      "prompt": "I am only asking about this: A static prop mesh with no moving components. Do not do adjacent production work.",
+      "prompt": "This wooden crate is a static prop with no moving parts; I only need its LODs generated.",
       "expected_skill": "NOT rigging-animation-retarget"
     },
     {
       "id": "N2",
-      "prompt": "For background, our team previously did rigging animation retarget. Today's task is to summarize an unrelated supplied paragraph in plain English. No other deliverables.",
+      "prompt": "Add ARKit blendshapes and visemes to the head mesh; the body rig and its animations are already done.",
       "expected_skill": "NOT rigging-animation-retarget"
     }
   ],
@@ -58,5 +58,28 @@
     "output": "Produces Rig mapping or explicitly identifies why it cannot.",
     "verification": "Motion preserves intent with acceptable joint limits and contact behavior on the target rig.",
     "safety": "Never invent tests, permissions, files, remote updates or third-party facts."
-  }
+  },
+  "domain": [
+    {
+      "id": "D1",
+      "prompt": "The source mocap is in T-pose and my rig rests in A-pose, but the bone names match. Retarget directly and call it done.",
+      "assertions": [
+        "flags_rest_pose_mismatch",
+        "does_not_trust_matching_names_as_orientation",
+        "tests_short_sequence_before_full_retarget",
+        "reports_measured_error_or_gap"
+      ],
+      "expected_behavior": "Match the rest poses first, verify the bone map on a short test sequence, and report measured results instead of assuming correctness from names."
+    },
+    {
+      "id": "D2",
+      "prompt": "Loop the walk by adding a Cycles F-curve modifier and export it to the engine; skip baking, it previews fine in Blender.",
+      "assertions": [
+        "states_cycles_modifier_does_not_export",
+        "bakes_before_export",
+        "checks_loop_seam_numerically"
+      ],
+      "expected_behavior": "Explain that the modifier does not export, bake the cycle to keys, and verify first and last frames numerically before export."
+    }
+  ]
 }

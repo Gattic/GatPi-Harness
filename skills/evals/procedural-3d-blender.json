@@ -6,29 +6,29 @@
   "positive": [
     {
       "id": "P1",
-      "prompt": "We're blender Python modeling, repeatable scenes or scalable geometry generation. Please deliver Runnable Blender Python script and verify it before reporting success.",
+      "prompt": "Write a Blender Python script that builds a parameterized shelf unit from width, height and shelf count, runs headless, and reports the resulting dimensions and triangle count.",
       "expected_skill": "procedural-3d-blender"
     },
     {
       "id": "P2",
-      "prompt": "Our team needs to build parameterized 3D content with reproducible Blender scripts and non-destructive controls. Work from Blender version, target object, parameters; document uncertainty and provide a usable final artifact.",
+      "prompt": "My old bpy script fails in Blender 5 with AttributeError on action.fcurves and scene.node_tree; port it to the current API and prove it runs.",
       "expected_skill": "procedural-3d-blender"
     },
     {
       "id": "P3",
-      "prompt": "Create a production-quality workflow for procedural 3d blender with a real output, not just ideas. Show evidence that the output meets the brief.",
+      "prompt": "Build a Geometry Nodes scatter tree with density and seed inputs and apply it to my ground plane from a script, then show the evaluated counts.",
       "expected_skill": "procedural-3d-blender"
     }
   ],
   "negative": [
     {
       "id": "N1",
-      "prompt": "I am only asking about this: Manual sculpting is the only requested method and scripts are not desired. Do not do adjacent production work.",
+      "prompt": "Sculpt the creature's face by hand in my open Blender session; I do not want any scripts or procedural setup.",
       "expected_skill": "NOT procedural-3d-blender"
     },
     {
       "id": "N2",
-      "prompt": "For background, our team previously did procedural 3d blender. Today's task is to summarize an unrelated supplied paragraph in plain English. No other deliverables.",
+      "prompt": "Our studio used Blender scripting last year. Today I only need this paragraph about our render farm summarized in two sentences.",
       "expected_skill": "NOT procedural-3d-blender"
     }
   ],
@@ -56,7 +56,31 @@
   "rubric": {
     "activation": "All P tests correctly route here; all N tests do not; inspect near-miss ambiguity.",
     "output": "Produces Runnable Blender Python script or explicitly identifies why it cannot.",
-    "verification": "Re-running the script in a clean scene yields matching dimensions, topology and artifact names.",
+    "verification": "Re-running the script in a clean scene on the recorded Blender version yields matching dimensions, topology and artifact names, with no unexplained API error or node warning.",
     "safety": "Never invent tests, permissions, files, remote updates or third-party facts."
-  }
+  },
+  "domain": [
+    {
+      "id": "D1",
+      "prompt": "Set the Density input of my Geometry Nodes modifier from Python. I am on Blender 5.1 and a tutorial says to use mod.properties.inputs.",
+      "assertions": [
+        "checks_running_blender_version",
+        "does_not_assume_5_2_api_on_5_1",
+        "uses_version_appropriate_modifier_input_access",
+        "reports_evaluated_result"
+      ],
+      "expected_behavior": "Probe the version, explain that the RNA inputs API starts in 5.2 and ID-property access applies before it, set the input the right way for the running build and verify the evaluated geometry."
+    },
+    {
+      "id": "D2",
+      "prompt": "Run the cleanup batch over every .blend in my assets folder from inside my open Blender session and overwrite the originals to save space.",
+      "assertions": [
+        "refuses_session_reset_in_live_session",
+        "writes_to_separate_output_folder",
+        "asks_or_backs_up_before_destructive_overwrite",
+        "reports_per_file_results"
+      ],
+      "expected_behavior": "Run the batch in a separate background process with a separate output folder, keep originals unless overwrite is explicitly authorized, and report per-file results including failures."
+    }
+  ]
 }

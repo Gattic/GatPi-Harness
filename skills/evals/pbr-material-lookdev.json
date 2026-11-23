@@ -6,29 +6,29 @@
   "positive": [
     {
       "id": "P1",
-      "prompt": "We're 3D look development, game-engine materials or texturing. Please deliver Material graph and verify it before reporting success.",
+      "prompt": "Wire this downloaded texture set into a correct PBR material for my crate, fix the washed-out normal map, and confirm the color spaces.",
       "expected_skill": "pbr-material-lookdev"
     },
     {
       "id": "P2",
-      "prompt": "Our team needs to create calibrated physically based materials and texture sets for consistent rendering. Work from engine, material references, UVs; document uncertainty and provide a usable final artifact.",
+      "prompt": "Make the painted steel locker look used: chipped edges showing bare metal, grime in the corners and dust on top, then tell me how to get it into Unreal.",
       "expected_skill": "pbr-material-lookdev"
     },
     {
       "id": "P3",
-      "prompt": "Create a production-quality workflow for pbr material lookdev with a real output, not just ideas. Show evidence that the output meets the brief.",
+      "prompt": "Create a physically plausible brushed gold and black rubber material pair with measured values and show them under neutral lighting.",
       "expected_skill": "pbr-material-lookdev"
     }
   ],
   "negative": [
     {
       "id": "N1",
-      "prompt": "I am only asking about this: Object has no material or rendering requirement. Do not do adjacent production work.",
+      "prompt": "This collision proxy mesh will never be rendered or textured; I only need its vertex count reduced.",
       "expected_skill": "NOT pbr-material-lookdev"
     },
     {
       "id": "N2",
-      "prompt": "For background, our team previously did pbr material lookdev. Today's task is to summarize an unrelated supplied paragraph in plain English. No other deliverables.",
+      "prompt": "We discussed PBR materials in yesterday's meeting. Please just proofread the attached meeting notes for typos.",
       "expected_skill": "NOT pbr-material-lookdev"
     }
   ],
@@ -56,7 +56,30 @@
   "rubric": {
     "activation": "All P tests correctly route here; all N tests do not; inspect near-miss ambiguity.",
     "output": "Produces Material graph or explicitly identifies why it cannot.",
-    "verification": "Material behaves plausibly over lighting conditions and matches target engine color space.",
+    "verification": "Material behaves plausibly over lighting conditions and matches target engine color space, with every data map Non-Color and the channel packing confirmed for the target.",
     "safety": "Never invent tests, permissions, files, remote updates or third-party facts."
-  }
+  },
+  "domain": [
+    {
+      "id": "D1",
+      "prompt": "My roughness and normal textures are tagged sRGB and the metal looks grey and plasticky. Bump metallic to 0.6 to compensate and ship it.",
+      "assertions": [
+        "fixes_color_space_instead_of_compensating",
+        "keeps_metallic_binary",
+        "verifies_under_neutral_view_transform"
+      ],
+      "expected_behavior": "Retag data maps as Non-Color, keep metallic at 0 or 1 with a plausible metal base color, and verify the result rather than compensating with a mid-range metallic value."
+    },
+    {
+      "id": "D2",
+      "prompt": "Export this procedural rust shader straight to Unity as-is; the node tree is all noise and math nodes and there are no image textures.",
+      "assertions": [
+        "states_procedural_nodes_do_not_export",
+        "routes_to_texture_baking",
+        "names_unity_channel_packing",
+        "does_not_claim_exported_material"
+      ],
+      "expected_behavior": "Explain that procedural nodes do not export, bake to a texture set first, use the Unity packing convention, and mark engine import as not verified until observed."
+    }
+  ]
 }

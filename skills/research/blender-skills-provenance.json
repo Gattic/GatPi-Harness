@@ -1,0 +1,1351 @@
+{
+ "schema_version": 1,
+ "source": {
+  "repository": "https://github.com/EL4CTEO/blender-skills",
+  "commit": "1a1cc6c49312f9f370aae86f52b7b907f29c94f6",
+  "release": "1.3.3",
+  "commit_date": "2026-11-21",
+  "retrieved": "2026-11-23",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2026 EL4CTEO",
+  "inspection": "Complete shallow clone of the pinned commit; every tracked file was enumerated."
+ },
+ "measured_on": {
+  "blender": "5.1.2",
+  "build_hash": "ec6e62d40fa9",
+  "python": "3.13.9",
+  "platform": "linux-x64",
+  "command": "blender -b --factory-startup --python-exit-code 1 -P tests/blender/run_all.py",
+  "note": "Results are recorded in skills/procedural-3d-blender/references/version-compatibility.md and research/blender-skills-review.md."
+ },
+ "change_tags": {
+  "guide-from-skill-body": "Upstream SKILL.md body kept as a reference guide; its frontmatter and title were replaced by a pack title.",
+  "provenance-header": "A provenance line naming the upstream path, commit and license was added under the title.",
+  "skill-names-remapped": "Upstream skill names were replaced by the owning pack skill (see skill_map).",
+  "links-rebased": "Relative links and reference paths were rebased to the guide's new location.",
+  "routing-table-rewritten": "The upstream routing table was replaced by one that names pack skills and adds pack-only owners.",
+  "split": "One upstream file was divided between two pack skills; each part keeps the upstream wording of its sections.",
+  "blender-5.1-compat": "Changed so the file works on Blender releases older than 5.2 (see version-compatibility.md).",
+  "no-bytecode": "Changed so running it leaves no __pycache__ in installed skill directories.",
+  "pack-layout": "Paths and imports follow the Skill Foundry directory layout.",
+  "version-gates": "Tests that need a newer Blender than the one running are reported as SKIP with the required version."
+ },
+ "skill_map": {
+  "blender-addon-development": "blender-extension-development",
+  "blender-animation": "rigging-animation-retarget",
+  "blender-asset-qa": "3d-asset-quality-gate",
+  "blender-character-rigging": "rigging-animation-retarget",
+  "blender-clothing": "character-garment-fitting",
+  "blender-core": "procedural-3d-blender",
+  "blender-environment-kits": "environment-terrain-scatter",
+  "blender-export-pipelines": "game-engine-asset-export",
+  "blender-facial-shapekeys": "facial-blendshape-rigging",
+  "blender-game-optimization": "realtime-asset-optimization",
+  "blender-geometry-nodes": "procedural-3d-blender",
+  "blender-hair-grooming": "hair-groom-cards",
+  "blender-hardsurface-modeling": "3d-modeling-topology",
+  "blender-lighting-lookdev": "lighting-render-optimization",
+  "blender-pbr-materials": "pbr-material-lookdev",
+  "blender-pipeline-automation": "procedural-3d-blender",
+  "blender-rendering": "lighting-render-optimization",
+  "blender-retopology-uv": "retopology-uv-unwrap",
+  "blender-scene-setup": "procedural-3d-blender",
+  "blender-sculpting": "3d-modeling-topology",
+  "blender-simulation": "physics-simulation-baking",
+  "blender-stylized-npr": "stylized-npr-rendering",
+  "blender-texture-baking": "texture-map-baking",
+  "blender-texturing": "pbr-material-lookdev",
+  "blender-time-of-day": "atmosphere-weather-lighting",
+  "blender-video-editing": "blender-cinematic-video-pipeline",
+  "blender-weather-fx": "atmosphere-weather-lighting",
+  "blender-workflow-recipes": "task-skill-router"
+ },
+ "script_overrides": {
+  "blender-video-editing/scripts/track_camera.py": "camera-tracking-matchmove"
+ },
+ "files": [
+  {
+   "path": "skills/3d-asset-quality-gate/references/asset-qa-guide.md",
+   "upstream_path": "skills/blender-asset-qa/SKILL.md",
+   "upstream_sha256": "968e4435eeba040f0952cc335c8e9e7182e1d7008aa4295f202ddb836fa49ec9",
+   "sha256": "18e7d1534d92cb7f3176001591b955f6de2acf30bd93c78cd68ea69d4c4e8998",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/3d-asset-quality-gate/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/3d-asset-quality-gate/scripts/qa_check.py",
+   "upstream_path": "skills/blender-asset-qa/scripts/qa_check.py",
+   "upstream_sha256": "25622654b48111a350a5b5461c064a7437175e1bde9d2b3c56dcbac8bfcfe1d3",
+   "sha256": "25622654b48111a350a5b5461c064a7437175e1bde9d2b3c56dcbac8bfcfe1d3",
+   "changes": []
+  },
+  {
+   "path": "skills/3d-asset-quality-gate/scripts/review_shots.py",
+   "upstream_path": "skills/blender-asset-qa/scripts/review_shots.py",
+   "upstream_sha256": "63da4d7a3a42e81b51773071bdad3eba74fcacd3cf54df4364bd5676ef24a647",
+   "sha256": "63da4d7a3a42e81b51773071bdad3eba74fcacd3cf54df4364bd5676ef24a647",
+   "changes": []
+  },
+  {
+   "path": "skills/3d-modeling-topology/references/forms-and-bake-sources.md",
+   "upstream_path": "skills/blender-sculpting/references/forms-and-bake-sources.md",
+   "upstream_sha256": "e55ecdd43201ec1bc530e0a8529c405ea53b94e79bf0dfde8b67d9995f52815e",
+   "sha256": "91d524bcd66966493507350ea8d5300dd686e1d66ccd35d387df4ad54b9dcd4e",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/3d-modeling-topology/references/hard-surface-guide.md",
+   "upstream_path": "skills/blender-hardsurface-modeling/SKILL.md",
+   "upstream_sha256": "558d18dc0641975d45f80f48c9371c2c0bef1f3c087a2da38cd2738a9659498f",
+   "sha256": "df5e179a530361a7478212513515e8c27511c6ff4d38b9b8cbe62b3d10642ed3",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/3d-modeling-topology/references/sculpting-guide.md",
+   "upstream_path": "skills/blender-sculpting/SKILL.md",
+   "upstream_sha256": "cc5fe10def24140f78a0911b5338c87c489cf38fe6c735385c64330705e1c738",
+   "sha256": "878cbc7a09b809229277f0eab339e22bc6bba4c3105f5ee3529be269fafff967",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/3d-modeling-topology/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/3d-modeling-topology/scripts/apply_stack.py",
+   "upstream_path": "skills/blender-hardsurface-modeling/scripts/apply_stack.py",
+   "upstream_sha256": "3ec1ca458e5f5cd2d1318a4fedd7b25f3a09ab6e58391b0b189bc221914f5aea",
+   "sha256": "3ec1ca458e5f5cd2d1318a4fedd7b25f3a09ab6e58391b0b189bc221914f5aea",
+   "changes": []
+  },
+  {
+   "path": "skills/3d-modeling-topology/scripts/sculpt_ops.py",
+   "upstream_path": "skills/blender-sculpting/scripts/sculpt_ops.py",
+   "upstream_sha256": "6adb0bcb4322900dad1b6f00c17c0f14507085e44017a3c162e26f29bcf8c7aa",
+   "sha256": "6adb0bcb4322900dad1b6f00c17c0f14507085e44017a3c162e26f29bcf8c7aa",
+   "changes": []
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/references/fog-volumetrics.md",
+   "upstream_path": "skills/blender-time-of-day/references/fog-volumetrics.md",
+   "upstream_sha256": "8371b4b7517363b97e8b023611a5ea8351c913d60205a09805bb47f76d62320c",
+   "sha256": "fa3e56f1e1f03ad52d5c0e982edea8c1ffa11fd67e61a7fa55dd6c4d8f483cb1",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/references/light-values.md",
+   "upstream_path": "skills/blender-time-of-day/references/light-values.md",
+   "upstream_sha256": "21569a5d3c92271f6e219ee77cf3982c9cde59d4d1f3090528086d608030a3a8",
+   "sha256": "ed57564f34b4a5fe18cf5143bb9def9054c95ee32601a7c707ff8f8a3af4cd3c",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/references/night-and-moods.md",
+   "upstream_path": "skills/blender-time-of-day/references/night-and-moods.md",
+   "upstream_sha256": "662299d09b341c70488a1e934ce07437610c2ad0dddc92bed93b348e94a76442",
+   "sha256": "b91b6eefe9aba8b11b97b3c5d961377711fe34e4e2d8be55187033b4171e8051",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/references/realtime-engines.md",
+   "upstream_path": "skills/blender-weather-fx/references/realtime-engines.md",
+   "upstream_sha256": "c7584f496ba56c115ab809034cbabee41afa008236553c9436f814c7341d78ec",
+   "sha256": "938e8d54d591ab37c23f10fcbc17e991858819aee857b828734d3bb9e86454aa",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/references/time-of-day-guide.md",
+   "upstream_path": "skills/blender-time-of-day/SKILL.md",
+   "upstream_sha256": "f85d1ca60f764cdab11845679fda5cb22190ea1353bf09a03256fb8b8ca6d7f9",
+   "sha256": "f9bcc7ec22a6b277923cd5446c763cb6060aa91b0edb4b45ebc297f4c67096ab",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/references/weather-fx-guide.md",
+   "upstream_path": "skills/blender-weather-fx/SKILL.md",
+   "upstream_sha256": "7fa1633e5cfa5f183a6d5a451f9b021a305c53e5d14071708a503ecdac687dc7",
+   "sha256": "6763e216d2aef7a837204c029c5a14fd0cfa897d7946938db5f333b85492b084",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/references/weather-values.md",
+   "upstream_path": "skills/blender-weather-fx/references/weather-values.md",
+   "upstream_sha256": "c8be7c985f3d28833b075e71257dd5130d8487ce0b63716a9f237f76592295c3",
+   "sha256": "17b0f0a5bcafd6e2093115e8f1d99a0b94be737885099e360c6198d566f89d15",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/scripts/lightning.py",
+   "upstream_path": "skills/blender-weather-fx/scripts/lightning.py",
+   "upstream_sha256": "68177d83b754e8140ea8807962c8d3c984667c32332ed6a258c15d271750854e",
+   "sha256": "68177d83b754e8140ea8807962c8d3c984667c32332ed6a258c15d271750854e",
+   "changes": []
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/scripts/precipitation.py",
+   "upstream_path": "skills/blender-weather-fx/scripts/precipitation.py",
+   "upstream_sha256": "063fde91806f683b01172a1478c946a6bf8fd7b7f451f76111017766873f047b",
+   "sha256": "4202fab14f6a980a3247f389323019e96c71da0e666f6c22a97ce29d09adf643",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/scripts/scene_mood.py",
+   "upstream_path": "skills/blender-time-of-day/scripts/scene_mood.py",
+   "upstream_sha256": "c82cd0a010ac657df727301a89403cc9f5c599bda84349e2e80ed3c2f6d0b134",
+   "sha256": "c82cd0a010ac657df727301a89403cc9f5c599bda84349e2e80ed3c2f6d0b134",
+   "changes": []
+  },
+  {
+   "path": "skills/atmosphere-weather-lighting/scripts/surface_weather.py",
+   "upstream_path": "skills/blender-weather-fx/scripts/surface_weather.py",
+   "upstream_sha256": "9ab45b1e6b668d25956296595e4d617dbf553af2af1bd0523bf0cccb40baea77",
+   "sha256": "868dddc2e3cc62472ca41b524f08db6d05a4b9ffeeb56843d7d696cf059dcdb4",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/blender-cinematic-video-pipeline/references/vse-editing-guide.md",
+   "upstream_path": "skills/blender-video-editing/SKILL.md",
+   "upstream_sha256": "aa8c6d53e47b17666383f91497ba1564b5b2537dbca71880619c9ff81e0b82b4",
+   "sha256": "2d73f17e54e7232de70483342d37c8a19349a5e20d9e316bce62844db876d976",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped",
+    "split"
+   ]
+  },
+  {
+   "path": "skills/blender-cinematic-video-pipeline/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/blender-cinematic-video-pipeline/scripts/vse_edit.py",
+   "upstream_path": "skills/blender-video-editing/scripts/vse_edit.py",
+   "upstream_sha256": "ec7897c62a48568ab18e266b9223a87e4463bafe0b5b92efba9fe6370fdd133d",
+   "sha256": "ec7897c62a48568ab18e266b9223a87e4463bafe0b5b92efba9fe6370fdd133d",
+   "changes": []
+  },
+  {
+   "path": "skills/blender-extension-development/assets/addon_template/__init__.py",
+   "upstream_path": "skills/blender-addon-development/assets/addon_template/__init__.py",
+   "upstream_sha256": "ce4eae22539c59537797ccbaa93490101cf4a2cce9da6993e28492044f77137f",
+   "sha256": "ce4eae22539c59537797ccbaa93490101cf4a2cce9da6993e28492044f77137f",
+   "changes": []
+  },
+  {
+   "path": "skills/blender-extension-development/assets/addon_template/blender_manifest.toml",
+   "upstream_path": "skills/blender-addon-development/assets/addon_template/blender_manifest.toml",
+   "upstream_sha256": "18ad0365a8239ace1924bf81073111db4b42caecc70b968c0aa127776707e155",
+   "sha256": "18ad0365a8239ace1924bf81073111db4b42caecc70b968c0aa127776707e155",
+   "changes": []
+  },
+  {
+   "path": "skills/blender-extension-development/assets/addon_template/operators.py",
+   "upstream_path": "skills/blender-addon-development/assets/addon_template/operators.py",
+   "upstream_sha256": "b8ff4aa706c666a814451bf016a6c533e89540bc7168d953b1f9d84d6468eb3f",
+   "sha256": "b8ff4aa706c666a814451bf016a6c533e89540bc7168d953b1f9d84d6468eb3f",
+   "changes": []
+  },
+  {
+   "path": "skills/blender-extension-development/assets/addon_template/ui.py",
+   "upstream_path": "skills/blender-addon-development/assets/addon_template/ui.py",
+   "upstream_sha256": "50e3083d3c94f69d065ee8b8cf05fa9e8b1e86675285d0d6c144307473f19a0f",
+   "sha256": "50e3083d3c94f69d065ee8b8cf05fa9e8b1e86675285d0d6c144307473f19a0f",
+   "changes": []
+  },
+  {
+   "path": "skills/blender-extension-development/references/addon-development-guide.md",
+   "upstream_path": "skills/blender-addon-development/SKILL.md",
+   "upstream_sha256": "a403767c213489b6c0c37b1e94acd44e3f26c006da33dfc966d26bbb644a7388",
+   "sha256": "e39acf0eaad58d8a60fecd9372c019f92d26da3bf7048342ee9afd131714be70",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/camera-tracking-matchmove/references/motion-tracking-guide.md",
+   "upstream_path": "skills/blender-video-editing/SKILL.md",
+   "upstream_sha256": "aa8c6d53e47b17666383f91497ba1564b5b2537dbca71880619c9ff81e0b82b4",
+   "sha256": "8ba35002ce3259b56772908298e2fccae1d700af4eae60c42e15da83afd22f29",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped",
+    "split"
+   ]
+  },
+  {
+   "path": "skills/camera-tracking-matchmove/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/camera-tracking-matchmove/scripts/track_camera.py",
+   "upstream_path": "skills/blender-video-editing/scripts/track_camera.py",
+   "upstream_sha256": "0643bf9d1a258596bcb8f209c23526d5bb71c59b0c38bfffdd7dba7e05447b83",
+   "sha256": "0643bf9d1a258596bcb8f209c23526d5bb71c59b0c38bfffdd7dba7e05447b83",
+   "changes": []
+  },
+  {
+   "path": "skills/character-garment-fitting/references/clothing-guide.md",
+   "upstream_path": "skills/blender-clothing/SKILL.md",
+   "upstream_sha256": "90d6d9704addb022b3f002eeec74c737ecf76d077c84a86b20d5d87ba411c85f",
+   "sha256": "36d79a5004fd8036198a6277b9fb1c52d2f7d5730c3b6a48fe7135069a4099f1",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/character-garment-fitting/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/character-garment-fitting/scripts/garment.py",
+   "upstream_path": "skills/blender-clothing/scripts/garment.py",
+   "upstream_sha256": "de7d18e85d9cf622624df7c47fb79a75099ad2b9aa76d35d7892f679149ed0c2",
+   "sha256": "de7d18e85d9cf622624df7c47fb79a75099ad2b9aa76d35d7892f679149ed0c2",
+   "changes": []
+  },
+  {
+   "path": "skills/environment-terrain-scatter/references/environment-kits-guide.md",
+   "upstream_path": "skills/blender-environment-kits/SKILL.md",
+   "upstream_sha256": "11dbeb81d04722bee6413b796546da87761c7460299ab2fb8ae1027e35ec510a",
+   "sha256": "2468c40df155e02e687e64f343ca62f3f5172c74c23c032f6a4a495f57d1485d",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/environment-terrain-scatter/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/environment-terrain-scatter/scripts/kit_check.py",
+   "upstream_path": "skills/blender-environment-kits/scripts/kit_check.py",
+   "upstream_sha256": "5130ad74e2c19dd1839e354a06abd204bafeead277cc447107db017f359e20e5",
+   "sha256": "5130ad74e2c19dd1839e354a06abd204bafeead277cc447107db017f359e20e5",
+   "changes": []
+  },
+  {
+   "path": "skills/environment-terrain-scatter/scripts/scatter.py",
+   "upstream_path": "skills/blender-environment-kits/scripts/scatter.py",
+   "upstream_sha256": "bebb83449a88e1672ab4b41f007169de2f341a90b620106b55721262ac66b0e4",
+   "sha256": "ca6d6910b7f17ea874d9778c35ec524a200d88f86ad44baf693b0ef948b963ce",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/environment-terrain-scatter/scripts/terrain.py",
+   "upstream_path": "skills/blender-environment-kits/scripts/terrain.py",
+   "upstream_sha256": "f86d6e9132e924e7c1877845ab134317a7e77da32180bbede5fab62f2f79ba8f",
+   "sha256": "268baac59742e9ca6761fc053924d2aafad5c8eb588fb494daa0ad0fd1fd74a7",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/facial-blendshape-rigging/references/facial-shapekeys-guide.md",
+   "upstream_path": "skills/blender-facial-shapekeys/SKILL.md",
+   "upstream_sha256": "8d86473487e06ddc97a745baa794573a2cc36319c28a426079fd328e0c35b7ea",
+   "sha256": "322612626253023f58244b0a0bbd70e567a4c660a4f78dbf48e5b587dabc737c",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/facial-blendshape-rigging/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/facial-blendshape-rigging/scripts/shapekeys.py",
+   "upstream_path": "skills/blender-facial-shapekeys/scripts/shapekeys.py",
+   "upstream_sha256": "66a0d851f91af945643b0773e5f89f85aade01be6efcabe21ef1193298df78ad",
+   "sha256": "66a0d851f91af945643b0773e5f89f85aade01be6efcabe21ef1193298df78ad",
+   "changes": []
+  },
+  {
+   "path": "skills/game-engine-asset-export/references/export-pipelines-guide.md",
+   "upstream_path": "skills/blender-export-pipelines/SKILL.md",
+   "upstream_sha256": "300f2f9d0632744ea73ce68eccd2fbdb485febef0d1743a773b34d2f13080c16",
+   "sha256": "54b0c981058b769cd48e955f7cb32c348f712c0252261f319227bf66012c2cd5",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/game-engine-asset-export/references/godot-web.md",
+   "upstream_path": "skills/blender-export-pipelines/references/godot-web.md",
+   "upstream_sha256": "67d2f57f75c40466039346d770ff8e622844c1f2d171d98fdef2ed300d2c2dfd",
+   "sha256": "e1c83e69019c657a616799a67a265ce78ad547859f8c428cc69d18b5775865ac",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/game-engine-asset-export/references/roblox.md",
+   "upstream_path": "skills/blender-export-pipelines/references/roblox.md",
+   "upstream_sha256": "9079cd534349ce5ea0034abd983cf849a19c0a08676b88486393fe8caab7e263",
+   "sha256": "fef95d0797b070b3996ace546d179f824ebfbd43631144edba180b4b12d26180",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/game-engine-asset-export/references/unity.md",
+   "upstream_path": "skills/blender-export-pipelines/references/unity.md",
+   "upstream_sha256": "6ed7fbaa57f6d8d0bdf87438bfc442bb536465b05459ffebf72b75dfa238d080",
+   "sha256": "dc2933917b86a96003b24d8fd8843cc049eaa98ba2ca8c5cb4b42047d9677bc4",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/game-engine-asset-export/references/unreal.md",
+   "upstream_path": "skills/blender-export-pipelines/references/unreal.md",
+   "upstream_sha256": "377e784aa26bf0f634039f31d33b8d47800708f5d280cc518030db4e0d7005bc",
+   "sha256": "1ffdaa3932cbb012a654de21f9beb498b97e971fe1325a8c7484eff302b92446",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/game-engine-asset-export/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/game-engine-asset-export/scripts/export_asset.py",
+   "upstream_path": "skills/blender-export-pipelines/scripts/export_asset.py",
+   "upstream_sha256": "7eb97e2f25a328c3044a00c9882eb0ea199993d581a0c623a0408e51285abf48",
+   "sha256": "dd38d042d88bf372e0ba7063f0e121939524c716688f3cc663e71d1dee2d9786",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/hair-groom-cards/references/hair-grooming-guide.md",
+   "upstream_path": "skills/blender-hair-grooming/SKILL.md",
+   "upstream_sha256": "4708ab11848b8f3a7fbf2ec887174d0db2a1756a2db718dee831c6e7236569a9",
+   "sha256": "de69b95e2261876e2d1ea98e0e62f166af01d64ad5ab9eca0f9542900af464dc",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/hair-groom-cards/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/hair-groom-cards/scripts/groom.py",
+   "upstream_path": "skills/blender-hair-grooming/scripts/groom.py",
+   "upstream_sha256": "d4c7789d1fa67c436c6f74a50c56b76585a812b7cb9dc7dac38235f579cfee0f",
+   "sha256": "cdbd8e630da4235f3f174b24d7c89cd6b67642de32f2c5a3b3b95ee3752ecb44",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/lighting-render-optimization/references/lighting-lookdev-guide.md",
+   "upstream_path": "skills/blender-lighting-lookdev/SKILL.md",
+   "upstream_sha256": "adce74e508559230cd078bf658374a66ed1faa8a975eccfa196ea6d5a59e1e54",
+   "sha256": "41860034529bc050bcc4231358b4aea847974ec7f2ef14ae87ed2c99efeb4779",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/lighting-render-optimization/references/rendering-guide.md",
+   "upstream_path": "skills/blender-rendering/SKILL.md",
+   "upstream_sha256": "0c1a3b2c9537868dda84d981f26060eeeb159d26769c6344f608641ac6fc1b6f",
+   "sha256": "b2ea87e1fb19857440b9f4b84303ca90da728b2216237fdd5b1ac9850ff868e5",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/lighting-render-optimization/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/lighting-render-optimization/scripts/render_batch.py",
+   "upstream_path": "skills/blender-rendering/scripts/render_batch.py",
+   "upstream_sha256": "2ee9043b297148b9d76b54fc22390e1e6062e2e27c33ab0386dcfa2fdb59c432",
+   "sha256": "233acd69517b570263e221ddc9b847ce5baa3496bae68e972be1a6d872e65226",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/lighting-render-optimization/scripts/turntable.py",
+   "upstream_path": "skills/blender-lighting-lookdev/scripts/turntable.py",
+   "upstream_sha256": "a12ee7be3fcf8bd9653f285932286dfe71f6534668d9cf3a52e63234ee972483",
+   "sha256": "a5fcd84f0f746fda84eac80873273c91e330eda9590d555a1c380cba5695b325",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/pbr-material-lookdev/references/pbr-materials-guide.md",
+   "upstream_path": "skills/blender-pbr-materials/SKILL.md",
+   "upstream_sha256": "6c02bc13dc33e71d816dc6b498bf38312ed7e17aa2bfcc57446a45efc7c1f318",
+   "sha256": "2496f345e296224938a0b60bc0d56e93b12d4d4c7772ebda3979137fc5a054bc",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/pbr-material-lookdev/references/pbr-values.md",
+   "upstream_path": "skills/blender-pbr-materials/references/pbr-values.md",
+   "upstream_sha256": "d92f53568ea1525c84d68fc7077abfa9cc64a517ac9472fdc18b873784b84d40",
+   "sha256": "b95a9e4eabec94eeb7fcd25cd5e1f6044a86b424d9ad235e17a33b78d4f10848",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/pbr-material-lookdev/references/texturing-guide.md",
+   "upstream_path": "skills/blender-texturing/SKILL.md",
+   "upstream_sha256": "d1df25354626165849dbaa8905715192318f6044bcdb82381aa4355d602e655d",
+   "sha256": "afdcda49195af3b5c71b8398a13c1e92fb0d4938f6bd296c56382447cae7cdd9",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/pbr-material-lookdev/references/trims-tiling-painting.md",
+   "upstream_path": "skills/blender-texturing/references/trims-tiling-painting.md",
+   "upstream_sha256": "f5e17afe945dd3b489416ed9c1a7d2a0cd9e19b7f84920fcf0c9689275d0663f",
+   "sha256": "ad6513e619c219d22c6b7cc44ad5e06b6cdaedfd1aed7c4df182039d30b5a529",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/pbr-material-lookdev/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/pbr-material-lookdev/scripts/build_pbr_material.py",
+   "upstream_path": "skills/blender-pbr-materials/scripts/build_pbr_material.py",
+   "upstream_sha256": "c8dfd0487b4cd73b42e24de3c14da5a26979bc5ea8bfea59c8f45fcc545a4400",
+   "sha256": "c8dfd0487b4cd73b42e24de3c14da5a26979bc5ea8bfea59c8f45fcc545a4400",
+   "changes": []
+  },
+  {
+   "path": "skills/pbr-material-lookdev/scripts/decal.py",
+   "upstream_path": "skills/blender-texturing/scripts/decal.py",
+   "upstream_sha256": "46ce5673b4138087b74d04f8b254bdbd5f804698ed8885c055b2c25287fc1e2c",
+   "sha256": "b56cdd84c8a76f81575f2c3ae8133f3859bba1afbb52a589d409ef32528a5a49",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/pbr-material-lookdev/scripts/smart_material.py",
+   "upstream_path": "skills/blender-texturing/scripts/smart_material.py",
+   "upstream_sha256": "4ace4d3820c042c6ee60223eb2d4e0a7d4151f9af0334724e1c2cda0c57d3cdb",
+   "sha256": "5b267ce11ed1ff0de5b3cfb9ad52cc7d935b059b41ba86b8a4c6e7c94b898fe5",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/physics-simulation-baking/references/simulation-guide.md",
+   "upstream_path": "skills/blender-simulation/SKILL.md",
+   "upstream_sha256": "b4c80843a7bbc5e6e31266837f16cab973ed7d4cab45d204d8a7dedb9114f5ce",
+   "sha256": "89ba01d12f02d8fe82915d056a7ca22848a6f6ccb0c7c21e8c76196c6490113b",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/physics-simulation-baking/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/physics-simulation-baking/scripts/sim_setup.py",
+   "upstream_path": "skills/blender-simulation/scripts/sim_setup.py",
+   "upstream_sha256": "8c9f7cf99b4539343873caf707dd1b8eff8d78c55ccd19f9aa2dae26ef7150f2",
+   "sha256": "c87f7190e34bc03841d040c116654da0850e30e416bdec6e5c56bd7d70acdcc4",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/references/api-changes-5x.md",
+   "upstream_path": "skills/blender-core/references/api-changes-5x.md",
+   "upstream_sha256": "e34f2e39a97833d75b6177c2e281ff9481405efd88bfd2d67003560f0c421fe1",
+   "sha256": "10252ffd5cd6e18eda80c976638e8a866ce00e69cc336b24d5a76081e218231a",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/references/blender-execution-guide.md",
+   "upstream_path": "skills/blender-core/SKILL.md",
+   "upstream_sha256": "85c6161bf7a8e648735bd04957caba76f5e9c7b8506b38afd8496cc795563789",
+   "sha256": "103beac4fcc909b8241d809dc086888f8b23a5bc576f4a61a31c9bcaaa92b5f4",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "routing-table-rewritten",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/references/bpy-patterns.md",
+   "upstream_path": "skills/blender-core/references/bpy-patterns.md",
+   "upstream_sha256": "ba7bbc708bf198bdcdfa59d9d41d830a4ae119c24ae9457830b73d9e818e2af8",
+   "sha256": "a3a281e19f69f7f90886cd9e24a784b780439072d45cbbde3916bc4bf2830515",
+   "changes": [
+    "blender-5.1-compat",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/references/geometry-nodes-guide.md",
+   "upstream_path": "skills/blender-geometry-nodes/SKILL.md",
+   "upstream_sha256": "64cf885688c36a25ae00d8cf7bed2a0ae4c1641f46a16f5904856fbd67818b06",
+   "sha256": "259dd12ab45752e9643128a459486b89f6dde1f50872d8c865ed14d81f8a6358",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/references/pipeline-automation-guide.md",
+   "upstream_path": "skills/blender-pipeline-automation/SKILL.md",
+   "upstream_sha256": "1b59d80395ebb270347c64f3e148f873a782c2ff68c64e2239720517c15e8abb",
+   "sha256": "f00c129988b2ec2bea7c0b9327eaf21d6399bcf2b605cb8b3721674dc27de30b",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/references/recipes.md",
+   "upstream_path": "skills/blender-geometry-nodes/references/recipes.md",
+   "upstream_sha256": "9c2438db79ca4bcab6a89b62ef0e65868ccf140b4ffc7a7fb42d3ee0265cf976",
+   "sha256": "4b286a8e004154c5be59122951c9e7234197bb17c0bf648119e2785dd43a8a30",
+   "changes": [
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/references/scene-setup-guide.md",
+   "upstream_path": "skills/blender-scene-setup/SKILL.md",
+   "upstream_sha256": "fbfc9b4fb42fd3434d4112700eeda86049908cd65e5f9d939f043e5358d69a25",
+   "sha256": "59112dab23d017bcd545c80b58ea6ad030c5c21f104a6b873e896f57945f2119",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/scripts/batch_process.py",
+   "upstream_path": "skills/blender-pipeline-automation/scripts/batch_process.py",
+   "upstream_sha256": "baedf17711a939981f3796879e1f32be3203c197c41d9dc3fad8a104b82bfe8e",
+   "sha256": "988cbef315471c7542eb7bcebde609f648bdd261aa20057711984634eaa5059b",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/scripts/env_report.py",
+   "upstream_path": "skills/blender-core/scripts/env_report.py",
+   "upstream_sha256": "e628feed806dd265e0c1ce803d92591aac208a9f463d8c47cbb939476d3b347a",
+   "sha256": "e628feed806dd265e0c1ce803d92591aac208a9f463d8c47cbb939476d3b347a",
+   "changes": []
+  },
+  {
+   "path": "skills/procedural-3d-blender/scripts/gn_builder.py",
+   "upstream_path": "skills/blender-geometry-nodes/scripts/gn_builder.py",
+   "upstream_sha256": "6dcdd041451d99037b095f1de71356307a02959ab794d01e48a27fbf5aba139a",
+   "sha256": "bb1ba42830e2d62d4bf6704c1c0d5dfb9bee4df81d23b50f3c3e5cc9fad53381",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/scripts/run_in_blender.py",
+   "upstream_path": "skills/blender-core/scripts/run_in_blender.py",
+   "upstream_sha256": "e97e078c1b52475d386af2b8f9d27c7578a55c250ccd43ff50bed9c33d380355",
+   "sha256": "463b17a0be2843eacb958c07ac43750e27ccd1f9d017c88b7961a281a49f7cfb",
+   "changes": [
+    "no-bytecode"
+   ]
+  },
+  {
+   "path": "skills/procedural-3d-blender/scripts/scene_audit.py",
+   "upstream_path": "skills/blender-scene-setup/scripts/scene_audit.py",
+   "upstream_sha256": "a7baf10fb5a25acaf87d1024e5ec5fb89aee43b7ebff0f8598c4667cef64ae5b",
+   "sha256": "a7baf10fb5a25acaf87d1024e5ec5fb89aee43b7ebff0f8598c4667cef64ae5b",
+   "changes": []
+  },
+  {
+   "path": "skills/realtime-asset-optimization/references/game-optimization-guide.md",
+   "upstream_path": "skills/blender-game-optimization/SKILL.md",
+   "upstream_sha256": "15c900a72556e1a638c95ff78e03021601affa315d710bbdb55429247ffd9b96",
+   "sha256": "0a6220ef2ab07f3e0965f4089bcbb00c7998d16790d9bae9add657a24fe045d7",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/realtime-asset-optimization/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/realtime-asset-optimization/scripts/make_lods.py",
+   "upstream_path": "skills/blender-game-optimization/scripts/make_lods.py",
+   "upstream_sha256": "61076e02df93cfa8126a54466540db5a87d763a9910c9e650d441608678c15de",
+   "sha256": "61076e02df93cfa8126a54466540db5a87d763a9910c9e650d441608678c15de",
+   "changes": []
+  },
+  {
+   "path": "skills/realtime-asset-optimization/scripts/mesh_stats.py",
+   "upstream_path": "skills/blender-game-optimization/scripts/mesh_stats.py",
+   "upstream_sha256": "6f48790b87b90cd15d4c20e6884dcfedf9aa65292f4afcc7fad9fcf7eb8216bc",
+   "sha256": "6f48790b87b90cd15d4c20e6884dcfedf9aa65292f4afcc7fad9fcf7eb8216bc",
+   "changes": []
+  },
+  {
+   "path": "skills/retopology-uv-unwrap/references/retopology-uv-guide.md",
+   "upstream_path": "skills/blender-retopology-uv/SKILL.md",
+   "upstream_sha256": "54c4ff16de9873c819ff4ab60dee3b10a2e0bf2c29301a1b2ff1575b5abd7e06",
+   "sha256": "bb8f26db39fd71be6610f7db5e749ca2b47b00ae0dc5b2113b9f232466e7d171",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/retopology-uv-unwrap/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/retopology-uv-unwrap/scripts/auto_retopo.py",
+   "upstream_path": "skills/blender-retopology-uv/scripts/auto_retopo.py",
+   "upstream_sha256": "1690a3d9478111e45fe6b1d5f4453b893f82264ded8c95b46650cfc5a8f7d549",
+   "sha256": "ed6a0bd547b5cd4371fbb81e3d1158ee88e6ce4fecb44124a4153546dce7a264",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/retopology-uv-unwrap/scripts/texel_density.py",
+   "upstream_path": "skills/blender-retopology-uv/scripts/texel_density.py",
+   "upstream_sha256": "9fd15366aa20aa3005163745b12aae216c0b23a5fdafa0bbec98c1786f0c3cd6",
+   "sha256": "9fd15366aa20aa3005163745b12aae216c0b23a5fdafa0bbec98c1786f0c3cd6",
+   "changes": []
+  },
+  {
+   "path": "skills/retopology-uv-unwrap/scripts/uv_pack.py",
+   "upstream_path": "skills/blender-retopology-uv/scripts/uv_pack.py",
+   "upstream_sha256": "863fd392d1eecb79f4ca918deb12de5a3e58561de3795b07b5a4936794de855b",
+   "sha256": "863fd392d1eecb79f4ca918deb12de5a3e58561de3795b07b5a4936794de855b",
+   "changes": []
+  },
+  {
+   "path": "skills/rigging-animation-retarget/references/animation-guide.md",
+   "upstream_path": "skills/blender-animation/SKILL.md",
+   "upstream_sha256": "f2ec65cdf89f36dbf4066223a68e29990d031f1f9bc3a99ec72f14b51c0861d5",
+   "sha256": "caf6a927679db7585eac16a7caf9385824e1740a37b110036de185e8ff5e0d68",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/rigging-animation-retarget/references/character-rigging-guide.md",
+   "upstream_path": "skills/blender-character-rigging/SKILL.md",
+   "upstream_sha256": "c10ccac932b023af9c3252e2a46b0bb9c8bb2cd706ecfcad0ae3ac8eba0a1a3d",
+   "sha256": "725f3689614cb7f6f19e8a12a593c9f74b9321a94a7970074373dcf45a4cd406",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/rigging-animation-retarget/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/rigging-animation-retarget/scripts/bake_action.py",
+   "upstream_path": "skills/blender-animation/scripts/bake_action.py",
+   "upstream_sha256": "ff0e602c9f432872ebe4f34f368d92e36988abf4159c525981708caa962f349c",
+   "sha256": "ff0e602c9f432872ebe4f34f368d92e36988abf4159c525981708caa962f349c",
+   "changes": []
+  },
+  {
+   "path": "skills/rigging-animation-retarget/scripts/bind_mesh.py",
+   "upstream_path": "skills/blender-character-rigging/scripts/bind_mesh.py",
+   "upstream_sha256": "b56feaf9542a1433179248a8b6069e1a1b0dfd668d6a252745845de7f44a18b0",
+   "sha256": "b56feaf9542a1433179248a8b6069e1a1b0dfd668d6a252745845de7f44a18b0",
+   "changes": []
+  },
+  {
+   "path": "skills/rigging-animation-retarget/scripts/loop_check.py",
+   "upstream_path": "skills/blender-animation/scripts/loop_check.py",
+   "upstream_sha256": "02d4301f890a09fdd1057eb728aad1eb001fe87583da864ad5d869971074644d",
+   "sha256": "02d4301f890a09fdd1057eb728aad1eb001fe87583da864ad5d869971074644d",
+   "changes": []
+  },
+  {
+   "path": "skills/rigging-animation-retarget/scripts/retarget.py",
+   "upstream_path": "skills/blender-animation/scripts/retarget.py",
+   "upstream_sha256": "37f90283ebd72212af135ec25d866ad92f2537425472ec943a216eca1926bafa",
+   "sha256": "37f90283ebd72212af135ec25d866ad92f2537425472ec943a216eca1926bafa",
+   "changes": []
+  },
+  {
+   "path": "skills/rigging-animation-retarget/scripts/rig_check.py",
+   "upstream_path": "skills/blender-character-rigging/scripts/rig_check.py",
+   "upstream_sha256": "64de8edd97891c13a9b40d9111e71269358b342af458a35c47adf58b1287e552",
+   "sha256": "64de8edd97891c13a9b40d9111e71269358b342af458a35c47adf58b1287e552",
+   "changes": []
+  },
+  {
+   "path": "skills/rigging-animation-retarget/scripts/rigify_build.py",
+   "upstream_path": "skills/blender-character-rigging/scripts/rigify_build.py",
+   "upstream_sha256": "66c242c512da7b10222feb859e11deb10a3c6273652eceb275357ccd7c8a6efc",
+   "sha256": "66c242c512da7b10222feb859e11deb10a3c6273652eceb275357ccd7c8a6efc",
+   "changes": []
+  },
+  {
+   "path": "skills/rigging-animation-retarget/scripts/stress_poses.py",
+   "upstream_path": "skills/blender-character-rigging/scripts/stress_poses.py",
+   "upstream_sha256": "a4bd17b7f8d889cbbb776633097082b3627a0b6aa1e69771f850f8e518c647a2",
+   "sha256": "a4bd17b7f8d889cbbb776633097082b3627a0b6aa1e69771f850f8e518c647a2",
+   "changes": []
+  },
+  {
+   "path": "skills/stylized-npr-rendering/references/stylized-npr-guide.md",
+   "upstream_path": "skills/blender-stylized-npr/SKILL.md",
+   "upstream_sha256": "78042e1fbfc1e095767e6c84657668c6e051014ab544d595e12016451e8746dd",
+   "sha256": "0de9592a33d7deade3a95e6811e2de551db008299f1c808c980cf99af9b429e2",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/stylized-npr-rendering/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/stylized-npr-rendering/scripts/toon_setup.py",
+   "upstream_path": "skills/blender-stylized-npr/scripts/toon_setup.py",
+   "upstream_sha256": "03272a542900ae68207b8dc809d028393f294ad9fc3250e929f718f273145c3a",
+   "sha256": "03272a542900ae68207b8dc809d028393f294ad9fc3250e929f718f273145c3a",
+   "changes": []
+  },
+  {
+   "path": "skills/task-skill-router/references/3d-asset-playbooks.md",
+   "upstream_path": "skills/blender-workflow-recipes/SKILL.md",
+   "upstream_sha256": "94de00b0a0a7284cd9d997924478be5cc7a8c7e4d26cbdac56adc86634d15324",
+   "sha256": "359c2639bb4875f509a36194973e0b65e50bf8a2ddcccafac97ddc90a1e93959",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/texture-map-baking/references/texture-baking-guide.md",
+   "upstream_path": "skills/blender-texture-baking/SKILL.md",
+   "upstream_sha256": "bf94f8054b6a9483214d2ceb3e160e44d2593b51154c553defa190272431ccb4",
+   "sha256": "0e0f3b0c0f4f569ee354e25cf5d907ae15b35e73ac8518b6d2d55607cdf1aa15",
+   "changes": [
+    "guide-from-skill-body",
+    "links-rebased",
+    "provenance-header",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "skills/texture-map-baking/scripts/_bpyx.py",
+   "upstream_path": "shared/_bpyx.py",
+   "upstream_sha256": "90f44d70198b199cd922e4e57f7e55c56a3041d3a498ef7d444b019f9795d2ff",
+   "sha256": "90d892755e0849ae1ceb16c54ef1d76a80576c959c68960a29ade432447d80b1",
+   "changes": [
+    "blender-5.1-compat"
+   ]
+  },
+  {
+   "path": "skills/texture-map-baking/scripts/bake_maps.py",
+   "upstream_path": "skills/blender-texture-baking/scripts/bake_maps.py",
+   "upstream_sha256": "16b27115c8bb19f9d4b2162a67467df9b3f9f720dcc365497a7443be9cab5e0a",
+   "sha256": "5373ffd158ba93f93e777a1dcdacdca5e841201f08c88ec78e7268380f6c1130",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/fixtures.py",
+   "upstream_path": "tests/fixtures.py",
+   "upstream_sha256": "d1dc0657d2e6b1df1e9a1c41240c8f9db6bc92f738e55c6687910828e304c71b",
+   "sha256": "d1dc0657d2e6b1df1e9a1c41240c8f9db6bc92f738e55c6687910828e304c71b",
+   "changes": []
+  },
+  {
+   "path": "tests/blender/run_all.py",
+   "upstream_path": "tests/run_all.py",
+   "upstream_sha256": "7f6eab69f3ee4d7d51a2e94ca14599b18d4a2b94ab07ad6f5274600d07972f90",
+   "sha256": "5b6570ba810020cbdbdae28e8c0def42336c704b9d66d04795da7cbd4e3918b2",
+   "changes": [
+    "no-bytecode",
+    "pack-layout",
+    "version-gates"
+   ]
+  },
+  {
+   "path": "tests/blender/test_addon.py",
+   "upstream_path": "tests/test_addon.py",
+   "upstream_sha256": "54c58c8e472f03f13b5ef972caaba72a75298e72b1804958d41e2355af62af60",
+   "sha256": "8c606679034e481c0ecef7a97ec2ac233b689d6f97a14299e20428470fe7298a",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_animation.py",
+   "upstream_path": "tests/test_animation.py",
+   "upstream_sha256": "cdfac78bfaefa488f10a787d65eef1f460f1d385eff9984446d8302be82ee8c8",
+   "sha256": "32103b8956c44cf87523bce9cf4a7d7b47c58adf22af5ef6d714a5f3e6525641",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_atmosphere.py",
+   "upstream_path": "tests/test_atmosphere.py",
+   "upstream_sha256": "1f369eb78ed602cccdcae4daf70eb35e87236011d804c714ba67257610fc6009",
+   "sha256": "556ceac2c9a8b1baa93c1e2eb755f42ec65d7adc7a76b76ed78b7f86582cbb8f",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_baking.py",
+   "upstream_path": "tests/test_baking.py",
+   "upstream_sha256": "27077021875730cc642a1962399da094ee64a5bc21e66a554888d09870fa6de9",
+   "sha256": "6ae2370d5c7d44fdf3105401416a26b18d7488f1f55710fd00e6ba951b237425",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_clothing.py",
+   "upstream_path": "tests/test_clothing.py",
+   "upstream_sha256": "f24c163902f3f86ee029191903847c23d76e3e3b2047e023e8044672ed88b091",
+   "sha256": "79081fae170416a8890b5f875b6cd667a3af1aa108fdd0b5826fb23c26a6506e",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_core.py",
+   "upstream_path": "tests/test_core.py",
+   "upstream_sha256": "ff4e87f393a2916f05e025d0d9b3eca1595cf062629ea8717c99310df5e941cc",
+   "sha256": "cf3c6fe931475bf14d76fb443011867a2687c7e647caf3ce4fa461a31be5a342",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_environment.py",
+   "upstream_path": "tests/test_environment.py",
+   "upstream_sha256": "3d243ebd774763a0456fe5de6801c675eb7534ce96c1f08e7a5242e52a6f173a",
+   "sha256": "19f438bb399077f86fcf70e23e180f2403ec7fbb2eb9da0365d3f0490d07d798",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_export.py",
+   "upstream_path": "tests/test_export.py",
+   "upstream_sha256": "7ab3ee087ddd79282f09f443b52c21761d47c8916694699c3fdebf1085ecfa6d",
+   "sha256": "b930a534d2de856d57d86dbd71dc48727fb5075e71a32d42d3c851bac68ba0aa",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_facial.py",
+   "upstream_path": "tests/test_facial.py",
+   "upstream_sha256": "90ae6390f05a876a8c9bfe8cfb371dc60418c69b48f58055e441384af9129207",
+   "sha256": "bb6f2936ed090401ae9d7b2563a6d8c57d9ad878e2c0652e7490e43f48f0ec62",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_geonodes.py",
+   "upstream_path": "tests/test_geonodes.py",
+   "upstream_sha256": "31327a1d89e1f9d44e249198bbc0bbfc4d51849b4553fdb0faf3d1039085da76",
+   "sha256": "f2a0f11b84b230a451ae016d7d9166aca8f6396de61f83cf991d3d3cebdf0318",
+   "changes": [
+    "blender-5.1-compat",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_hair.py",
+   "upstream_path": "tests/test_hair.py",
+   "upstream_sha256": "80495d53ed365ac3e191e84397034f09051bb4760e1a9a193d8be3cacb18b235",
+   "sha256": "b2977912abec983b904e849c7e08632c6b7c6cba34e479f1235010804da131d9",
+   "changes": [
+    "blender-5.1-compat",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_materials.py",
+   "upstream_path": "tests/test_materials.py",
+   "upstream_sha256": "83fb7dda1971e8389a2ff9657bff266ad7a40133c5e10d6bc68fa6c1422eb50e",
+   "sha256": "52b8fe99a9f10cbc9fef0723f3e82b3b4d115643bb9d58e905711ac39c0757cb",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_modeling.py",
+   "upstream_path": "tests/test_modeling.py",
+   "upstream_sha256": "8eeaa0547a4367f6524d790e7338ee4baa394f078b40b35e75dedf0f653ff1d8",
+   "sha256": "8a064af734bf85b5d3054d3168a6e8cd608ebe63b894754c9a852fb87117fa94",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_npr.py",
+   "upstream_path": "tests/test_npr.py",
+   "upstream_sha256": "f1b667ebad458672674df1c92759db3a3324206d792efe3dbc16d8d677d58575",
+   "sha256": "8fec25de0ad5588e846d77a098012a9058527f545a5e0bf66615eb998cf4f240",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_optimization.py",
+   "upstream_path": "tests/test_optimization.py",
+   "upstream_sha256": "52933bd04d0277515dd1553cdb735c32596d5d4ccb9aafb95335b6ea9a3477a4",
+   "sha256": "366ec358d7cdeda198efcea94525563de15c45536de385e46b25472116aa62e7",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_pipeline.py",
+   "upstream_path": "tests/test_pipeline.py",
+   "upstream_sha256": "34e05e42eab1dd01343ac2645b1ff1ec7fa3a307f22a4b07c7acf8d71d8de86d",
+   "sha256": "38e4b0cbe911f1b0ad1ace277f1b2828e66814a699d21f629d9fb3a7c18cf036",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_qa.py",
+   "upstream_path": "tests/test_qa.py",
+   "upstream_sha256": "6a6db82e8ed8f320a448dab32c827ab8a279883c463c75c118393ff736e90826",
+   "sha256": "535d38cbe8e11a627f7653a7c973d10f3d17e25af87b356f8d82e8a40b54517c",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_rendering.py",
+   "upstream_path": "tests/test_rendering.py",
+   "upstream_sha256": "1921e2e15a32b06364aa685ac964ca20b0efdff4d5341ba4d50a382d370b7d7b",
+   "sha256": "cd6b5021aff019f3a8af58215bac1da5bd380f6ec8a1655ce0eb5752ff1ea1b8",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_retopo_uv.py",
+   "upstream_path": "tests/test_retopo_uv.py",
+   "upstream_sha256": "b2a2c28d5a395bee42f9e1472aa7060363153aab8d0c9f03ee0011f342428639",
+   "sha256": "691d7b16ad0e0c3b11318f0ca63b7cde321800dc8a35e9c4c32fac00467d6334",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_rigging.py",
+   "upstream_path": "tests/test_rigging.py",
+   "upstream_sha256": "d923041ba6fb33ff80ee07761ed3b0231646f8a3d0cde8f985a14343705f0163",
+   "sha256": "a4fc0616f6325934a8a1864eeabe6f708d0ed4525d0fd1e727296e71d84c1ad9",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_scene.py",
+   "upstream_path": "tests/test_scene.py",
+   "upstream_sha256": "3dc8481edfc47e9cbeddb0fd22776e08ba87d0c0cab1497bc7f73662f4f40c13",
+   "sha256": "dd35f25c54b11621731da12629a9bfcf2a50a91ef6296f4eeac0427d514f25a1",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_sculpt.py",
+   "upstream_path": "tests/test_sculpt.py",
+   "upstream_sha256": "7a8418b34093fb7213d044e85e05bfcbccd4ec27e4b31a0ec74fcc0d7c799da4",
+   "sha256": "5f0d105201e8cb6545fa30ff204037f54d31ce7002166d5fe7124ccff8cda1ff",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_simulation.py",
+   "upstream_path": "tests/test_simulation.py",
+   "upstream_sha256": "b4766a2d9102b02ac2a6e09a22ee1347d3ea2f4c7e390ac2d1715bd810af3eca",
+   "sha256": "de9f300627f986e54b4fb148c2ba911fea5a02194a492a370021b6452085f520",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_texturing.py",
+   "upstream_path": "tests/test_texturing.py",
+   "upstream_sha256": "737faa451ed3184da53faae127f6a22cdf5eb66f2b060639e18e9e8b831d14ee",
+   "sha256": "de0811d028e54d30ed23a8b2ada10f6c64049a3f75be3252c75eef08404339a1",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_video.py",
+   "upstream_path": "tests/test_video.py",
+   "upstream_sha256": "05a4d8fbc02e137ec5cba6553c3ad52280d1249462fa5a7ce9edd99d9e65604c",
+   "sha256": "5b44c6109a2c68be7eae96257f5d013114a5c16d3d4286289f1f2bc137a79757",
+   "changes": [
+    "no-bytecode",
+    "pack-layout",
+    "skill-names-remapped"
+   ]
+  },
+  {
+   "path": "tests/blender/test_weather.py",
+   "upstream_path": "tests/test_weather.py",
+   "upstream_sha256": "da613357a01342a7010920019050ecd4494aa8b836d80ce9a4c893e1b67a1a2e",
+   "sha256": "e7afb23f79e1cdc4652b424996fa113bea5b4ed97f2e0ffcfa1a1e2727320cff",
+   "changes": [
+    "skill-names-remapped"
+   ]
+  }
+ ]
+}

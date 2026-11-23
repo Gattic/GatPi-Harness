@@ -3,7 +3,7 @@ name: rigging-animation-retarget
 description: "Use when character rigging, mocap retargeting, motion cleanup or animation export. Do not use when a static prop mesh with no moving components."
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "2.0.0"
   category: "media"
 ---
 
@@ -27,22 +27,30 @@ metadata:
 
 ## Workflow
 
-1. Inventory source and target skeletons, joint naming, bind poses, scale, coordinate axes and motion semantics.
+1. Inventory source and target skeletons, joint naming, bind poses, scale, coordinate axes and motion semantics; prepare the mesh with applied scale, facing -Y, feet at Z=0, symmetric, in T- or A-pose.
 
-2. Map joints and degrees of freedom; define root motion, translation channels, twist distribution and IK constraints.
+2. Build or validate the rig with joints at the pivot of rotation, consistent roll, `.L`/`.R` naming and deform bones separated from controls; `scripts/rigify_build.py` adds, fits and generates a Rigify rig and derives a clean game skeleton from it.
 
-3. Normalize rest poses and bone orientation, then retarget a short representative test sequence.
+3. Skin with `scripts/bind_mesh.py` (heat weights with a proxy fallback, at most four influences, normalized) and stress-test with `scripts/stress_poses.py`; fix collapsing elbows, candy-wrapped forearms and sunken shoulders before animating.
 
-4. Correct foot sliding, penetration, discontinuities and excessive joint rotation without flattening intentional acting.
+4. Map joints and degrees of freedom; define root motion, translation channels, twist distribution and IK constraints, and validate the export skeleton with `scripts/rig_check.py --profile unity|unreal|roblox`.
 
-5. Validate deformation weights, animation curves, event timing and target-engine import behavior.
+5. Normalize rest poses and bone orientation, then retarget a short representative test sequence; run `scripts/retarget.py --show-map` first and resolve every unmapped key part.
 
-6. Export reusable mapping, rig, cleaned clips and a side-by-side motion QC report.
+6. Correct foot sliding, penetration, discontinuities and excessive joint rotation without flattening intentional acting; bake control-rig motion onto the export skeleton with `scripts/bake_action.py` and check loop seams with `scripts/loop_check.py`.
+
+7. Validate deformation weights, animation curves, event timing and target-engine import behavior.
+
+8. Export reusable mapping, rig, cleaned clips and a side-by-side motion QC report.
 
 ## Specialist protocol and proof boundaries
 
 - Validate cyclic phase, joint constraints, collisions and motion endpoints at sampled times; prioritize model-defined kinematics for rigid mechanisms.
 - Do not substitute aesthetically pleasing interpolation for correct mechanical constraints.
+- Blender 5.x actions are slotted and layered: `action.fcurves` no longer exists, so reach F-curves through `anim_utils.action_ensure_channelbag_for_slot` and confirm `animation_data.action_slot` after assigning an action.
+- Keep one action per clip with a fake user; an F-curve Cycles modifier previews a loop but does not export, so bake it, and do not animate bone scale unless the target engine supports it.
+- Rest poses must match (T versus A) before retargeting; measured loop pops and hip-travel scale are evidence, a clip that merely looks smooth is not.
+- Bundled guides and scripts target Blender 5.2 LTS+ (upstream-verified on 5.3) and were re-run in this pack on 5.1.2; record `bpy.app.version_string` and check `procedural-3d-blender/references/version-compatibility.md` before using a 5.2+ or 5.3-only API on an older build.
 
 ## Deliverables
 
@@ -105,9 +113,23 @@ In the Pi harness, use `create_subagent` for one role, `specialist_tasks` for a 
 and `run_topology` for registered topologies. Role children run with skill discovery disabled, so pass
 the relevant part of this skill in the child task and keep this skill's acceptance gate as the parent's gate.
 
+## Optional references
+
+- [references/character-rigging-guide.md](references/character-rigging-guide.md)
+- [references/animation-guide.md](references/animation-guide.md)
+- [scripts/rigify_build.py](scripts/rigify_build.py)
+- [scripts/bind_mesh.py](scripts/bind_mesh.py)
+- [scripts/stress_poses.py](scripts/stress_poses.py)
+- [scripts/rig_check.py](scripts/rig_check.py)
+- [scripts/retarget.py](scripts/retarget.py)
+- [scripts/bake_action.py](scripts/bake_action.py)
+- [scripts/loop_check.py](scripts/loop_check.py)
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+
 ## Provenance notes
 
 Original Skill Foundry workflow informed by these public sources; this skill does not install or authorize any named tool:
 
 - https://gist.github.com/ivanfioravanti/1b892d8d30db8703c113dc56d6bbf11d
 - https://github.com/wheresryan22/anatomy/blob/main/SKILL.md
+- https://github.com/EL4CTEO/blender-skills

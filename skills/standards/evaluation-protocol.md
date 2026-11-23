@@ -1,10 +1,10 @@
 # Skill evaluation protocol — v1.0
 
-The packaged `evals/<skill>.json` files are **test designs**, not successful agent-test runs. Each of the 139 suites defines three positive routing prompts, two negative prompts and two adversarial/constraint prompts (973 cases). 51 suites — the 41 skills revised or added in 2.0 and the ten 3.0 motion additions — add two `domain` edge/negative cases each (102), for 1075 designed cases total. Do not conflate these specifications with measured activation or end-to-end quality.
+The packaged `evals/<skill>.json` files are **test designs**, not successful agent-test runs. Each of the 153 suites defines three positive routing prompts, two negative prompts and two adversarial/constraint prompts (1071 cases). 70 suites — the 41 skills revised or added in 2.0, the ten 3.0 motion additions, and the five revised and fourteen new skills of the 2026-11-23 Blender integration — add two `domain` edge/negative cases each (140), for 1211 designed cases total. Do not conflate these specifications with measured activation or end-to-end quality.
 
 ## Static phase (implemented)
 
-Run `python tools/validate_skills.py` and `python -m unittest discover -s tests -v`. Check directory/frontmatter consistency, structure, gating language, evaluation completeness and referenced assets. Verify no generator changes from a no-op rebuild. Static success proves only that the pack satisfies the declared structure.
+Run `python tools/validate_skills.py`, `python tools/check_blender_bundle.py` and `python -m unittest discover -s tests -v`. Check directory/frontmatter consistency, structure, gating language, evaluation completeness and referenced assets. Verify no generator changes from a no-op rebuild. Static success proves only that the pack satisfies the declared structure.
 
 ## Routing phase (to execute in a real agent host)
 
