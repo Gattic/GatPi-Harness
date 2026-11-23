@@ -104,6 +104,7 @@ node scripts/memory-evidence-window.js --strict   # exit 1 and list the failing 
 | [docs/](docs) | Design decisions, release scorecards, benchmarks, and field notes. |
 | [docs/extension-portfolio/](docs/extension-portfolio) | Per-extension lifecycle registry and tool-exposure decisions. |
 | [skills/CATALOG.md](skills/CATALOG.md) | Shipped Agent Skill catalog. |
+| [GatPi and the Harness: A Governed AI Coding Stack](https://gattic.com/articles/gatpi-and-harness-guide/) | Published walkthrough of the runtime/harness split, install path, and authorization model. |
 
 ## Privacy and safety
 
