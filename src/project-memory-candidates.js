@@ -128,7 +128,11 @@ class ProjectMemoryCandidatePipeline {
       if (candidateHashes.length > 0) this.persist({ lastDiagnosticSettle: { at: new Date(this.clock()).toISOString(), newCandidates: candidateHashes.length, alreadySeen } });
       this.diagnostic({ kind: "settle", scanned: observed.length, truncated: entries.length > observed.length, candidateHashes, alreadySeen, reasonCounts, vaultReady: this.projectMemory?.enabled === true, diagnosticOnly: !this.rollout.controls.candidateCapture });
     }
-    if (!this.rollout?.controls?.candidateCapture || !this.projectMemory?.enabled) return { enabled: false, considered: 0, decisions: [], pendingExplicit: this.pendingExplicit.length };
+    // Shadow proposals run from M2 so SD accrues before M3 authorizes candidate
+    // capture. `consider` stays on the shadow path (apply and queueReview are
+    // false until those controls exist), so nothing is written to the vault.
+    const proposalsAuthorized = Boolean(this.rollout?.controls?.candidateCapture || this.rollout?.controls?.shadowCandidates);
+    if (!proposalsAuthorized || !this.projectMemory?.enabled) return { enabled: false, considered: 0, decisions: [], pendingExplicit: this.pendingExplicit.length };
     const decisions = []; let considered = 0;
     for (const entry of entries) {
       if (considered >= this.maxPerSettle) break; const classified = classifyCognitiveCandidate(entry); if (!classified.eligible) continue;
