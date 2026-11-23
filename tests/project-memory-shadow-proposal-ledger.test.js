@@ -15,7 +15,7 @@ const { sha256 } = require("../src/project-memory-schema");
 const DAY = 864e5;
 const BASE = Date.parse("2026-11-10T09:00:00Z");
 
-function m2Fixture() {
+function stageFixture(stage) {
   const tmp = tmpFixture("pi-memory-shadow-proposal-");
   const cwd = path.join(tmp, "repo");
   const vault = path.join(tmp, "vault");
@@ -35,10 +35,10 @@ function m2Fixture() {
     PI_PROJECT_MEMORY_AUTOMATIC: "0",
   };
   const runtime = projectMemoryRuntimeConfig(cwd, env, { vault });
-  const rollout = resolveProjectMemoryRollout(
-    { ...env, PI_PROJECT_MEMORY_STAGE: "M2" },
-    { kind: "rollout.evaluated", effectiveStage: "M2", insufficient: [] },
-  );
+  const rollout = stage === "M1"
+    ? resolveProjectMemoryRollout(env)
+    : resolveProjectMemoryRollout({ ...env, PI_PROJECT_MEMORY_STAGE: stage }, { kind: "rollout.evaluated", effectiveStage: stage, insufficient: [] });
+  assert.equal(rollout.effectiveStage, stage);
   assert.equal(rollout.controls.shadowCandidates, true);
   assert.equal(rollout.controls.candidateCapture, false);
 
@@ -84,6 +84,8 @@ function m2Fixture() {
   };
   return { tmp, cwd, env, adapter, pipeline, entry, readTrace, setNow: (value) => { now = value; }, setSessionHash: (value) => { sessionHash = value; } };
 }
+
+function m2Fixture() { return stageFixture("M2"); }
 
 test("M2 records a shadow proposal in the decision ledger", () => {
   const fixture = m2Fixture();
@@ -254,6 +256,45 @@ test("agreed:false outcomes are recorded and consumed into the agreement bar", (
   assert.ok(evaluation.predicates.SD.reasons.includes("shadow-agreement-below-bar"));
   assert.ok(!evaluation.predicates.SD.reasons.includes("shadow-samples-below-minimum"), "the sample gate is passed");
   assert.ok(Math.abs(evaluation.predicates.SD.metrics.agreement - 18 / 21) < 1e-9);
+
+  fs.rmSync(fixture.tmp, { recursive: true, force: true });
+});
+
+test("M1 records a shadow proposal and resolves it into a shadow outcome", () => {
+  const fixture = stageFixture("M1");
+  assert.equal(fixture.pipeline.settle([fixture.entry]).decisions[0].outcome, "shadowed");
+  const proposal = fixture.adapter.decisions({ limit: Infinity }).find((row) => row.action === "shadowed");
+  const proposed = fixture.readTrace().filter((event) => event.name === "shadow.proposed");
+  assert.equal(proposed.length, 1);
+  assert.equal(proposed[0].payload.proposalHash, proposal.candidateHash);
+
+  fixture.setNow(BASE + 60 * 60 * 1000);
+  const saved = fixture.adapter.save(
+    { kind: "decision", title: fixture.entry.title, content: fixture.entry.content, verification: "verified" },
+    { apply: true, explicit: true },
+  );
+  assert.equal(saved.decision.action, "saved");
+
+  const outcomes = fixture.readTrace().filter((event) => event.name === "shadow.outcome");
+  assert.equal(outcomes.length, 1);
+  assert.equal(outcomes[0].payload.agreed, true);
+  assert.equal(outcomes[0].payload.applied, false);
+  assert.equal(outcomes[0].payload.proposalHash, proposal.candidateHash);
+  assert.equal(outcomes[0].payload.sessionIdHash, proposal.sessionIdHash);
+
+  const evaluation = evaluateProjectMemoryRollout({
+    cwd: fixture.cwd,
+    env: fixture.env,
+    now: BASE + 7 * DAY,
+    refresh: true,
+    emit: false,
+    privacy: null,
+    baseline: null,
+  });
+  assert.equal(evaluation.predicates.SD.metrics.outcomes, 1);
+  assert.equal(evaluation.predicates.SD.metrics.sessions, 1);
+  assert.equal(evaluation.predicates.SD.metrics.days, 1);
+  assert.ok(!evaluation.predicates.SD.reasons.includes("shadow-outcomes-missing"));
 
   fs.rmSync(fixture.tmp, { recursive: true, force: true });
 });

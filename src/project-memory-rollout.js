@@ -144,10 +144,11 @@ function resolveProjectMemoryRollout(env = process.env, evaluation = null, optio
     automaticCapture: operatorAutomatic && env.PI_PROJECT_MEMORY_READS !== "0" && env.PI_PROJECT_MEMORY_AUTO_SAVE === "1",
     // Diagnostics do not grant M1 writes, M2 injection, or M3 candidate authority.
     diagnosticCapture: enabled && env.PI_PROJECT_MEMORY_DIAGNOSTICS === "1",
-    // M2 measures shadow decisions before candidate capture is authorized at
-    // M3: proposals are recorded as shadowed decisions (never applied or
-    // queued), so SD can accrue while M2 is active.
-    shadowCandidates: enabled && stageIndex(effective) >= 2 && env.PI_PROJECT_MEMORY_CANDIDATES !== "0",
+    // Shadow decisions are measurement-only and accrue from M1: proposals are
+    // recorded as shadowed decisions (never applied or queued), so SD can be
+    // observed without changing the explicit-write policy. Candidate capture
+    // stays M3+ because it writes the review queue.
+    shadowCandidates: enabled && stageIndex(effective) >= 1 && env.PI_PROJECT_MEMORY_CANDIDATES !== "0",
     candidateCapture: enabled && stageIndex(effective) >= 3 && env.PI_PROJECT_MEMORY_CANDIDATES !== "0",
     reviewQueueWrites: enabled && stageIndex(effective) >= 4 && env.PI_PROJECT_MEMORY_REVIEW_QUEUE !== "0",
     hermesCuration: enabled && stageIndex(effective) >= 4 && env.PI_PROJECT_MEMORY_HERMES !== "0",

@@ -244,7 +244,7 @@ deterministic suite, compliant permissions, and zero new record-format highs sin
 | | |
 |---|---|
 | Active controls | explicit writes (`PI_PROJECT_MEMORY_WRITES=1`), shadow recall (measured, not injected) |
-| Shadow measurement | explicit save quality accumulates; `recall.completed` with `injected:false` |
+| Shadow measurement | explicit save quality accumulates; `recall.completed` with `injected:false`; shadow decision proposals/outcomes (measurement only — nothing applied or queued) |
 | Promotion predicate | `M0 && explicit writes enabled` |
 | Operator authority | `PI_PROJECT_MEMORY_STAGE=M1` + `PI_PROJECT_MEMORY_WRITES=1` (today's opt-in) |
 
@@ -272,7 +272,7 @@ This is what makes M2 reachable from ordinary sessions rather than from a signed
 | | |
 |---|---|
 | Active controls | candidate capture written to the review queue |
-| Shadow measurement | `shadow.outcome` with `applied === false` at M2 |
+| Shadow measurement | `shadow.outcome` with `applied === false` at M1+ |
 | Promotion predicate | `M2 && SD` |
 | Required samples | ≥ 20 shadow outcomes, ≥ 5 sessions, ≥ 7 days |
 | Bars | agreement ≥ 0.90 |
