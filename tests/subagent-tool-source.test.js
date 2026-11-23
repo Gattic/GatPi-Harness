@@ -29,7 +29,8 @@ assert(source.includes('roleResolution: "custom-read-only"'), "custom role prove
 assert(source.includes("Unknown subagent role"), "unknown role labels without a prompt are rejected");
 assert(source.includes("Ambiguous subagent role"), "normalized role collisions fail closed");
 assert(source.includes("is handler-only and must run inside a topology"), "handler-only roles cannot be misrouted into RPC sidecars");
-assert(source.includes("ctx?.sessionManager?.getSessionId?.()"), "subagent parent identity should use the real Pi session id instead of collapsing tool calls into pi-session");
+const sessionIdentity = fs.readFileSync(path.join(__dirname, "..", "src", "session-identity.js"), "utf8");
+assert(source.includes("parentSessionId: getParentSessionId") && sessionIdentity.includes("ctx?.sessionManager?.getSessionId?.()"), "subagent parent identity should use the shared real Pi session id helper instead of collapsing tool calls into pi-session");
 assert(source.includes("process.env.PI_SUBAGENT_MAX_CONCURRENT || 8"), "default subagent record headroom should exceed 4-way critique fanout");
 assert(source.includes("function isSubagentBranch") && source.includes('metadata?.kind === "subagent"'), "extension parent branch selection should not chain sibling critique subagents under prior subagent branches");
 assert(toolSource.includes('executionMode: "parallel"'), "subagent tool should allow sibling run calls to execute in parallel for skill fanout");

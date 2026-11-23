@@ -17,6 +17,7 @@ const { EvidenceStore, createEvidencePacket } = require("../src/evidence-binder.
 const { currentMemorySourceEvidence } = require("../src/memory-effectiveness-source.js");
 const { ROLE_OUTPUT_SCHEMAS, validateJsonSchema } = require("../src/role-result-schemas.js");
 const { HermesAdvisoryAdapter } = require("../src/integration-boundary.js");
+const { ProjectMemoryStore } = require("../src/project-memory-store.js");
 
 let piPackageRoot = null;
 try {
@@ -136,7 +137,8 @@ function stubPi(registered, events = { on: () => {}, off: () => {}, emit: () => 
           else process.env.PI_PROMPT_SUGGESTIONS_MODEL = priorModel;
         }
       }
-      fn(stubPi(registered));
+      const extensionEvents = [];
+      fn(stubPi(registered, name === "extensions/memory-explorer" ? { on: () => {}, off: () => {}, emit: (event, payload) => extensionEvents.push({ event, payload }) } : undefined));
       const total = registered.commands.length + registered.tools.length;
       if (["extensions/git-evidence-courier", "extensions/verification-center"].includes(name)) {
         const fixture = tmpFixture("pi-security-checkpoint-tool-");
@@ -943,6 +945,10 @@ if (process.argv[2] === 'scan' && !process.argv.includes('--validate')) {
         assert.equal(fs.existsSync(path.join(cwd, ".pi", "project-memory", "decisions.jsonl")), false, "M0 review queue writes no rejected or queued decision");
         fs.mkdirSync(path.join(cwd, ".pi", "memory-effectiveness"), { recursive: true });
         fs.writeFileSync(path.join(cwd, ".pi", "memory-effectiveness", "scorecard.json"), JSON.stringify({ schemaVersion: 1, generatedAt: new Date().toISOString(), source: currentMemorySourceEvidence({ implementationRoot: path.resolve(__dirname, "..") }), highestAuthorizedStage: "M1", scores: { privacyBoundary: { status: "pass" }, migrationRollback: { status: "pass" } }, aggregates: { privacy: { unresolvedHighSeverity: 0 } } }));
+        const shadowCandidate = { kind: "decision", title: "Explicit memory fixture", content: "Canonical project memory uses reviewed Obsidian notes.", verification: "verified", sourceFingerprints: ["fixture-v1"] };
+        const shadowStore = new ProjectMemoryStore({ cwd, vault, writeEnabled: true });
+        const shadow = shadowStore.consider(shadowCandidate, { queueReview: false, apply: false });
+        assert.equal(shadow.outcome, "shadowed", "an M1 consideration records a shadow proposal without writing the vault");
         const oldVault = process.env.PI_OBSIDIAN_VAULT; const oldStage = process.env.PI_PROJECT_MEMORY_STAGE; process.env.PI_OBSIDIAN_VAULT = vault; process.env.PI_PROJECT_MEMORY_STAGE = "M1";
         try {
           input({ source: "user", text: "Please save this reviewed memory decision." }, ctx);
@@ -950,6 +956,12 @@ if (process.argv[2] === 'scan' && !process.argv.includes('--validate')) {
           assert.equal(saved.details.outcome, "saved");
           assert.equal(saved.details.entry.content, undefined, "curator result does not echo the candidate body");
           assert.equal(saved.details.rollout.effectiveStage, "M1");
+          const outcome = extensionEvents.find((row) => row.event === "project-memory:telemetry" && row.payload?.name === "shadow.outcome");
+          assert.ok(outcome, "an explicit curator save resolves the shadow proposal through the telemetry sink");
+          assert.equal(outcome.payload.agreed, true);
+          assert.equal(outcome.payload.applied, false);
+          assert.match(String(outcome.payload.sessionIdHash), /^[a-f0-9]{16}$/);
+          assert.ok(extensionEvents.some((row) => row.payload?.name === "curation.completed"), "the applied save emits curation telemetry");
         } finally { if (oldVault === undefined) delete process.env.PI_OBSIDIAN_VAULT; else process.env.PI_OBSIDIAN_VAULT = oldVault; if (oldStage === undefined) delete process.env.PI_PROJECT_MEMORY_STAGE; else process.env.PI_PROJECT_MEMORY_STAGE = oldStage; }
         input({ source: "user", text: "Explain the current branch." }, ctx);
         const readAfterReset = await curator.execute("read-after-reset", { operation: "plan" }, undefined, undefined, ctx);

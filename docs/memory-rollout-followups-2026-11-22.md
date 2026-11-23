@@ -42,23 +42,28 @@ live process cannot reach it:
    `.pi/traces`. The 42 `recall.completed` events in `.pi/traces` are Hermes-memory rows
    from `2026-07-09 … 2026-07-27`, outside the 90-day window and payload-less.
 
-## Why `shadow.outcome` is still zero
+## Shadow outcome measurement at M1
 
-`shadow.outcome` is emitted by `ProjectMemoryAdapter.emitDecision()` only when a
-`shadowed` decision is resolved by a real decision recorded for the same
-`candidateHash`:
+`shadow.outcome` is emitted by `ProjectMemoryAdapter.emitDecision()` when a real
+decision resolves a `shadowed` row with the same `candidateHash`. Three changes make
+that path live at M1:
 
-1. **No shadow proposals exist.** The ledger's last `shadowed` row is
-   `2026-10-25T22:54:47Z`; no decision of any action has been recorded since
-   `2026-10-26T13:07:56Z`. Without a shadowed proposal there is no outcome to emit.
-2. **Shadow recall is not authorized at this stage.** With
-   `PI_PROJECT_MEMORY_AUTOMATIC=1` task recall is authorized at M1
-   (`taskRecall:true`), and `shadowRecallAuthorized` requires `!recallAuthorized`;
-   controls report `shadowRecall:false`, `candidateCapture:false`. Shadow measurement is
-   therefore inert until M2 or until an M1 posture without operator auto-recall.
-3. **Same telemetry gaps as R.** The `project-memory:telemetry` listener is registered
-   only on `session_start`, and payload capture strips `agreed`/`applied`/`proposalHash`,
-   which `SD` requires.
+1. **Proposals are recorded at M1.** `shadowCandidates` is enabled from M1 and the
+   idle settle records `shadowed` proposals with `apply:false` and `queueReview:false`;
+   `candidateCapture` stays M3+ because it writes the review queue.
+2. **The runtime idle settle emits `shadow.proposed`** for eligible durable entries
+   (verified, content-addressed, not already shadowed). A production run recorded
+   proposal `sha256:35feb75c…` and its `shadow.outcome` (`agreed:true`,
+   `applied:false`) in `.pi/traces`; the ledger shows the matching `shadowed` and
+   `saved` rows.
+3. **Curator saves forward telemetry.** The `memory-explorer` adapter now installs
+   the same `project-memory:telemetry` sink and derives the session hash through
+   `src/session-identity.js`, so an explicit `memory_curator save` of a shadowed
+   candidate resolves it with the same session attribution as the runtime.
+
+SD therefore accrues from real explicit saves at M1. Agreement is measured without
+asking the operator: `saved`/`updated` resolutions are agreed, while other resolution
+actions (`review-queued`, `rejected`, `superseded`) count as disagreements.
 
 ## Follow-ups
 
@@ -165,9 +170,10 @@ verdicts).
 | C | ≥14 `kind:"settle"` previews, ≥14 days, stable consecutive `candidateHashes`, accounting ≥0.95, `diagnosticOnly`+`vaultReady` | diagnostics `kind:"settle"`, written on `agent_settled` | complete at least one agent turn each UTC day; keep the candidate set stable between settles (avoid new durable entries that change `candidateHashes`) |
 | A | ≥30 automatic saves, ≥10 sessions, ≥14 days, verified ≥0.98, curation success ≥0.90, timeout ≤0.10 | decisions row `action:"saved"`, `automatic:true`, `applied:true`, plus `curation.completed` outcomes | requires `automaticCapture` (`PI_PROJECT_MEMORY_AUTOMATIC=1` under the explicit M1 opt-in) or M5 automatic verified upserts; not recordable under the current M1 posture (`automatic:false`) |
 
-Current standing (window ending 2026-11-23): S1 0/20 (0/7 days), R 6/30 (1/14), SD 0/20
-(0/7), C 186/14 (9/14, days-bound), A 0/30 (0/14). C needs five more elapsed days; the
-others need both volume and days.
+Current standing (window ending 2026-11-23): S1 2/20 (1/7 days, precision 1.000), R
+5/30 (2 sessions, 1/14 days), SD 1/20 (1 session, 1/7 days, agreement 1.000), C 209/14
+(9/14, days-bound), A 0/30 (0/14). C needs five more elapsed days; the others need both
+volume and days.
 
 Ordering matters: S1 and R unlock M2 eligibility, SD unlocks M3, C unlocks M4, and A
 unlocks M5. Raise the requested stage only after S1 and R pass — requesting M2 during
@@ -178,16 +184,16 @@ accrual drops the explicit M1 opt-in and fails closed to M0. The ceiling is
 
 | Gate | Expected row | Present |
 |---|---|---|
-| S1 | `decisions.jsonl`: `action:"saved"`, `automatic` absent/false, `verification:"verified"`, `at` inside the window | 0; the 14 existing `saved` rows are all `unverified` and dated 2026-10-23…26 (outside the window) |
-| SD | traces: `category:"memory_decision"`, `name:"shadow.outcome"`, `payload.applied:false`; prerequisite `shadowed` decisions and `shadow.proposed` events | 0 outcomes, 0 proposals; the 7 existing `shadowed` rows date to 2026-10-25 and carry only hashes, no content to resolve |
-| A | `decisions.jsonl`: `action:"saved"`, `automatic:true`, `applied:true`, plus `curation.completed` outcomes | 0 automatic saves, 0 `curation.completed` |
+| S1 | `decisions.jsonl`: `action:"saved"`, `automatic` absent/false, `verification:"verified"`, `at` inside the window | 2 verified explicit saves inside the window (2026-11-23); 18 short |
+| SD | traces: `category:"memory_decision"`, `name:"shadow.outcome"`, `payload.applied:false`; prerequisite `shadowed` decisions and `shadow.proposed` events | 1 outcome / 1 proposal / 1 session (`sha256:35feb75c…`, agreed 1.0); 19 outcomes, 4 sessions and 6 days short |
+| A | `decisions.jsonl`: `action:"saved"`, `automatic:true`, `applied:true`, plus `curation.completed` outcomes | 0 automatic saves; 1 `curation.completed` |
 
-At M1 only S1 and R can accrue: shadow recall emits `recall.completed` (R) but never
-`shadowed` proposals. Shadow proposals are recorded from M1 (`shadowCandidates`) without
-applying or queueing them, so SD accrues while M1 is active; `candidateCapture` (M3+)
-writes the review queue. A requires automatic verified upserts (M5). SD is therefore
-recordable at M1; A remains a downstream measurement whose zero count is structural, not
-operator inaction. R holds 6–7 completions on 1/14 days from this session's own turns.
+At M1, S1, R and SD can accrue: shadow recall emits `recall.completed` (R), and the
+idle settle records `shadowed` proposals (`shadowCandidates`) without applying or
+queueing them, so explicit saves resolve them into `shadow.outcome` (SD).
+`candidateCapture` (M3+) writes the review queue. A requires automatic verified upserts
+(M5), so its zero count remains structural. R holds 5–6 completions on 1/14 days from
+this session's own turns.
 
 ## Tracking
 

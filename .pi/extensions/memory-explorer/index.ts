@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { notify } = require("../../../src/pi-extension-kit.js");
 const { assertProjectScope } = require("../../../src/project-scope.js");
+const { sessionIdHash } = require("../../../src/session-identity.js");
 const { MemoryStateAdapter, ProjectMemoryAdapter, ProjectMemoryCaptureAdapter, SessionSearchAdapter, MemoryContentSafetyAdapter, RetentionAdapter, StatePermissionsAdapter, MemoryMaintenanceAdapter, ProvenanceGraphAdapter, ExecutionOutcomeAdapter, LearningLoopAdapter, SkillSynthesisAdapter, GoalEvidenceAdapter, CognitiveMemoryAdapter, MemoryJsonStorage, FileIntegrationStorage, resolveDiagnosticReview, readDiagnosticReviewRequests, projectMemoryRuntimeConfig, appendProjectMemoryDiagnostic, captureAttemptSummary } = require("../../../src/integration-boundary.js");
 
 const EXPLORER_ENABLED = process.env.PI_MEMORY_EXPLORER !== "0";
@@ -18,6 +19,10 @@ const CURATOR_STATE_DIR = ".pi/memory-curator";
 const MAINTENANCE_INTERVAL_HOURS = Number(process.env.PI_MEMORY_MAINTENANCE_PREVIEW_INTERVAL_HOURS || 0);
 const MAINTENANCE_ENABLED = process.env.PI_MEMORY_MAINTENANCE_ENABLED !== "0";
 const PROVENANCE_ENABLED = process.env.PI_PROVENANCE_GRAPH_ENABLED !== "0";
+// Curator saves resolve shadow proposals through the same telemetry sink the
+// runtime uses; without it an explicit save records S1 but emits no outcome.
+let projectMemoryTelemetryEmitter: ((event: any) => void) | null = null;
+let projectMemorySessionHash: string | null = null;
 
 function cleanQuery(args: string) { return String(args || "").replace(/--exact|--apply|--yes/g, "").trim(); }
 function sessionId(ctx: any) { return String(ctx?.sessionManager?.getSessionId?.() || ctx?.sessionManager?.getSessionFile?.() || "ephemeral"); }
@@ -57,7 +62,7 @@ function memoryOptions(value: any) { return { limit: Number(value?.limit || 200)
 function publicSelection(value: any) { if (!value || typeof value !== "object") return value; const { path: _runtimeOnlyPath, ...safe } = value; return safe; }
 function services(cwd: string, input: any = {}) {
   const runtime = projectMemoryRuntimeConfig(cwd, process.env, { vault: input?.vault }); const vault = runtime.adapter.vault;
-  const svc: any = { memoryState: new MemoryStateAdapter({ cwd }), memorySafety: new MemoryContentSafetyAdapter(), sessionSearch: new SessionSearchAdapter({ cwd }), retention: new RetentionAdapter({ cwd }), statePermissions: new StatePermissionsAdapter({ cwd, vault }), projectMemory: new ProjectMemoryAdapter(runtime.adapter), rollout: runtime.rollout, selection: runtime.selection, readiness: runtime.readiness, canonicalProjectFolder: runtime.canonicalProjectFolder, vaultReady: runtime.adapter.enabled };
+  const svc: any = { memoryState: new MemoryStateAdapter({ cwd }), memorySafety: new MemoryContentSafetyAdapter(), sessionSearch: new SessionSearchAdapter({ cwd }), retention: new RetentionAdapter({ cwd }), statePermissions: new StatePermissionsAdapter({ cwd, vault }), projectMemory: new ProjectMemoryAdapter({ ...runtime.adapter, sessionIdHash: () => projectMemorySessionHash, telemetry: { emit: (event: any) => projectMemoryTelemetryEmitter?.(event) } }), rollout: runtime.rollout, selection: runtime.selection, readiness: runtime.readiness, canonicalProjectFolder: runtime.canonicalProjectFolder, vaultReady: runtime.adapter.enabled };
   // Hydrating the cognitive store reads every entry, so build it only when a
   // consolidation operation actually needs it instead of on every read tool.
   Object.defineProperty(svc, "cognitive", { enumerable: true, get() { return new CognitiveMemoryAdapter({ enabled: true, storage: new FileIntegrationStorage(join(cwd, ".pi", "cognitive-automation")), storageKey: "cognitive-memory" }); } });
@@ -155,6 +160,7 @@ function correction(cwd: string, input: any = {}) { const svc = services(cwd, in
 
 export default function memoryExplorer(pi: ExtensionAPI) {
   pi = require("../../../src/pi-extension-kit.js").instrumentExtensionCommands(pi) as ExtensionAPI;
+  projectMemoryTelemetryEmitter = (event: any) => { try { pi.events?.emit?.("project-memory:telemetry", event); } catch {} };
   const curatorAuthorizations = new Map<string, Set<CuratorMutationScope>>();
   let automaticSession: { key: string; capture: any } | undefined;
   function captureSession(ctx: any) {
@@ -166,7 +172,7 @@ export default function memoryExplorer(pi: ExtensionAPI) {
     }
     return automaticSession.capture;
   }
-  for (const event of ["session_start", "session_switch", "session_shutdown"]) pi.on(event as any, () => { automaticSession = undefined; });
+  for (const event of ["session_start", "session_switch", "session_shutdown"]) pi.on(event as any, (_event: any, ctx: any) => { automaticSession = undefined; if (event === "session_start") projectMemorySessionHash = sessionIdHash(ctx); });
   if (CURATOR_ENABLED) {
     pi.on("before_agent_start", (event: any, ctx: any) => {
       const guidance = captureSession(ctx).guidance();
@@ -181,7 +187,7 @@ export default function memoryExplorer(pi: ExtensionAPI) {
     });
   }
   if (MAINTENANCE_ENABLED && Number.isFinite(MAINTENANCE_INTERVAL_HOURS) && MAINTENANCE_INTERVAL_HOURS > 0) pi.on("session_start" as any, async (_event: any, ctx: any) => { try { const adapter = new MemoryMaintenanceAdapter({ enabled: MAINTENANCE_ENABLED, cwd: ctx.cwd }); const schedule = adapter.due(MAINTENANCE_INTERVAL_HOURS); if (schedule.due) { const report = adapter.preview({ write: false }); notify(ctx, `Memory maintenance preview ${report.reportId}: ${report.candidateCount} candidates; no report or cleanup written.`, "info"); } } catch (error: any) { notify(ctx, `Memory maintenance preview unavailable: ${error?.code || error?.name || "error"}`, "warning"); } });
-  if (CURATOR_ENABLED) pi.on("input" as any, (event: any, ctx: any) => { if (event.source !== "extension") { curatorAuthorizations.set(sessionId(ctx), explicitCuratorScopes(event.text)); captureSession(ctx).beginTurn(event.text); } return { action: "continue" }; });
+  if (CURATOR_ENABLED) pi.on("input" as any, (event: any, ctx: any) => { if (event.source !== "extension") { projectMemorySessionHash = sessionIdHash(ctx); curatorAuthorizations.set(sessionId(ctx), explicitCuratorScopes(event.text)); captureSession(ctx).beginTurn(event.text); } return { action: "continue" }; });
   if (EXPLORER_ENABLED) {
     pi.registerCommand("memory-map", { description: "Show exact project-memory metadata map", handler: async (_args: string, ctx: any) => notify(ctx, JSON.stringify(memoryMap(ctx.cwd), null, 2), "info") });
     pi.registerCommand("memory-search", { description: "Rank typed and canonical memory; pass --exact for exact phrase matching", handler: async (args: string, ctx: any) => notify(ctx, JSON.stringify(search(ctx.cwd, cleanQuery(args), { exact: /--exact/.test(args) }), null, 2), "info") });

@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { join, relative, resolve } from "node:path";
 
 const require = createRequire(import.meta.url);
+const { parentSessionId: getParentSessionId, sessionIdHash: sessionIdHashFor } = require("../../../src/session-identity.js");
 let renderInjectedReasoningContext: any;
 let richScaffold: any;
 let dedupeInjectedContext: any;
@@ -537,18 +538,6 @@ function resolveSubagentId(raw: string, parentSessionId: string) {
   if (id && id !== "latest") return id;
   const rows = runtime?.boundary.subagents.listSubagents({ parentSessionId }) || [];
   return rows.at(-1)?.id || id;
-}
-function getParentSessionId(ctx: any) {
-  const explicit = ctx?.session?.id || ctx?.sessionId;
-  if (explicit) return String(explicit);
-  const sessionId = ctx?.sessionManager?.getSessionId?.();
-  if (sessionId) return String(sessionId);
-  const sessionFile = ctx?.sessionManager?.getSessionFile?.();
-  if (sessionFile) return `session_${sha256(String(sessionFile)).slice(0, 12)}`;
-  return "pi-session";
-}
-function sessionIdHashFor(ctx: any): string | null {
-  try { const id = getParentSessionId(ctx); return id ? createHash("sha256").update(String(id)).digest("hex").slice(0, 16) : null; } catch { return null; }
 }
 function isSubagentBranch(branch: any) {
   return branch?.metadata?.kind === "subagent" || !!branch?.metadata?.subagentId || String(branch?.name || "").startsWith("subagent ");

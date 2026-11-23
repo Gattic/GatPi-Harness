@@ -34,6 +34,7 @@ const EXTENSION_IMPORT_ALLOWLIST = Object.freeze([
   "src/integration-config.js",
   "src/runtime-cleanup.js",
   "src/session-hygiene.js",
+  "src/session-identity.js",
   "src/runtime-policy.js",
   "src/result-rendering.js",
   "src/context-overflow-recovery.js",
