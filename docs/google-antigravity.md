@@ -1,9 +1,17 @@
 # Google Antigravity provider (multi-login)
 
-`multi-login` can add Google's subscription-backed Cloud Code Assist surface as
-the `google-antigravity` provider. It is the path the Antigravity IDE uses:
-a Google OAuth client plus the `v1internal:streamGenerateContent` endpoint,
-not the Gemini API. Pi's own `google` provider stays API-key only.
+`multi-login` registers two independent Google Antigravity providers:
+
+- `google-antigravity-acp` is **registered by default**. It drives Google's
+official Antigravity ACP server and is the preferred path for the models the
+Antigravity client exposes, including Gemini 4 Neon and Carbon.
+- `google-antigravity` is the subscription-backed Cloud Code Assist surface and
+remains **opt-in** through `accounts`. It uses a Google OAuth client plus the
+`v1internal:streamGenerateContent` endpoint, not the Gemini API. Pi's own
+`google` provider stays API-key only.
+
+An `accounts` entry for either provider creates `-account-N` aliases and
+priority slots; it is not required to register the ACP provider.
 
 ## OAuth client credentials
 
@@ -35,15 +43,37 @@ Add the provider to the multi-login config (`~/.pi/agent/multi-login.json`):
 }
 ```
 
-Registration is opt-in: without an `accounts` entry no Antigravity provider,
-models or login method appear in the session. `accounts` counts create
-`google-antigravity-account-N` aliases for multi-account failover.
+Cloud Code registration is opt-in: without an `accounts` entry no
+`google-antigravity` provider, models or login method appear in the session.
+`accounts` counts create `google-antigravity-account-N` aliases for
+multi-account failover.
 
 Then sign in once per account:
 
 ```
 /login google-antigravity
 ```
+
+## Antigravity ACP
+
+The ACP provider needs no `accounts` entry and is available in every session.
+Its login installs the pinned official runtime (1.5.2) on first use and opens
+Google sign-in:
+
+```
+/login google-antigravity-acp
+```
+
+The server owns its OAuth token at
+`~/.gemini/antigravity-acp/acp_token.json` (or under `GEMINI_HOME`); Pi stores
+only a non-secret managed-auth marker. The ACP token is independent of the
+Cloud Code credential above. No Gemini API key is used. The runtime archive is
+downloaded from Google's release URL and verified against the pinned SHA-256,
+size and expected archive entries before installation.
+
+ACP models appear in `/model` without a config entry. Adding
+`"google-antigravity-acp": 1` to `accounts` is only needed for multi-account
+aliases or priority/failover entries.
 
 The flow opens `http://localhost:51121/oauth-callback`, and also accepts a
 pasted redirect URL or bare authorization code when that port is unavailable.
@@ -102,18 +132,23 @@ retrying the exhausted one.
 - Google's terms scope this OAuth client to its own IDE. Driving it from Pi is
   outside that grant; an account can lose access. Use it only on accounts you
   accept that risk for.
-- The handshake is undocumented and may change without notice. The provider is
-  isolated in `extensions/multi-login/antigravity/` for that reason.
+- The handshake is undocumented and may change without notice. The providers
+  are isolated in `extensions/multi-login/antigravity/` and
+  `extensions/multi-login/antigravity-acp/` for that reason.
 - Credentials are never logged; tests mock every network call and supply
-  synthetic client identifiers from the environment.
+  synthetic client identifiers from the environment. The ACP runtime is
+  installed only after `/login`, and its archive is verified before use.
 
 ## Verification
 
 ```
 node tests/google-antigravity.test.js
 node tests/multi-login.test.js
+node tests/antigravity-acp.test.js
 ```
 
-The test covers the authorization URL and PKCE, callback and manual login,
+The tests cover the authorization URL and PKCE, callback and manual login,
 refresh, project discovery, the request envelope, message/tool conversion, SSE
-parsing, endpoint fallback, multi-login registration and quota classification.
+parsing, endpoint fallback, default ACP registration, runtime installation and
+verification, ACP login/model/stream behavior, multi-login registration and
+quota classification.

@@ -42,12 +42,12 @@ export default function multiLogin(pi: ExtensionAPI) {
     pi.registerProvider(antigravity);
   }
   // The ACP server has its own OAuth token and is independent of the Cloud
-  // Code Assist provider above. Register it only when the config names it.
-  if (Object.prototype.hasOwnProperty.call(config.accounts, ANTIGRAVITY_ACP_PROVIDER_ID)) {
-    const acp = antigravityAcpProvider();
-    bases.set(ANTIGRAVITY_ACP_PROVIDER_ID, acp);
-    pi.registerProvider(acp);
-  }
+  // Code Assist provider above. It is registered by default so its models and
+  // login method are available without a config opt-in; `accounts` only adds
+  // aliases and priority entries for it.
+  const acp = antigravityAcpProvider();
+  bases.set(ANTIGRAVITY_ACP_PROVIDER_ID, acp);
+  pi.registerProvider(acp);
   for (const [baseId, count] of Object.entries(config.accounts) as [string, number][]) {
     const base = bases.get(baseId);
     if (!base) throw new Error(`multi-login: ${config.file}: accounts.${baseId} is not a supported provider`);
