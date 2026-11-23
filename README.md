@@ -80,6 +80,19 @@ scripts/pi-harness-refresh.sh --check-only   # checks without deploying
 
 Restart Pi after a `--pi` refresh; use `/reload` after extension or skill changes. Install the optional adapters (Hermes, CodeGraph, Semgrep, Obsidian) and see the migration guide in **[wiki/installation.md](wiki/installation.md)**.
 
+## Memory rollout evidence
+
+Rollout promotion is decided by passive telemetry, never by a claim. Two read-only scripts report the evidence window without touching state:
+
+```bash
+node scripts/memory-evidence-status.js    # authoritative gate verdict
+node scripts/memory-evidence-window.js    # 14-day window, counts and days remaining
+node scripts/memory-evidence-window.js --json     # same result as JSON
+node scripts/memory-evidence-window.js --strict   # exit 1 and list the failing keys
+```
+
+`--strict` exits non-zero when any criterion is short on count or distinct days and prints `strict: incomplete criteria: …` to stderr; `--json` keeps stdout parseable. To make an incomplete window fail CI, run `scripts/check-memory-evidence.sh`, or set `PI_MEMORY_EVIDENCE_STRICT=1` for `scripts/check-all.sh`. It is opt-in so the deterministic suite stays green while the window accrues.
+
 ## Documentation
 
 | Document | Contents |

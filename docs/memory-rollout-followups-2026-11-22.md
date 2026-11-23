@@ -101,6 +101,23 @@ distinct preview days.
 automatic-capture path can produce verified entries or whether the bar must be
 redefined for M5.
 
+## Evidence tooling
+
+Three read-only helpers report the window; none writes rows or backdates time:
+
+| Script | Purpose |
+|---|---|
+| `scripts/memory-evidence-status.js` | Authoritative predicate verdicts, counts, and the stage-ceiling note |
+| `scripts/memory-evidence-window.js` | 14-day UTC grid per criterion; `--json` for scripts, `--strict` to exit 1 and print the failing keys |
+| `scripts/check-memory-evidence.sh` | Strict gate wrapper for CI or pre-commit |
+
+`--strict` fails when `count < need` or `days < daysNeed` for S1/R/SD/C/A and prints
+`strict: incomplete criteria: …` to stderr, leaving `--json` stdout parseable. Wire the
+gate into a promotion job with `scripts/check-memory-evidence.sh`, or set
+`PI_MEMORY_EVIDENCE_STRICT=1` when running `scripts/check-all.sh`. It is opt-in so the
+deterministic suite (and the `D` predicate that reads its record) stays green while the
+window accrues. Soak output under `.pi/soak/**` is never counted as rollout evidence.
+
 ## Tracking
 
 These follow-ups are documentation only. A GitHub issue could not be opened from this

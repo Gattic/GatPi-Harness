@@ -35,6 +35,14 @@ if [[ "${PI_CHECK_QUEUE:-0}" == "1" ]]; then
   scripts/check-pi-queue.sh || failures=$((failures + 1))
 fi
 
+# Opt-in rollout-evidence gate: an incomplete S1/R/SD/C/A window fails the run.
+# Off by default so the deterministic suite (and the D predicate that reads its
+# record) stays green while the 14-day window accrues.
+if [[ "${PI_MEMORY_EVIDENCE_STRICT:-0}" == "1" ]]; then
+  printf '== scripts/check-memory-evidence.sh\n'
+  scripts/check-memory-evidence.sh || failures=$((failures + 1))
+fi
+
 if [[ "$failures" -ne 0 ]]; then
   printf 'deterministic checks failed (%s failure(s), %s test file(s))\n' "$failures" "$total" >&2
   exit 1
