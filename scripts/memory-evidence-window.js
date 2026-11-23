@@ -71,8 +71,13 @@ function renderText(result) {
   console.log("rows cover 14 UTC calendar days; the evaluator uses a rolling 14x24h window, so an event in the oldest partial day is counted by the gate but not shown here.");
 }
 
+function incompleteCriteria(result) {
+  return result.criteria.filter((criterion) => criterion.count < criterion.need || criterion.observedDays < criterion.daysNeed).map((criterion) => criterion.key);
+}
+
 function main(argv) {
   const json = argv.includes("--json");
+  const strict = argv.includes("--strict");
   const cwdArg = argv.find((arg) => !arg.startsWith("--"));
   const cwd = path.resolve(cwdArg || process.cwd());
   if (!fs.existsSync(path.join(cwd, ".pi"))) {
@@ -83,8 +88,10 @@ function main(argv) {
   const result = computeEvidenceWindow({ decisions: sources.decisions, traces: sources.traces, diagnostics: sources.diagnostics });
   if (json) console.log(JSON.stringify(result, null, 2));
   else renderText(result);
-  return 0;
+  const incomplete = incompleteCriteria(result);
+  if (strict && incomplete.length) console.error(`strict: incomplete criteria: ${incomplete.join(", ")}`);
+  return strict && incomplete.length ? 1 : 0;
 }
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
-module.exports = { computeEvidenceWindow, renderText };
+module.exports = { computeEvidenceWindow, incompleteCriteria, renderText };

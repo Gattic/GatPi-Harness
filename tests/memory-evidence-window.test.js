@@ -4,9 +4,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { execFileSync } = require("node:child_process");
+const { execFileSync, spawnSync } = require("node:child_process");
 const { test } = require("node:test");
-const { computeEvidenceWindow } = require("../scripts/memory-evidence-window.js");
+const { computeEvidenceWindow, incompleteCriteria } = require("../scripts/memory-evidence-window.js");
 const { tmpFixture } = require("./helpers/tmp-fixture");
 
 const NOW = Date.parse("2026-11-23T12:00:00Z");
@@ -115,5 +115,57 @@ test("--json prints the window result as JSON", () => {
   assert.equal(r.observedDays, 1);
   assert.equal(r.daysRemaining, 13);
   assert.equal(parsed.criteria.find((row) => row.key === "S1").count, 1);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+const DAY_MS = 864e5;
+const isoDaysAgo = (days, minute = 0) => new Date(Date.now() - days * DAY_MS - minute * 60000).toISOString();
+function writeStrictFixture({ saves = [], autos = [], settles = [], recalls = [], shadows = [] }) {
+  const dir = tmpFixture("pi-memory-window-strict-");
+  fs.mkdirSync(path.join(dir, ".pi", "traces"), { recursive: true });
+  fs.mkdirSync(path.join(dir, ".pi", "project-memory"), { recursive: true });
+  const write = (file, rows) => fs.writeFileSync(file, rows.map((row) => JSON.stringify(row)).join("\n") + "\n");
+  if (saves.length || autos.length) write(path.join(dir, ".pi", "project-memory", "decisions.jsonl"), [...saves, ...autos]);
+  if (settles.length) write(path.join(dir, ".pi", "project-memory", "diagnostics.jsonl"), settles);
+  if (recalls.length || shadows.length) write(path.join(dir, ".pi", "traces", "project--session.jsonl"), [...recalls, ...shadows]);
+  return dir;
+}
+function completeFixture() {
+  const saves = []; const autos = []; const settles = []; const recalls = []; const shadows = [];
+  for (let day = 0; day < 7; day++) for (let i = 0; i < 3; i++) saves.push({ action: "saved", automatic: false, verification: "verified", at: isoDaysAgo(day, i) });
+  for (let day = 0; day < 14; day++) {
+    for (let i = 0; i < 3; i++) {
+      autos.push({ action: "saved", automatic: true, verification: "verified", applied: true, at: isoDaysAgo(day, i) });
+      recalls.push({ category: "memory_retrieval", name: "recall.completed", timestamp: isoDaysAgo(day, 10 + i) });
+    }
+    settles.push({ kind: "settle", at: isoDaysAgo(day, 20) });
+  }
+  for (let day = 0; day < 7; day++) for (let i = 0; i < 3; i++) shadows.push({ category: "memory_decision", name: "shadow.outcome", timestamp: isoDaysAgo(day, 30 + i), payload: { agreed: true, applied: false, proposalHash: "sha256:abc" } });
+  return { saves, autos, settles, recalls, shadows };
+}
+const toSources = (fixture) => ({ decisions: [...fixture.saves, ...fixture.autos], traces: [...fixture.recalls, ...fixture.shadows], diagnostics: fixture.settles });
+
+test("incompleteCriteria reports only the short criteria", () => {
+  const saves = [];
+  for (let day = 0; day < 7; day++) for (let i = 0; i < 3; i++) saves.push({ action: "saved", automatic: false, verification: "verified", at: isoDaysAgo(day, i) });
+  const partial = computeEvidenceWindow({ decisions: saves });
+  assert.deepEqual(incompleteCriteria(partial), ["R", "SD", "C", "A"]);
+  const complete = computeEvidenceWindow(toSources(completeFixture()));
+  assert.deepEqual(incompleteCriteria(complete), []);
+});
+
+test("--strict exits non-zero and prints the failing keys", () => {
+  const dir = writeStrictFixture({});
+  const run = spawnSync(process.execPath, [path.join(__dirname, "..", "scripts", "memory-evidence-window.js"), "--strict", dir], { encoding: "utf8" });
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /strict: incomplete criteria: S1, R, SD, C, A/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("--strict exits zero when every criterion is complete", () => {
+  const dir = writeStrictFixture(completeFixture());
+  const run = spawnSync(process.execPath, [path.join(__dirname, "..", "scripts", "memory-evidence-window.js"), "--strict", dir], { encoding: "utf8" });
+  assert.equal(run.status, 0);
+  assert.doesNotMatch(run.stderr, /incomplete criteria/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
