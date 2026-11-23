@@ -1,5 +1,53 @@
 # Changelog
 
+## blender-skills-integration - 2026-11-23
+
+- Integrated [EL4CTEO/blender-skills](https://github.com/EL4CTEO/blender-skills)
+  (commit `1a1cc6c`, release 1.3.3, MIT) into the Skill Foundry pack. The catalog
+  grows from 139 to 153 skills: 14 new 3D asset-pipeline skills
+  (`3d-asset-quality-gate`, `retopology-uv-unwrap`, `texture-map-baking`,
+  `realtime-asset-optimization`, `game-engine-asset-export`,
+  `facial-blendshape-rigging`, `character-garment-fitting`, `hair-groom-cards`,
+  `stylized-npr-rendering`, `environment-terrain-scatter`,
+  `atmosphere-weather-lighting`, `physics-simulation-baking`,
+  `blender-extension-development`, `camera-tracking-matchmove`) and 7 revised
+  supplied skills (`procedural-3d-blender`, `3d-modeling-topology`,
+  `pbr-material-lookdev`, `lighting-render-optimization`,
+  `rigging-animation-retarget`, `blender-cinematic-video-pipeline`,
+  `task-skill-router`). The other 132 entrypoints are byte-unchanged.
+- Entrypoints stay generated from `skills/catalog.json` and are original.
+  Upstream skill bodies are kept as reference guides, and 42 Blender scripts, a
+  shared helper, an extension template and the in-Blender tests are bundled:
+  137 files, each recorded with upstream path, digests and changes in
+  `skills/research/blender-skills-provenance.json`. Every affected skill
+  directory carries `THIRD_PARTY_NOTICES.md`. `skills/tools/check_blender_bundle.py`
+  fails on drift between files, ledger and notices.
+- Upstream targets Blender 5.2+. On the harness-pinned Blender 5.1.2 its
+  unmodified suite scored 68 passed, 11 failed; with the compatibility changes
+  in this tree it scores 79 passed, 0 failed, 1 skipped of 80 (one original test
+  added; the skipped test needs a 5.2 asset file). The measured boundary is
+  `skills/skills/procedural-3d-blender/references/version-compatibility.md`.
+  Nothing was run on Blender 5.2 or 5.3 and no engine import was exercised.
+- `skills/skills/procedural-3d-blender/scripts/build_product_stage.py`, the pack's
+  own demo, rendered Blender's default startup cube over its stage. It now hides
+  unrelated objects during the render only, and finds its shader node by type.
+- The supplied-pack parity recorded for 3.0 now holds for 124 of the 131
+  supplied entrypoints and 126 of their evaluation suites; the seven revised
+  skills differ from the supplied pack by design.
+- `src/skill-awareness.js` lists `3d-asset-quality-gate` and
+  `game-engine-asset-export` for the `3d-modeler` role and
+  `3d-asset-quality-gate` for `3d-critic`. The role skill-awareness roster now
+  lists 153 skills, so every role's `roleRevisionHash` changes; durable typed
+  records and task graphs pinned to the previous revision fail closed as
+  documented in `docs/subagents.md`.
+- Verified with `skills/tools/validate_skills.py` (153 skills), the 32 offline
+  pack tests, the opt-in native Blender suite, and `generic-agent-skills`,
+  `install-agent-skills`, `agent-skills-pi-load`, `skill-awareness`,
+  `role-consumer-contracts`, `role-contract-revision` and `fleet-skill-gate`.
+  Installed on this machine to `~/.agents/skills` and `~/.claude/skills` (153
+  managed skills each, digest-equal to the source) from the task branch with
+  `--no-check`; `scripts/check-all.sh` was not run.
+
 ## skills-pack-3.0 - 2026-11-18
 
 - Replaced the Skill Foundry payload in `skills/` with the supplied 2026-11-18
