@@ -322,10 +322,15 @@ globalThis.fetch = async () => { throw new Error("multi-login test attempted an 
   const initial = loadExtension();
   const { providers, virtualModels, handlers, selected } = initial;
 
-  // Both the base and alias use the shaped transport and retain the built-in OAuth flow.
-  assert.deepEqual(providers.map((p) => p.id), ["anthropic", "anthropic-account-2"]);
+  // The ACP provider is registered by default; Anthropic's base and alias retain
+  // the shaped transport and built-in OAuth flow.
+  assert.deepEqual(providers.map((p) => p.id), ["anthropic", "google-antigravity-acp", "anthropic-account-2"]);
   assert.equal(virtualModels.length, 0, "failover switches real models; no virtual model is registered");
-  for (const provider of providers) await assertAnthropicHandshake(provider);
+  const acpProvider = providers.find((provider) => provider.id === "google-antigravity-acp");
+  assert(acpProvider);
+  assert.equal(typeof acpProvider.auth.oauth.login, "function");
+  const anthropicProviders = providers.filter((provider) => provider.id === "anthropic" || provider.id.startsWith("anthropic-account-"));
+  for (const provider of anthropicProviders) await assertAnthropicHandshake(provider);
 
   // The exact extension also loads in isolated children: registration and login
   // survive, but no hook may replace the selected provider/model or write state.
@@ -338,18 +343,20 @@ globalThis.fetch = async () => { throw new Error("multi-login test attempted an 
     assert.equal(child.handlers.size, 0, "no child failover, cooldown or directory-model hooks");
     assert.deepEqual(child.commands, [], "no child cooldown reset command");
     assert.deepEqual(child.selected, [], "registration does not change the inherited model");
-    for (const [index, provider] of child.providers.entries()) {
+    const childAnthropicProviders = child.providers.filter((provider) => provider.id === "anthropic" || provider.id.startsWith("anthropic-account-"));
+    for (const provider of childAnthropicProviders) {
       // builtinProviders() creates fresh instances per load; aliases within
       // this load must retain their own base provider's native OAuth callbacks.
-      if (index > 0) for (const operation of ["login", "refresh", "toAuth"]) assert.equal(provider.auth.oauth[operation], child.providers[0].auth.oauth[operation]);
+      if (provider.id !== "anthropic") for (const operation of ["login", "refresh", "toAuth"]) assert.equal(provider.auth.oauth[operation], childAnthropicProviders[0].auth.oauth[operation]);
       await assertAnthropicHandshake(provider);
     }
+    assert.equal(typeof child.providers.find((provider) => provider.id === "google-antigravity-acp")?.auth.oauth.login, "function");
     assert.deepEqual(fs.readdirSync(agentDir), beforeChild, "child registration writes no credential, cooldown or model files");
   } finally {
     if (parentId === undefined) delete process.env.PI_SUBAGENT_PARENT_ID;
     else process.env.PI_SUBAGENT_PARENT_ID = parentId;
   }
-  const alias = providers[1];
+  const alias = providers.find((provider) => provider.id === "anthropic-account-2");
   const aliasModels = alias.getModels();
   assert.ok(aliasModels.some((m) => m.id === "claude-opus-5-5"));
   assert.ok(aliasModels.every((m) => m.provider === "anthropic-account-2"));

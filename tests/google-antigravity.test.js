@@ -93,6 +93,7 @@ function stateFromAuthUrl(url) {
   const modelsModule = await jiti.import(path.resolve("extensions/multi-login/antigravity/models.ts"));
 
   const { antigravityProvider, ANTIGRAVITY_PROVIDER_ID } = antigravity;
+  const ACP_PROVIDER_ID = "google-antigravity-acp";
   const { buildAuthorizationUrl, parseAuthorizationInput, discoverProject, refreshAntigravityToken, antigravityClient, antigravityCredentialsFile, DEFAULT_PROJECT_ID } = oauth;
   const { buildRequest, convertMessages, streamAntigravity, streamSimpleAntigravity } = streamModule;
   const { STATIC_ANTIGRAVITY_MODELS, ANTIGRAVITY_ENDPOINTS, currentAntigravityModels, resetAntigravityModelCache, discoverAntigravityModels, parseProvisionedModelIds, modelForId } = modelsModule;
@@ -600,7 +601,7 @@ function stateFromAuthUrl(url) {
     assert.equal(headers[0]["anthropic-beta"], "interleaved-thinking-2025-05-14");
   }
 
-  // --- Multi-login installs the provider only when configured --------------
+  // --- Multi-login registers ACP by default; Cloud Code stays opt-in ------
   {
     const agentDir = tmpFixture("antigravity-agent-");
     const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
@@ -625,14 +626,22 @@ function stateFromAuthUrl(url) {
         priority: ["anthropic/claude-opus-5-5"],
       }));
       const withoutAntigravity = loadExtension();
-      assert.deepEqual(withoutAntigravity.providers.map((provider) => provider.id), ["anthropic"], "opt-in only");
+      assert.deepEqual(
+        withoutAntigravity.providers.map((provider) => provider.id),
+        ["anthropic", ACP_PROVIDER_ID],
+        "ACP is registered by default; Cloud Code remains opt-in",
+      );
+      const acp = withoutAntigravity.providers.find((provider) => provider.id === ACP_PROVIDER_ID);
+      assert(acp);
+      assert.equal(acp.auth.oauth.name, "Google Antigravity ACP (Google account)");
+      assert(acp.getModels().some((model) => model.id === "gemini-4-neon"));
 
       fs.writeFileSync(configFile, JSON.stringify({
         accounts: { "google-antigravity": 2 },
         priority: ["google-antigravity/gemini-3-flash", "anthropic/claude-opus-5-5"],
       }));
       const withAntigravity = loadExtension();
-      assert.deepEqual(withAntigravity.providers.map((provider) => provider.id), ["anthropic", ANTIGRAVITY_PROVIDER_ID, `${ANTIGRAVITY_PROVIDER_ID}-account-2`]);
+      assert.deepEqual(withAntigravity.providers.map((provider) => provider.id), ["anthropic", ANTIGRAVITY_PROVIDER_ID, ACP_PROVIDER_ID, `${ANTIGRAVITY_PROVIDER_ID}-account-2`]);
       const base = withAntigravity.providers.find((provider) => provider.id === ANTIGRAVITY_PROVIDER_ID);
       const alias = withAntigravity.providers.find((provider) => provider.id === `${ANTIGRAVITY_PROVIDER_ID}-account-2`);
       assert.equal(base.auth.oauth.name, "Google Antigravity (Google account)");
