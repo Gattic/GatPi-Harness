@@ -161,9 +161,9 @@ verdicts).
 |---|---|---|---|
 | S1 | ≥20 explicit saves, ≥7 days, precision ≥0.95 | decisions row `action:"saved"`, `automatic` absent/false, `verification:"verified"` | 3 verified explicit saves per day via `memory_curator` save with `apply:true`, `explicit:true`, `verification:"verified"`; 7 days yields 21 |
 | R | ≥30 `recall.completed`, ≥10 sessions, ≥14 days, p95 ≤50 ms, out-of-scope 0, citation ≥0.40, stale ≤0.05 | trace `memory_retrieval`/`recall.completed` with `durationMs`, `returnedHashes`, `outOfScopeCount`, `injected` | 3 recall-triggering prompts per day in an interactive session (shadow at M1); later decisions in the same session must cite returned hashes through `evidenceIds` |
-| SD | ≥20 `shadow.outcome` with `applied:false`, ≥5 sessions, ≥7 days, agreement ≥0.90 | trace `memory_decision`/`shadow.outcome`, emitted when a real save/update resolves a `shadowed` candidate with the same `candidateHash` | let shadow recall propose candidates, then explicitly save/update those candidates in later turns (agreeing); 3 per day over 7 days |
+| SD | ≥20 `shadow.outcome` with `applied:false`, ≥5 sessions, ≥7 days, agreement ≥0.90 | trace `memory_decision`/`shadow.outcome`, emitted when a real save/update resolves a `shadowed` candidate with the same `candidateHash` | requires `candidateCapture` (effective M3+): shadow recall at M1 emits only `recall.completed`; candidate capture records `shadowed` proposals, and real saves/updates resolve them. Not recordable from an M1 session |
 | C | ≥14 `kind:"settle"` previews, ≥14 days, stable consecutive `candidateHashes`, accounting ≥0.95, `diagnosticOnly`+`vaultReady` | diagnostics `kind:"settle"`, written on `agent_settled` | complete at least one agent turn each UTC day; keep the candidate set stable between settles (avoid new durable entries that change `candidateHashes`) |
-| A | ≥30 automatic saves, ≥10 sessions, ≥14 days, verified ≥0.98, curation success ≥0.90, timeout ≤0.10 | decisions row `action:"saved"`, `automatic:true`, `applied:true`, plus `curation.completed` outcomes | none under the current M1 posture (`automatic:false`); A accrues only after M5 is authorized with automatic capture on |
+| A | ≥30 automatic saves, ≥10 sessions, ≥14 days, verified ≥0.98, curation success ≥0.90, timeout ≤0.10 | decisions row `action:"saved"`, `automatic:true`, `applied:true`, plus `curation.completed` outcomes | requires `automaticCapture` (`PI_PROJECT_MEMORY_AUTOMATIC=1` under the explicit M1 opt-in) or M5 automatic verified upserts; not recordable under the current M1 posture (`automatic:false`) |
 
 Current standing (window ending 2026-11-23): S1 0/20 (0/7 days), R 6/30 (1/14), SD 0/20
 (0/7), C 186/14 (9/14, days-bound), A 0/30 (0/14). C needs five more elapsed days; the
@@ -173,6 +173,19 @@ Ordering matters: S1 and R unlock M2 eligibility, SD unlocks M3, C unlocks M4, a
 unlocks M5. Raise the requested stage only after S1 and R pass — requesting M2 during
 accrual drops the explicit M1 opt-in and fails closed to M0. The ceiling is
 `min(requested, eligible, hold)`.
+
+### Missing rows at M1 (2026-11-23)
+
+| Gate | Expected row | Present |
+|---|---|---|
+| S1 | `decisions.jsonl`: `action:"saved"`, `automatic` absent/false, `verification:"verified"`, `at` inside the window | 0; the 14 existing `saved` rows are all `unverified` and dated 2026-10-23…26 (outside the window) |
+| SD | traces: `category:"memory_decision"`, `name:"shadow.outcome"`, `payload.applied:false`; prerequisite `shadowed` decisions and `shadow.proposed` events | 0 outcomes, 0 proposals; the 7 existing `shadowed` rows date to 2026-10-25 and carry only hashes, no content to resolve |
+| A | `decisions.jsonl`: `action:"saved"`, `automatic:true`, `applied:true`, plus `curation.completed` outcomes | 0 automatic saves, 0 `curation.completed` |
+
+At M1 only S1 and R can accrue: shadow recall emits `recall.completed` (R) but never
+`shadowed` proposals, and `candidateCapture` requires M3+. SD and A are therefore
+downstream measurements whose zero counts are structural, not operator inaction. R holds
+6–7 completions on 1/14 days from this session's own turns.
 
 ## Tracking
 
