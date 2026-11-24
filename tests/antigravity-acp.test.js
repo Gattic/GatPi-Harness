@@ -438,6 +438,7 @@ async function main() {
     await acpTests();
     await loginTests();
     await providerTests();
+    await streamAuthorityTests();
     console.log("antigravity-acp runtime, zip, install, auth, login, model and provider tests passed");
   } finally {
     cleanup();
@@ -1064,4 +1065,185 @@ async function providerTests() {
   assert(onlinePublished);
   assert(onlinePublished.persist.models.some((model) => model.id === "gemini-4-neon"));
   assert(discoveredProvider.getModels().some((model) => model.id === "gemini-4-neon"));
+}
+
+// A server that raises one permission request during a prompt, reports tool
+// activity, and advertises (or not) additional-directory support.
+const MOCK_STREAM_SERVER = String.raw`
+const fs = require("node:fs");
+const readline = require("node:readline");
+const logPath = process.env.ACP_MOCK_LOG;
+const withDirectories = process.env.ACP_MOCK_DIRECTORIES === "1";
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\n");
+const log = (entry) => fs.appendFileSync(logPath, JSON.stringify(entry) + "\n");
+let promptId;
+const update = (payload) =>
+  send({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "session-1", update: payload } });
+const rl = readline.createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  const message = JSON.parse(line);
+  if (message.id !== undefined && message.method === undefined) {
+    log({ permissionResponse: message.result });
+    update({
+      sessionUpdate: "tool_call_update",
+      toolCallId: "call-1",
+      status: "completed",
+      rawOutput: "clean",
+    });
+    update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Done" } });
+    send({ jsonrpc: "2.0", id: promptId, result: { stopReason: "end_turn", usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } } });
+    return;
+  }
+  switch (message.method) {
+    case "initialize":
+      log({ method: "initialize" });
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          protocolVersion: 1,
+          agentInfo: { name: "antigravity-acp", version: "1.5.2" },
+          authMethods: [{ id: "oauth", name: "Google OAuth" }],
+          agentCapabilities: {
+            sessionCapabilities: withDirectories ? { additionalDirectories: {} } : {},
+          },
+        },
+      });
+      break;
+    case "session/new":
+      log({ method: "session/new", params: message.params });
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          sessionId: "session-1",
+          models: { currentModelId: "gemini-4-neon", availableModels: [{ modelId: "gemini-4-neon", name: "Gemini 4 Neon" }] },
+          configOptions: [
+            { id: "model", category: "model", currentValue: "gemini-4-neon", options: [{ value: "gemini-4-neon", name: "Neon" }] },
+            { id: "thinking_level", category: "thought_level", currentValue: "medium", options: [{ value: "medium", name: "Medium" }, { value: "high", name: "High" }] },
+          ],
+        },
+      });
+      break;
+    case "session/set_config_option":
+      send({ jsonrpc: "2.0", id: message.id, result: { configOptions: [] } });
+      break;
+    case "session/prompt":
+      promptId = message.id;
+      update({ sessionUpdate: "tool_call", toolCallId: "call-1", kind: "execute", title: "git status --short", status: "pending" });
+      send({
+        jsonrpc: "2.0",
+        id: 4242,
+        method: "session/request_permission",
+        params: {
+          sessionId: "session-1",
+          toolCall: { toolCallId: "call-1", kind: "execute", title: "git status --short", rawInput: { CommandLine: "git status --short" } },
+          options: [
+            { optionId: "allow", name: "Allow", kind: "allow_once" },
+            { optionId: "deny", name: "Deny", kind: "reject_once" },
+          ],
+        },
+      });
+      break;
+    default:
+      if (message.id !== undefined) {
+        send({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Method not found" } });
+      }
+  }
+});
+`;
+
+async function streamAuthorityTests() {
+  const streamModule = await jiti.import(path.join(EXT, "stream.ts"));
+  const modelsModule = await jiti.import(path.join(EXT, "models.ts"));
+  const acpModule = await jiti.import(path.join(EXT, "acp.ts"));
+  const neon = modelsModule.FALLBACK_MODELS.find((model) => model.id === "gemini-4-neon");
+
+  async function run(options) {
+    const dir = tempDir("pi-acp-stream-");
+    const mockPath = path.join(dir, "mock-stream.cjs");
+    fs.writeFileSync(mockPath, MOCK_STREAM_SERVER);
+    const logPath = path.join(dir, "mock.log");
+    const extra = path.join(dir, "extra");
+    fs.mkdirSync(extra);
+    const activity = [];
+    const permissions = [];
+    const stream = streamModule.createAcpStream(
+      neon,
+      { systemPrompt: "Be helpful", messages: [{ role: "user", content: "Run git status" }] },
+      { cwd: dir, thinking: { level: "high" } },
+      {
+        resolveRuntime: async () => ({ command: process.execPath, args: [mockPath], source: "env" }),
+        createClient: (clientOptions) =>
+          new acpModule.AcpClient({
+            ...clientOptions,
+            env: {
+              ...process.env,
+              ACP_MOCK_LOG: logPath,
+              ACP_MOCK_DIRECTORIES: options.directories ? "1" : "0",
+            },
+            initializeTimeoutMs: 5_000,
+            operationTimeoutMs: 5_000,
+            promptTimeoutMs: 5_000,
+          }),
+        cwd: dir,
+        ...(options.permission
+          ? {
+              permission: async (request) => {
+                permissions.push(request);
+                return options.permission;
+              },
+            }
+          : {}),
+        ...(options.directories ? { additionalDirectories: [extra] } : {}),
+        onToolActivity: (entry) => activity.push(entry),
+      },
+    );
+    const events = [];
+    for await (const event of stream) events.push(event);
+    const log = fs
+      .readFileSync(logPath, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    return { events, activity, permissions, log, extra };
+  }
+
+  // Pi's decision reaches the server, and the workspace Pi authorizes is passed through.
+  const allowed = await run({
+    permission: { outcome: { outcome: "selected", optionId: "allow" } },
+    directories: true,
+  });
+  assert.equal(allowed.permissions.length, 1, "the server's permission request reaches Pi");
+  assert.equal(allowed.permissions[0].toolCall.kind, "execute");
+  assert.deepEqual(
+    allowed.log.find((entry) => entry.method === "session/new").params.additionalDirectories,
+    [allowed.extra],
+    "Pi's project scope is offered to the session",
+  );
+  assert.equal(
+    allowed.log.find((entry) => entry.permissionResponse).permissionResponse.outcome.optionId,
+    "allow",
+  );
+  assert(
+    allowed.activity.some((entry) => entry.kind === "execute" && entry.title === "git status --short"),
+    "tool activity is reported while the ACP agent works",
+  );
+  assert(allowed.activity.some((entry) => entry.status === "completed"));
+  assert(allowed.events.some((event) => event.type === "text_delta" && event.delta === "Done"));
+  assert.equal(allowed.events.at(-1).type, "done");
+  assert.equal(allowed.events.at(-1).message.stopReason, "stop");
+
+  // Without a gate the provider denies instead of approving, and a server that
+  // does not advertise extra directories never receives them.
+  const denied = await run({ directories: false });
+  assert.equal(
+    denied.log.find((entry) => entry.permissionResponse).permissionResponse.outcome.outcome,
+    "cancelled",
+    "an ACP permission request is never approved without Pi's policy",
+  );
+  assert.equal(
+    denied.log.find((entry) => entry.method === "session/new").params.additionalDirectories,
+    undefined,
+  );
 }

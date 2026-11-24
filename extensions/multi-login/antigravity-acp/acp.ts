@@ -94,7 +94,7 @@ export interface AcpClientOptions {
 export interface AcpClientLike {
 	initialize(signal?: AbortSignal): Promise<AcpInitializeResult>;
 	authenticate(methodId: string, signal?: AbortSignal): Promise<void>;
-	newSession(cwd: string, signal?: AbortSignal): Promise<AcpSessionNewResult>;
+	newSession(cwd: string, signal?: AbortSignal, additionalDirectories?: string[]): Promise<AcpSessionNewResult>;
 	setModel(sessionId: string, modelId: string, signal?: AbortSignal): Promise<void>;
 	prompt(sessionId: string, prompt: unknown[], signal?: AbortSignal): Promise<AcpPromptResponse>;
 	close(): Promise<void>;
@@ -376,10 +376,18 @@ export class AcpClient implements AcpClientLike {
 		);
 	}
 
-	async newSession(cwd: string, signal?: AbortSignal): Promise<AcpSessionNewResult> {
+	async newSession(
+		cwd: string,
+		signal?: AbortSignal,
+		additionalDirectories?: string[],
+	): Promise<AcpSessionNewResult> {
 		const result = await this.request<AcpSessionNewResult>(
 			"session/new",
-			{ cwd, mcpServers: [] },
+			{
+				cwd,
+				mcpServers: [],
+				...(additionalDirectories?.length ? { additionalDirectories } : {}),
+			},
 			this.operationTimeoutMs,
 			signal,
 		);

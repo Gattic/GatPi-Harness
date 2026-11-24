@@ -4,7 +4,9 @@
  * Each Pi turn creates one ACP session, selects the requested model and
  * thought level, sends the current transcript as a text prompt, and maps the
  * server's message/thought chunks to Pi's stream events. The ACP server owns
- * its tools; this provider deliberately does not surface tool calls to Pi.
+ * and runs its tools, so tool calls are never surfaced as Pi tool blocks: Pi
+ * answers the server's permission requests instead (`deps.permission`) and
+ * observes the resulting tool activity.
  */
 
 import {
@@ -15,6 +17,9 @@ import {
 import type {
 	AcpClientLike,
 	AcpClientOptions,
+	AcpInitializeResult,
+	AcpPermissionRequest,
+	AcpPermissionResponse,
 	AcpPromptUsage,
 	AcpSessionUpdateNotification,
 } from "./acp";
@@ -31,11 +36,24 @@ export interface AcpStreamOptions {
 	[key: string]: unknown;
 }
 
+export interface AcpToolActivity {
+	toolCallId?: string;
+	kind?: string;
+	title?: string;
+	status?: string;
+}
+
 export interface AcpStreamDeps {
 	resolveRuntime: () => Promise<RuntimeLaunch>;
 	createClient: (options: AcpClientOptions) => AcpClientLike;
 	hasAuth?: () => boolean;
 	cwd?: string;
+	/** Answers the server's permission requests; without one every request is cancelled. */
+	permission?: (request: AcpPermissionRequest) => Promise<AcpPermissionResponse>;
+	/** Additional workspace directories for the session (Pi's project scope). */
+	additionalDirectories?: string[];
+	/** Reports server-side tool activity so Pi can show what the ACP agent is doing. */
+	onToolActivity?: (activity: AcpToolActivity) => void;
 }
 
 type StopReason = "stop" | "length" | "toolUse";
@@ -203,9 +221,26 @@ class PiEventWriter {
 function handleUpdate(
 	notification: AcpSessionUpdateNotification,
 	writer: PiEventWriter,
+	onToolActivity?: (activity: AcpToolActivity) => void,
 ): void {
 	const update = notification?.update;
 	if (!update) return;
+	if (update.sessionUpdate === "tool_call" || update.sessionUpdate === "tool_call_update") {
+		if (!onToolActivity) return;
+		const title =
+			typeof update.title === "string"
+				? update.title
+				: typeof (update as any).rawInput?.CommandLine === "string"
+					? (update as any).rawInput.CommandLine
+					: undefined;
+		onToolActivity({
+			...(typeof update.toolCallId === "string" ? { toolCallId: update.toolCallId } : {}),
+			...(typeof update.kind === "string" ? { kind: update.kind } : {}),
+			...(title ? { title } : {}),
+			...(typeof update.status === "string" ? { status: update.status } : {}),
+		});
+		return;
+	}
 	if (update.sessionUpdate === "agent_message_chunk") {
 		const content = update.content;
 		const text =
@@ -289,6 +324,13 @@ function mapStopReason(reason: string): StopReason {
 	return "stop";
 }
 
+/** The server advertises `session/new` extra-directory support under agentCapabilities. */
+function supportsAdditionalDirectories(initialized: AcpInitializeResult): boolean {
+	const capabilities = initialized?.agentCapabilities as Record<string, unknown> | undefined;
+	const session = capabilities?.sessionCapabilities as Record<string, unknown> | undefined;
+	return session?.additionalDirectories !== undefined;
+}
+
 export function createAcpStream(
 	model: AntigravityAcpModel,
 	context: unknown,
@@ -305,16 +347,23 @@ export function createAcpStream(
 				command: launch.command,
 				args: launch.args,
 				cwd,
-				onUpdate: (notification) => handleUpdate(notification, writer),
-				onPermission: async () => ({ outcome: { outcome: "cancelled" } }),
+				onUpdate: (notification) => handleUpdate(notification, writer, deps.onToolActivity),
+				// Pi's policy decides; the safe default without a gate is to deny.
+				onPermission:
+					deps.permission ?? (async () => ({ outcome: { outcome: "cancelled" as const } })),
 			});
-			await client.initialize(options.signal);
+			const initialized = await client.initialize(options.signal);
 			if (deps.hasAuth && !deps.hasAuth()) {
 				throw new Error(
 					"Google Antigravity ACP is not authenticated. Run /login for google-antigravity-acp.",
 				);
 			}
-			const session = await client.newSession(cwd, options.signal);
+			// Pi hands the server exactly the workspace Pi itself is allowed to use.
+			const additionalDirectories =
+				supportsAdditionalDirectories(initialized) && deps.additionalDirectories?.length
+					? deps.additionalDirectories
+					: undefined;
+			const session = await client.newSession(cwd, options.signal, additionalDirectories);
 			const level = thinkingLevel(options);
 			await client.setModel(session.sessionId, acpModelId(model, level), options.signal);
 			const response = await client.prompt(

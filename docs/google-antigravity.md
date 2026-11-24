@@ -85,6 +85,51 @@ ACP models appear in `/model` without a config entry. Adding
 `"google-antigravity-acp": 1` to `accounts` is only needed for multi-account
 aliases or priority/failover entries.
 
+### Tool authority and approvals
+
+An ACP model runs on Antigravity's own harness, not Pi's agent loop. Pi sends
+the transcript as text and never hands the model Pi's tools; the server owns
+its file and shell tools and executes them inside its runtime. Pi keeps the
+*authority* over them:
+
+- **Every permission request is a Pi policy decision.** When the server asks
+  `session/request_permission`, `src/acp-permission-gate.js` maps the tool call
+  onto Pi's policy: `execute` becomes a Pi `bash` command, `edit`/`write`/
+  `delete` become Pi writes with their target path, `read` stays a read. The
+  request then runs through the same shell parsing, path rules and approval
+  store as Pi's own tool calls (`src/policy-enforcement.js`), using the
+  project's `.pi/policy-gate/policy.json`.
+- **One mode for both surfaces.** `/policy-mode advisory|warn|block|approval`
+  changes Pi tool calls and ACP tool calls together (`src/policy-mode.js`).
+  In `block` mode a denied ACP call is refused without a prompt; in `approval`
+  mode a person is asked.
+- **Approvals are Pi's, not the server's.** A granted request is stored in
+  `.pi/policy-enforcer/approvals.json`; `/policy-approve`, `/policy-approve-
+  directory` and `/policy-approvals` work unchanged. Pi answers with the
+  server's one-shot `allow` option, never its `allow_always` option, unless Pi
+  already holds the grant — a persistent server-side approval would bypass
+  Pi's policy on later calls.
+- **Tool kinds Pi cannot judge need a grant.** An ACP tool kind with no path or
+  command (for example a fetch tool) is not silently allowed: it needs one
+  explicit approval per ACP tool name, after which that tool is authorized.
+- **Pi decides the workspace.** The ACP server confines itself to the session
+  cwd. Pi passes its own project scope (`PI_HARNESS_PROJECT_DIRS` plus
+  `/policy-approve-directory` grants) to `session/new` as
+  `additionalDirectories`, so the server sees exactly the directories Pi is
+  allowed to work in, and Pi's write rules still gate every change.
+- **Tool activity is visible.** The footer shows the ACP tool currently
+  running, and a denial names the policy reasons instead of leaving only the
+  server's "denied by pre-tool hook" wording.
+
+Boundaries worth knowing:
+
+- The server's own policy can auto-approve calls (for example reads) without
+  asking Pi; those never reach Pi's gate.
+- Pi cannot see the server's tool results as Pi tool results, so the
+  transcript records the model's text only.
+- ACP sessions provision `skills/system/run-workflow/SKILL.md` inside the
+  session cwd; that directory is not a Pi skill and is untracked in Git.
+
 ## Runtime host requirements
 
 The ACP runtime is a Go launcher with an embedded CPython 3.14 and the
