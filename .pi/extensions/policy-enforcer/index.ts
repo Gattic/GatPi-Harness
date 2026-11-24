@@ -2,7 +2,6 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
-import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 
@@ -11,6 +10,8 @@ const LIB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", ".
 const { FileApprovalStore, enforceToolCall, evaluateToolCall, formatEnforcementDecision } = require(join(LIB_ROOT, "src", "policy-enforcement.js"));
 const { DEFAULT_ALLOW_TOOLS, DEFAULT_DENY_PATH_PREFIXES, evaluatePolicy, serializablePolicy } = require(join(LIB_ROOT, "src", "runtime-policy.js"));
 const { readJson, writeJson } = require(join(LIB_ROOT, "src", "pi-extension-kit.js"));
+const { policyMode, setPolicyMode } = require(join(LIB_ROOT, "src", "policy-mode.js"));
+const { requestApproval } = require(join(LIB_ROOT, "src", "policy-approval.js"));
 
 // policy-gate was merged into this extension: gate surfaces are advisory
 // policy checks over src/runtime-policy.js, enforcer surfaces actively gate
@@ -19,7 +20,6 @@ const { readJson, writeJson } = require(join(LIB_ROOT, "src", "pi-extension-kit.
 const ENABLED = process.env.PI_POLICY_ENFORCER !== "0";
 const GATE_ENABLED = process.env.PI_POLICY_GATE !== "0";
 const GATE_STATE_DIR = ".pi/policy-gate";
-let MODE = process.env.PI_POLICY_ENFORCER_MODE || "block"; // advisory | warn | block | approval
 
 function gatePolicy(cwd: string) { return readJson(join(cwd, GATE_STATE_DIR, "policy.json"), {}); }
 function gateCheck(cwd: string, input: any) { return evaluatePolicy(input, { cwd, policy: gatePolicy(cwd) }); }
@@ -41,41 +41,6 @@ function registerPolicyGate(pi: ExtensionAPI) {
 
 function store(ctx: any) { return new FileApprovalStore({ cwd: ctx.cwd }); }
 
-// pi-dash publishes an approval request to a paired phone and answers it through this channel. The desktop
-// dialog runs in parallel, so whoever is closest to the user answers; the first decision wins.
-const APPROVAL_REQUEST_EVENT = "approval:request";
-const APPROVAL_SETTLE_EVENT = "approval:settle";
-/** One decision window for both surfaces: the first answer wins, and an unanswered request blocks the call. */
-const APPROVAL_WINDOW_MS = 2 * 60 * 1000;
-
-/** Offers the decision to pi-dash's dashboard/phone; "unavailable" means no answer surface is connected. */
-function requestPhoneApproval(pi: ExtensionAPI, decision: any) {
-  const id = `policy-${randomUUID()}`;
-  let answer: (reply: string) => void = () => {};
-  const reply = new Promise<string>((resolveReply) => { answer = resolveReply; });
-  const payload: any = {
-    request: { id, title: "Policy approval required", detail: formatEnforcementDecision(decision), timeoutMs: APPROVAL_WINDOW_MS },
-    respond: (value: string) => answer(value === "accept" ? "accept" : value === "deny" ? "deny" : "timeout"),
-    handled: false,
-  };
-  pi.events.emit(APPROVAL_REQUEST_EVENT, payload);
-  const handled = payload.handled === true;
-  if (!handled) answer("unavailable");
-  return { id, handled, reply };
-}
-
-/** The desktop dialog answers at the same time; a phone answer withdraws its still-pending card. */
-async function approvedOnce(pi: ExtensionAPI, ctx: any, decision: any): Promise<boolean> {
-  const desktop = ctx.ui.confirm("Policy approval required", `${formatEnforcementDecision(decision)}\n\nAllow once for 24h?`, { timeout: APPROVAL_WINDOW_MS })
-    .then((ok: boolean) => (ok ? "accept" : "deny"));
-  const phone = requestPhoneApproval(pi, decision);
-  const first = await Promise.race([phone.reply, desktop]);
-  if (phone.handled) pi.events.emit(APPROVAL_SETTLE_EVENT, { id: phone.id });
-  if (first === "accept") return true;
-  if (first === "deny") return false;
-  // No phone answer surface, or its deadline passed: the desktop dialog is the remaining decision.
-  return (await desktop) === "accept";
-}
 function activeToolPolicy(pi: ExtensionAPI, cwd: string) {
   const tools = (pi.getAllTools?.() || []).map((tool: any) => tool.name).filter(Boolean);
   return { ...gatePolicy(cwd), ...(tools.length ? { allowTools: [...new Set(tools)] } : {}) };
@@ -104,14 +69,14 @@ export default function policyEnforcer(pi: ExtensionAPI) {
   pi.on("tool_call" as any, async (event: any, ctx: any) => {
     const decision = enforceToolCall(event.toolName, event.input || {}, {
       cwd: ctx.cwd,
-      mode: MODE,
+      mode: policyMode(),
       approvalStore: store(ctx),
       policy: activeToolPolicy(pi, ctx.cwd),
     });
     if (decision.action === "warn") ctx.ui.notify(formatEnforcementDecision(decision), "warning");
     if (decision.allow) return;
     if (ctx.hasUI && decision.action === "approval-required") {
-      const ok = await approvedOnce(pi, ctx, decision);
+      const ok = await requestApproval(pi, ctx, decision, { format: formatEnforcementDecision });
       if (ok) {
         for (const item of decision.missingApprovals || []) store(ctx).approve(item.request, { reason: "interactive approval" });
         return;
@@ -124,7 +89,7 @@ export default function policyEnforcer(pi: ExtensionAPI) {
     description: "Show active policy enforcement status",
     handler: async (_args: string, ctx: any) => ctx.ui.notify(JSON.stringify({
       enabled: ENABLED,
-      mode: MODE,
+      mode: policyMode(),
       activeAllowTools: activeToolPolicy(pi, ctx.cwd).allowTools || [],
       approvals: store(ctx).list(),
       stateFile: store(ctx).file,
@@ -135,8 +100,8 @@ export default function policyEnforcer(pi: ExtensionAPI) {
     description: "Set policy enforcer mode: advisory|warn|block|approval",
     handler: async (args: string, ctx: any) => {
       const next = String(args || "").trim();
-      if (["advisory", "warn", "block", "approval"].includes(next)) MODE = next;
-      ctx.ui.notify(`policy enforcer mode=${MODE}`, "info");
+      // One shared mode: ACP tool authority follows this command too.
+      ctx.ui.notify(`policy enforcer mode=${setPolicyMode(next)}`, "info");
     },
   });
 
@@ -209,7 +174,7 @@ export default function policyEnforcer(pi: ExtensionAPI) {
       if (normalizedOp === "check") {
         details = enforceToolCall(params.input?.toolName, params.input?.input || {}, {
           cwd: ctx.cwd,
-          mode: params.input?.mode || MODE,
+          mode: params.input?.mode || policyMode(),
           approvalStore: store(ctx),
           policy: activeToolPolicy(pi, ctx.cwd),
         });
@@ -218,12 +183,11 @@ export default function policyEnforcer(pi: ExtensionAPI) {
       } else if (normalizedOp === "revoke") {
         details = store(ctx).revoke(params.input?.key);
       } else if (normalizedOp === "mode") {
-        if (params.input?.mode) MODE = params.input.mode;
-        details = { mode: MODE };
+        details = { mode: params.input?.mode ? setPolicyMode(params.input.mode) : policyMode() };
       } else {
         details = {
           enabled: ENABLED,
-          mode: MODE,
+          mode: policyMode(),
           activeAllowTools: activeToolPolicy(pi, ctx.cwd).allowTools || [],
           approvals: store(ctx).list(),
         };

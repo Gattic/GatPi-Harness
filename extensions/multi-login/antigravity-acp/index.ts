@@ -17,6 +17,8 @@ import {
 	type AcpClientLike,
 	type AcpClientOptions,
 	type AcpInitializeResult,
+	type AcpPermissionRequest,
+	type AcpPermissionResponse,
 } from "./acp";
 import {
 	type AcpAuthHealth,
@@ -34,7 +36,7 @@ import {
 	restoreModels,
 } from "./models";
 import { resolveRuntime, type RuntimeLaunch } from "./runtime";
-import { createAcpStream, type AcpStreamOptions } from "./stream";
+import { createAcpStream, type AcpStreamOptions, type AcpToolActivity } from "./stream";
 import {
 	authUrlFromLine,
 	deliverLoginCode,
@@ -69,6 +71,12 @@ export interface AntigravityAcpProviderDeps {
 	inspectAuth?: () => AcpAuthHealth;
 	waitForAuth?: (signal?: AbortSignal, timeoutMs?: number) => Promise<boolean>;
 	now?: () => number;
+	/** Builds the authority handler that answers the server's permission requests. */
+	createGate?: (cwd: string) => (request: AcpPermissionRequest) => Promise<AcpPermissionResponse>;
+	/** Workspace directories Pi grants beyond the session cwd. */
+	additionalDirectories?: (cwd: string) => string[];
+	/** Observes server-side tool activity, for example in Pi's footer. */
+	onToolActivity?: (activity: AcpToolActivity, cwd: string) => void;
 }
 
 const LOGIN_TIMEOUT_MS = 5 * 60_000;
@@ -170,6 +178,32 @@ export function antigravityAcpProvider(deps: AntigravityAcpProviderDeps = {}) {
 				await client.close();
 			}
 		});
+
+	// One stream shape for both entry points: the session cwd decides which
+	// authority gate and workspace Pi hands the server.
+	const createProviderStream = (
+		model: AntigravityAcpModel,
+		context: unknown,
+		options?: AcpStreamOptions,
+	) => {
+		const cwd = options?.cwd ?? process.cwd();
+		const permission = deps.createGate ? deps.createGate(cwd) : undefined;
+		const additionalDirectories = deps.additionalDirectories
+			? deps.additionalDirectories(cwd)
+			: undefined;
+		const onToolActivity = deps.onToolActivity
+			? (activity: AcpToolActivity) => deps.onToolActivity?.(activity, cwd)
+			: undefined;
+		return createAcpStream(model, context, options, {
+			resolveRuntime: runtime,
+			createClient,
+			hasAuth: () => authHealth().status === "oauth-refreshable",
+			cwd,
+			...(permission ? { permission } : {}),
+			...(additionalDirectories?.length ? { additionalDirectories } : {}),
+			...(onToolActivity ? { onToolActivity } : {}),
+		});
+	};
 
 	return {
 		id: ANTIGRAVITY_ACP_PROVIDER_ID,
@@ -300,16 +334,8 @@ export function antigravityAcpProvider(deps: AntigravityAcpProviderDeps = {}) {
 			});
 		},
 		stream: (model: AntigravityAcpModel, context: unknown, options?: AcpStreamOptions) =>
-			createAcpStream(model, context, options, {
-				resolveRuntime: runtime,
-				createClient,
-				hasAuth: () => authHealth().status === "oauth-refreshable",
-			}),
+			createProviderStream(model, context, options),
 		streamSimple: (model: AntigravityAcpModel, context: unknown, options?: AcpStreamOptions) =>
-			createAcpStream(model, context, options, {
-				resolveRuntime: runtime,
-				createClient,
-				hasAuth: () => authHealth().status === "oauth-refreshable",
-			}),
+			createProviderStream(model, context, options),
 	};
 }

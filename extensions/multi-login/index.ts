@@ -22,6 +22,8 @@ const {
 } = require(join(LIB_ROOT, "src", "multi-login.js"));
 const { withAnthropicOAuth } = require(join(LIB_ROOT, "src", "anthropic-oauth.js"));
 const { instrumentExtensionCommands } = require(join(LIB_ROOT, "src", "pi-extension-kit.js"));
+const { createAcpPermissionGate } = require(join(LIB_ROOT, "src", "acp-permission-gate.js"));
+const { projectScope } = require(join(LIB_ROOT, "src", "project-scope.js"));
 
 const EXTENSION_VERSION = "multi-login-2026-10-12.1";
 const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
@@ -30,6 +32,10 @@ export default function multiLogin(pi: ExtensionAPI) {
   pi = instrumentExtensionCommands(pi, { extension: "multi-login", version: EXTENSION_VERSION }) as ExtensionAPI;
   const config = loadConfig({ agentDir: AGENT_DIR, defaultFile: join(LIB_ROOT, "config", "multi-login.json") });
   const bases = new Map(builtinProviders().map((provider: any) => [provider.id, provider]));
+  // The live extension context, captured from the session events below. The ACP
+  // authority gate needs it outside a tool call, where Pi does not pass one.
+  let activeContext: any;
+  const getContext = () => activeContext;
   // Register the shaped base as well as using it for aliases; native auth remains unchanged.
   const anthropic = withAnthropicOAuth(bases.get("anthropic"));
   bases.set("anthropic", anthropic);
@@ -45,7 +51,28 @@ export default function multiLogin(pi: ExtensionAPI) {
   // Code Assist provider above. It is registered by default so its models and
   // login method are available without a config opt-in; `accounts` only adds
   // aliases and priority entries for it.
-  const acp = antigravityAcpProvider();
+  const acp = antigravityAcpProvider({
+    // Every ACP tool call the server asks about is decided by Pi's own policy:
+    // same policy file, approval store and mode as Pi's tool calls.
+    createGate: (cwd: string) =>
+      createAcpPermissionGate({ cwd, pi, getContext }).request,
+    // The ACP server confines itself to the session cwd; Pi hands it exactly
+    // the extra directories Pi's own project scope already authorizes.
+    additionalDirectories: (cwd: string) =>
+      projectScope(cwd)
+        .roots.map((root: any) => root.path)
+        .filter((directory: string) => directory !== cwd),
+    onToolActivity: (activity: any) => {
+      const ui = activeContext?.ui;
+      if (!ui?.setStatus) return;
+      if (activity.status === "completed" || activity.status === "failed") {
+        ui.setStatus("acp-tools", undefined);
+        return;
+      }
+      const label = [activity.kind, activity.title].filter(Boolean).join(" ");
+      ui.setStatus("acp-tools", label ? `ACP ${label}` : "ACP tool running");
+    },
+  });
   bases.set(ANTIGRAVITY_ACP_PROVIDER_ID, acp);
   pi.registerProvider(acp);
   for (const [baseId, count] of Object.entries(config.accounts) as [string, number][]) {
@@ -67,11 +94,17 @@ export default function multiLogin(pi: ExtensionAPI) {
   let restoringModel = false;
 
   pi.on("model_select", (event, ctx) => {
+    activeContext = ctx;
     // Restoring history or a directory default is not a new choice. Failover's setModel is.
     if (!restoringModel && event.source !== "restore") directoryModels.write(ctx.cwd, event.model);
   });
 
+  pi.on("turn_end", () => {
+    activeContext?.ui?.setStatus?.("acp-tools", undefined);
+  });
+
   pi.on("session_start", async (event, ctx) => {
+    activeContext = ctx;
     if (event.reason !== "startup" && event.reason !== "new") return;
     // Explicit CLI selection and existing conversation history take precedence over defaults.
     if (process.argv.slice(2).some((arg) => /^(--model|--provider|--models)(=|$)/.test(arg))) return;
@@ -104,6 +137,7 @@ export default function multiLogin(pi: ExtensionAPI) {
   });
 
   pi.on("message_end", async (event: any, ctx: any) => {
+    activeContext = ctx;
     const message = event.message;
     if (message?.role !== "assistant" || !isAccountFailure(message)) return;
     const until = cooldowns.coolDown(message.provider, config.cooldownMinutes);
