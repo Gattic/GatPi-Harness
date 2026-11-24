@@ -870,9 +870,12 @@ if (process.argv[2] === 'scan' && !process.argv.includes('--validate')) {
         const clientInstalled = fs.existsSync(path.join(__dirname, "..", "src", "pi-queue", "node_modules", "ioredis", "package.json"));
         const unconfigured = clientInstalled ? "not-configured" : "not-installed";
         const home = tmpFixture("pi-queue-extension-");
-        const previous = { PI_QUEUE_ENV: process.env.PI_QUEUE_ENV, PI_QUEUE: process.env.PI_QUEUE };
+        const previous = { PI_QUEUE_ENV: process.env.PI_QUEUE_ENV, PI_QUEUE: process.env.PI_QUEUE, PI_QUEUE_PROVIDER: process.env.PI_QUEUE_PROVIDER };
         try {
           process.env.PI_QUEUE = "1";
+          // The queued provider is configuration, not ambient state: a fleet machine
+          // that exports PI_QUEUE_PROVIDER must not decide what this test observes.
+          process.env.PI_QUEUE_PROVIDER = "local";
           process.env.PI_QUEUE_ENV = path.join(home, "not-configured.env");
           const status = registered.toolDefs.find((tool) => tool.name === "pi_queue_status");
           const offline = await status.execute("offline", {}, undefined, undefined, { cwd: home, mode: "print" });

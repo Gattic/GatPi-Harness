@@ -10,7 +10,12 @@ const { composeReadiness } = require("../scripts/memory-readiness.js");
 const { tmpFixture } = require("./helpers/tmp-fixture");
 
 const SCRIPT = path.join(__dirname, "..", "scripts", "memory-readiness.js");
-const AT = "2026-11-23T10:00:00Z";
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Shift an ISO day (YYYY-MM-DD) by whole days, in UTC like the CLI. */
+function addDays(isoDay, days) {
+  return new Date(Date.parse(`${isoDay}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
+}
 
 function statusFixture({ s1 = "insufficient", r = "insufficient", candidate = "M1", requested = "M1" } = {}) {
   return {
@@ -52,16 +57,20 @@ function windowFixture() {
 
 function writeFixture() {
   const dir = tmpFixture("pi-memory-readiness-");
+  // The CLI derives its window from the current clock, so fixture records are
+  // dated relative to now. A literal date silently falls out of the 14-day
+  // window once it ages, which turns every count assertion into a calendar bug.
+  const at = new Date(Date.now() - DAY_MS).toISOString();
   fs.mkdirSync(path.join(dir, ".pi", "traces"), { recursive: true });
   fs.mkdirSync(path.join(dir, ".pi", "project-memory"), { recursive: true });
   fs.writeFileSync(path.join(dir, ".pi", "project-memory", "decisions.jsonl"), [
-    { action: "saved", automatic: false, verification: "verified", at: AT },
-    { action: "saved", automatic: false, verification: "verified", at: AT },
+    { action: "saved", automatic: false, verification: "verified", at },
+    { action: "saved", automatic: false, verification: "verified", at },
   ].map((row) => JSON.stringify(row)).join("\n") + "\n");
   fs.writeFileSync(path.join(dir, ".pi", "traces", "project--session.jsonl"), Array.from({ length: 6 }, () => ({
     category: "memory_retrieval",
     name: "recall.completed",
-    timestamp: AT,
+    timestamp: at,
     payload: { durationMs: 1, returnedHashes: [], outOfScopeCount: 0, injected: false, sessionIdHash: "abc" },
   })).map((row) => JSON.stringify(row)).join("\n") + "\n");
   return dir;
@@ -111,7 +120,10 @@ test("the daily readiness CLI reports counts and days remaining, and --strict fa
   assert.equal(s1.count, 2);
   assert.equal(s1.need, 20);
   assert.equal(s1.daysRemaining, 6);
-  assert.equal(s1.earliest, "2026-11-29");
+  // The floor is derived from the live window, so pin the derivation instead of
+  // a literal date that would only hold on one calendar day.
+  assert.equal(s1.earliest, addDays(result.window.end, s1.daysRemaining), "the S1 floor is the window end plus its remaining days");
+  assert.ok(s1.earliest > result.window.end, "a shortfall floors the gate in the future");
   const r = result.gates.find((gate) => gate.name === "R");
   assert.equal(r.count, 6);
   assert.equal(r.daysRemaining, 13);
