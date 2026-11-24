@@ -35,12 +35,29 @@ import {
 } from "./models";
 import { resolveRuntime, type RuntimeLaunch } from "./runtime";
 import { createAcpStream, type AcpStreamOptions } from "./stream";
+import {
+	authUrlFromLine,
+	deliverLoginCode,
+	describeAuthUrl,
+	parsePastedCredential,
+} from "./login";
 
 export { ANTIGRAVITY_ACP_PROVIDER_ID } from "./models";
 
+export type AcpLoginNotification =
+	| { type: "progress"; message: string }
+	| { type: "auth_url"; url: string; instructions?: string };
+
 export interface AcpLoginInteraction {
 	signal?: AbortSignal;
-	notify?: (notification: { type: string; message: string }) => void;
+	notify?: (notification: AcpLoginNotification) => void;
+	/** Present in Pi's own login dialog; absent callers simply wait for the browser. */
+	prompt?: (prompt: {
+		type: "manual_code";
+		message: string;
+		placeholder?: string;
+		signal?: AbortSignal;
+	}) => Promise<string>;
 }
 
 export interface AntigravityAcpProviderDeps {
@@ -56,6 +73,53 @@ export interface AntigravityAcpProviderDeps {
 
 const LOGIN_TIMEOUT_MS = 5 * 60_000;
 const AUTH_MARKER_TTL_MS = 60 * 60_000;
+
+/**
+ * Show the sign-in URL, then accept a pasted redirect URL or code while the
+ * browser flow runs. A paste is forwarded to the server's own loopback
+ * listener, so the server still performs the exchange and owns the token.
+ */
+async function offerPastedCode(
+	url: string,
+	interaction: AcpLoginInteraction,
+	auth: Promise<void>,
+	fetchImpl?: typeof globalThis.fetch,
+): Promise<void> {
+	if (!interaction.prompt) return;
+	const target = describeAuthUrl(url);
+	if (target.port === undefined) return;
+	const controller = new AbortController();
+	const signal = interaction.signal
+		? AbortSignal.any([interaction.signal, controller.signal])
+		: controller.signal;
+	const pasted = interaction.prompt({
+		type: "manual_code",
+		message:
+			"Paste the redirect URL or authorization code, or submit an empty line to keep waiting for the browser",
+		signal,
+	});
+	const outcome = await Promise.race([
+		auth.then(
+			() => "authenticated" as const,
+			() => "authenticated" as const,
+		),
+		pasted.then((value) => ({ value })),
+	]);
+	if (outcome === "authenticated") {
+		// The browser finished first; retire the prompt without touching the flow.
+		controller.abort();
+		return;
+	}
+	const credential = parsePastedCredential(outcome.value);
+	if (credential.error) {
+		throw new Error(`Google sign-in failed: ${credential.error}`);
+	}
+	if (!credential.code) return;
+	await deliverLoginCode(target, credential, {
+		...(fetchImpl ? { fetch: fetchImpl } : {}),
+		...(interaction.signal ? { signal: interaction.signal } : {}),
+	});
+}
 
 async function pollAuth(
 	health: () => AcpAuthHealth,
@@ -119,10 +183,32 @@ export function antigravityAcpProvider(deps: AntigravityAcpProviderDeps = {}) {
 				login: async (interaction: AcpLoginInteraction) => {
 					ensureAuth();
 					const launch = await runtime();
+					let resolveUrl: ((value: string | undefined) => void) | undefined;
+					let urlSeen = false;
+					const firstUrl = new Promise<string | undefined>((resolve) => {
+						resolveUrl = resolve;
+					});
+					const surface = (url: string): void => {
+						if (urlSeen) return;
+						urlSeen = true;
+						const target = describeAuthUrl(url);
+						const instructions =
+							target.port === undefined
+								? "No browser on this host? Forward the callback port from the sign-in URL before opening it."
+								: `No browser on this host? Forward the callback port first (ssh -L ${target.port}:127.0.0.1:${target.port} <this host>), or paste the redirect URL or authorization code below.`;
+						interaction.notify?.({ type: "auth_url", url, instructions });
+						resolveUrl?.(url);
+					};
 					const client = createClient({
 						command: launch.command,
 						args: launch.args,
 						cwd: process.cwd(),
+						// A headless sign-in waits for a person, not a fast request.
+						operationTimeoutMs: LOGIN_TIMEOUT_MS,
+						onStderr: (line: string) => {
+							const url = authUrlFromLine(line);
+							if (url) surface(url);
+						},
 					});
 					try {
 						const initialized = await client.initialize(interaction.signal);
@@ -134,7 +220,19 @@ export function antigravityAcpProvider(deps: AntigravityAcpProviderDeps = {}) {
 							type: "progress",
 							message: `Opening ${method.name}…`,
 						});
-						await client.authenticate(method.id, interaction.signal);
+						const auth = client.authenticate(method.id, interaction.signal);
+						const url = await Promise.race([
+							firstUrl,
+							// An already-signed-in server returns without printing a URL.
+							auth.then(
+								() => undefined,
+								() => undefined,
+							),
+						]);
+						if (url !== undefined) {
+							await offerPastedCode(url, interaction, auth, deps.fetch);
+						}
+						await auth;
 						const wait =
 							deps.waitForAuth ??
 							((signal: AbortSignal | undefined, timeoutMs: number) =>

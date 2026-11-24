@@ -436,8 +436,9 @@ async function main() {
     assert.equal(restored.find((model) => model.id === "gemini-4-neon").thinkingLevelMap.medium, "gemini-4-neon-medium");
 
     await acpTests();
+    await loginTests();
     await providerTests();
-    console.log("antigravity-acp runtime, zip, install, auth, model and provider tests passed");
+    console.log("antigravity-acp runtime, zip, install, auth, login, model and provider tests passed");
   } finally {
     cleanup();
   }
@@ -672,6 +673,250 @@ async function acpTests() {
   );
   await errorClient.close().catch(() => undefined);
 }
+
+async function loginTests() {
+  const loginModule = await jiti.import(path.join(EXT, "login.ts"));
+  const providerModule = await jiti.import(path.join(EXT, "index.ts"));
+
+  const signInUrl =
+    "https://accounts.google.com/o/oauth2/v2/auth?response_type=code" +
+    "&client_id=1071006060591-abc.apps.googleusercontent.com" +
+    "&redirect_uri=http%3A%2F%2F127.0.0.1%3A36141%2F" +
+    "&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform" +
+    "&state=STATE-1&code_challenge=challenge";
+
+  // The server prints its URL inside an xdg-open failure; other lines carry nothing.
+  assert.equal(
+    loginModule.authUrlFromLine(`xdg-open: no method available for opening '${signInUrl}'`),
+    signInUrl,
+  );
+  assert.equal(loginModule.authUrlFromLine("SyntaxWarning: invalid escape sequence"), undefined);
+
+  const described = loginModule.describeAuthUrl(signInUrl);
+  assert.equal(described.port, 36141);
+  assert.equal(described.state, "STATE-1");
+  assert.equal(loginModule.describeAuthUrl("not a url").port, undefined);
+  assert.equal(
+    loginModule.describeAuthUrl("https://accounts.google.com/o/oauth2/v2/auth?state=s").port,
+    undefined,
+  );
+
+  assert.deepEqual(
+    loginModule.parsePastedCredential("http://127.0.0.1:36141/?code=4%2F0abc&state=STATE-1"),
+    { code: "4/0abc", state: "STATE-1" },
+  );
+  assert.deepEqual(loginModule.parsePastedCredential("4/0abc-def"), { code: "4/0abc-def" });
+  assert.deepEqual(loginModule.parsePastedCredential("code=4/0abc"), { code: "4/0abc" });
+  assert.deepEqual(loginModule.parsePastedCredential("   "), {});
+  assert.deepEqual(loginModule.parsePastedCredential("http://127.0.0.1:36141/"), {});
+  assert.equal(
+    loginModule.parsePastedCredential("http://127.0.0.1:36141/?error=access_denied").error,
+    "access_denied",
+  );
+
+  await assert.rejects(
+    () => loginModule.deliverLoginCode({ url: signInUrl }, { code: "x" }),
+    /no loopback callback port/u,
+  );
+
+  const authHealth = {
+    status: "oauth-refreshable",
+    tokenFile: true,
+    settingsFile: false,
+    directory: "",
+    tokenPath: "",
+    settingsPath: "",
+  };
+  const initialized = {
+    protocolVersion: 1,
+    authMethods: [{ id: "oauth-personal", name: "Log in with Google" }],
+  };
+
+  /** A provider whose client resolves `authenticate` only when the test says so. */
+  function loginProvider(overrides = {}) {
+    let authResolver;
+    let resolveRequested = false;
+    let options;
+    const fakeClient = {
+      initialize: async () => initialized,
+      authenticate: () =>
+        new Promise((resolve) => {
+          authResolver = resolve;
+          if (resolveRequested) resolve();
+        }),
+      newSession: async () => ({ sessionId: "session-1" }),
+      setModel: async () => {},
+      prompt: async () => ({ stopReason: "end_turn" }),
+      close: async () => {},
+    };
+    const provider = providerModule.antigravityAcpProvider({
+      runtime: async () => ({ command: "mock", args: [], source: "env" }),
+      createClient: (clientOptions) => {
+        options = clientOptions;
+        return fakeClient;
+      },
+      ensureAuth: () => {},
+      inspectAuth: () => authHealth,
+      waitForAuth: async () => true,
+      ...overrides,
+    });
+    return {
+      provider,
+      options: () => options,
+      // Safe before `authenticate` is reached: the request settles once it arrives.
+      resolveAuth: () => {
+        if (authResolver) authResolver();
+        else resolveRequested = true;
+      },
+    };
+  }
+
+  /** Wait until the provider created its client, so stderr can be delivered to it. */
+  async function whenClientReady(run) {
+    for (let attempt = 0; attempt < 500; attempt++) {
+      if (run.options()) return;
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    throw new Error("the login client was never created");
+  }
+
+  // 1. The URL reaches the dialog, and a pasted redirect URL completes the flow.
+  {
+    const notifications = [];
+    const delivered = [];
+    const run = loginProvider({
+      fetch: async (input) => {
+        delivered.push(String(input));
+        run.resolveAuth();
+        return { ok: true, status: 200, text: async () => "" };
+      },
+    });
+    const login = run.provider.auth.oauth.login({
+      notify: (notification) => notifications.push(notification),
+      prompt: async () => "http://127.0.0.1:36141/?code=4%2F0abc&state=STATE-1",
+    });
+    await whenClientReady(run);
+    assert.equal(run.options().operationTimeoutMs, 5 * 60_000);
+    run.options().onStderr(`xdg-open: no method available for opening '${signInUrl}'`);
+    const credential = await login;
+    assert.equal(credential.access, "antigravity-acp-managed");
+    assert.equal(notifications[0].type, "progress");
+    assert.match(notifications[0].message, /Opening Log in with Google/u);
+    const authUrl = notifications.find((notification) => notification.type === "auth_url");
+    assert(authUrl);
+    assert.equal(authUrl.url, signInUrl);
+    assert.match(authUrl.instructions, /ssh -L 36141:127\.0\.0\.1:36141/u);
+    assert.equal(delivered.length, 1);
+    const callback = new URL(delivered[0]);
+    assert.equal(callback.origin, "http://127.0.0.1:36141");
+    assert.equal(callback.searchParams.get("code"), "4/0abc");
+    assert.equal(callback.searchParams.get("state"), "STATE-1");
+  }
+
+  // 2. The browser finishing first retires the paste prompt without delivering anything.
+  {
+    let aborted = false;
+    const delivered = [];
+    const run = loginProvider({
+      fetch: async (input) => {
+        delivered.push(String(input));
+        return { ok: true, status: 200, text: async () => "" };
+      },
+    });
+    const login = run.provider.auth.oauth.login({
+      notify: () => {},
+      prompt: (prompt) =>
+        new Promise((_resolve, reject) => {
+          prompt.signal.addEventListener("abort", () => {
+            aborted = true;
+            reject(new Error("Login cancelled"));
+          });
+        }),
+    });
+    await whenClientReady(run);
+    run.options().onStderr(`opening '${signInUrl}'`);
+    run.resolveAuth();
+    assert.equal((await login).access, "antigravity-acp-managed");
+    assert.equal(aborted, true);
+    assert.equal(delivered.length, 0);
+  }
+
+  // 3. An already-signed-in server prints no URL, so nothing is prompted.
+  {
+    const notifications = [];
+    let prompted = 0;
+    const run = loginProvider();
+    const login = run.provider.auth.oauth.login({
+      notify: (notification) => notifications.push(notification),
+      prompt: async () => {
+        prompted++;
+        return "";
+      },
+    });
+    await whenClientReady(run);
+    run.resolveAuth();
+    assert.equal((await login).access, "antigravity-acp-managed");
+    assert.equal(prompted, 0);
+    assert.equal(notifications.filter((notification) => notification.type === "auth_url").length, 0);
+  }
+
+  // 4. An empty paste keeps waiting for the browser instead of delivering a code.
+  {
+    const delivered = [];
+    const run = loginProvider({
+      fetch: async (input) => {
+        delivered.push(String(input));
+        return { ok: true, status: 200, text: async () => "" };
+      },
+    });
+    const login = run.provider.auth.oauth.login({
+      notify: () => {},
+      prompt: async () => "   ",
+    });
+    await whenClientReady(run);
+    run.options().onStderr(`opening '${signInUrl}'`);
+    setTimeout(() => run.resolveAuth(), 20);
+    assert.equal((await login).access, "antigravity-acp-managed");
+    assert.equal(delivered.length, 0);
+  }
+
+  // 5. A pasted error stops the login with Google's reason.
+  {
+    const run = loginProvider();
+    const login = run.provider.auth.oauth.login({
+      notify: () => {},
+      prompt: async () => "http://127.0.0.1:36141/?error=access_denied",
+    });
+    await whenClientReady(run);
+    run.options().onStderr(`opening '${signInUrl}'`);
+    await assert.rejects(login, /Google sign-in failed: access_denied/u);
+  }
+
+  // 6. A rejected paste reports the server's answer instead of pretending success.
+  {
+    const run = loginProvider({
+      fetch: async () => ({ ok: false, status: 400, text: async () => "" }),
+    });
+    const login = run.provider.auth.oauth.login({
+      notify: () => {},
+      prompt: async () => "4/0stale",
+    });
+    await whenClientReady(run);
+    run.options().onStderr(`opening '${signInUrl}'`);
+    await assert.rejects(login, /rejected the pasted code \(HTTP 400\)/u);
+  }
+
+  // 7. Callers without a prompt (older integrations) still wait for the browser.
+  {
+    const run = loginProvider();
+    const login = run.provider.auth.oauth.login({ notify: () => {} });
+    await whenClientReady(run);
+    run.options().onStderr(`opening '${signInUrl}'`);
+    setTimeout(() => run.resolveAuth(), 20);
+    assert.equal((await login).access, "antigravity-acp-managed");
+  }
+}
+
 async function providerTests() {
   const providerModule = await jiti.import(path.join(EXT, "index.ts"));
   let fakeOptions;

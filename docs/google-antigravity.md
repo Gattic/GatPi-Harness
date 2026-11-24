@@ -54,6 +54,16 @@ Then sign in once per account:
 /login google-antigravity
 ```
 
+The flow opens `http://localhost:51121/oauth-callback`, and also accepts a
+pasted redirect URL or bare authorization code when that port is unavailable.
+The stored credential holds the access/refresh token, the discovered Cloud Code
+Assist project id, and the account email; it lives in Pi's own auth storage.
+Project discovery announces Antigravity's client identity (`ideType:
+ANTIGRAVITY`, `pluginType: CLOUD_CODE`), which is what makes the endpoint
+report the account's own companion project instead of the shared default. A
+credential that only holds the default project re-discovers on the next token
+refresh.
+
 ## Antigravity ACP
 
 The ACP provider needs no `accounts` entry and is available in every session.
@@ -75,15 +85,143 @@ ACP models appear in `/model` without a config entry. Adding
 `"google-antigravity-acp": 1` to `accounts` is only needed for multi-account
 aliases or priority/failover entries.
 
-The flow opens `http://localhost:51121/oauth-callback`, and also accepts a
-pasted redirect URL or bare authorization code when that port is unavailable.
-The stored credential holds the access/refresh token, the discovered Cloud Code
-Assist project id, and the account email; it lives in Pi's own auth storage.
-Project discovery announces Antigravity's client identity (`ideType:
-ANTIGRAVITY`, `pluginType: CLOUD_CODE`), which is what makes the endpoint
-report the account's own companion project instead of the shared default. A
-credential that only holds the default project re-discovers on the next token
-refresh.
+## Runtime host requirements
+
+The ACP runtime is a Go launcher with an embedded CPython 3.14 and the
+Antigravity application. The launcher is compiled with AES and AVX enabled and
+fails fast, before it prints anything else, when the CPU lacks them:
+
+```
+FATAL ERROR: This binary was compiled with aes enabled, but this feature is not available on this processor (go/sigill-fail-fast).
+```
+
+- The requirement is **AES + AVX** (Sandy Bridge class and later). AVX2 is not
+  required: a Westmere CPU (AES, no AVX) fails on `avx`, and a Nehalem (neither)
+  fails on `aes`.
+- Every published `linux-x86_64` release (1.2.0, 1.5.0 and 1.5.2) carries the
+  same requirement; Google ships no baseline build. The sibling
+  `localharness_external` binary does run on those CPUs, so only the server is
+  affected.
+- Check a host before rollout. Both flags must be present:
+  `grep -qw aes /proc/cpuinfo && grep -qw avx /proc/cpuinfo && echo supported`
+
+Fleet status (checked 2026-11):
+
+| host | CPU | aes | avx | ACP |
+| --- | --- | --- | --- | --- |
+| gbig00 | Xeon E5530 | no | no | not supported |
+| gbig01 | Xeon X5670 | yes | no | not supported |
+| gbig02 | Xeon E5530 | no | no | not supported |
+| gbig03 | Xeon X5570 | no | no | not supported |
+| gbig04 | Xeon E5-2640 | yes | yes | configured, verified |
+| ghome | Ryzen 9 3900X | yes | yes | supported, not yet configured |
+| sparky0–2 | aarch64 | yes | n/a | arm64 archive; not yet verified |
+
+Emulation is not a practical fallback: QEMU 7.2 with `-cpu max` does run the
+1.5.2 server, but startup costs about 38 s and the provider spawns a fresh
+server for every Pi turn, against roughly 4 s natively.
+
+## Rollout steps
+
+1. **Confirm the CPU** as above. Do not install the runtime on a host that fails
+   the check; the install succeeds and every spawn then dies with SIGILL.
+2. **Install the managed runtime.** Either run `/login google-antigravity-acp`
+   on the host (it downloads the 274 MB archive, verifies its SHA-256 and size,
+   and extracts 815 MB under `~/.local/opt/agy-acp`), or copy an installation
+   already verified on another host, using the `archiveSha256` of the
+   `runtime-manifest.json` entry for the platform as the version directory:
+
+   ```
+   ssh source-host 'cd ~/.local/opt/agy-acp/versions && tar -cf - <sha256>' \
+     | ssh target-host 'mkdir -p ~/.local/opt/agy-acp/versions && cd ~/.local/opt/agy-acp/versions && tar -xf -'
+   ssh target-host 'cd ~/.local/opt/agy-acp && ln -sfn versions/<sha256> current'
+   ```
+
+   `installedRuntime` re-checks the version, archive SHA-256, byte counts and
+   executable bits against the pinned manifest, so a copy is accepted only if it
+   matches. Set `AGY_ACP_BIN` to bypass the managed runtime with a user-managed
+   binary.
+3. **Provide the Google credential.** The server owns its token at
+   `~/.gemini/antigravity-acp/acp_token.json` (or under `GEMINI_HOME`); Pi keeps
+   only a non-secret marker. Either sign in on the host (see the headless note
+   below), or copy the token from a machine already signed in to the same
+   Google account:
+
+   ```
+   ssh signed-in-host 'tar -cf - -C ~/.gemini antigravity-acp/acp_token.json antigravity-acp/settings.json' \
+     | ssh target-host 'mkdir -p ~/.gemini && tar -xf - -C ~/.gemini && chmod 600 ~/.gemini/antigravity-acp/*.json'
+   ```
+
+   The file holds only the OAuth client id/secret, project id, refresh token,
+   scopes and token URI — no access token or expiry. The server mints an access
+   token from the refresh token on each start and rewrites the file, so a copy
+   is self-sustaining. Copying does not rotate the refresh token: both hosts
+   keep working until Google revokes it (password change, security event,
+   unused for about six months, or the per-client token cap).
+4. **Add Pi's auth marker**, merged into the existing store rather than
+   replacing it:
+
+   ```
+   python3 - <<'EOF'
+   import json, os, time
+   p = os.path.expanduser("~/.pi/agent/auth.json")
+   d = json.load(open(p)) if os.path.exists(p) else {}
+   d["google-antigravity-acp"] = {"type": "oauth", "access": "antigravity-acp-managed",
+                                 "refresh": "antigravity-acp-managed",
+                                 "expires": int(time.time() * 1000) + 3600_000}
+   tmp = p + ".tmp"
+   open(tmp, "w").write(json.dumps(d, indent=2) + "\n")
+   os.chmod(tmp, 0o600)
+   os.replace(tmp, p)
+   EOF
+   ```
+
+   The marker carries no secret; without it Pi reports the provider as
+   unauthenticated before it ever spawns the server.
+5. **Verify** on the host:
+
+   ```
+   pi --list-models                                   # the ACP models appear
+   pi -p --no-session --model google-antigravity-acp/gemini-4-neon:high \
+     "Reply with exactly: OK"
+   ```
+
+   On gbig04 the raw ACP handshake answered `initialize` in 3.5 s, and a
+   `gemini-4-neon` prompt with thought level `high` returned `end_turn` in 9.4 s
+   including server startup.
+
+## Logging in on a headless host
+
+The login forwards the server's stderr to the dialog. When the server prints its
+Google sign-in URL, the dialog shows that URL with an `ssh -L` hint naming the
+callback port it opened, and offers a paste field. Three ways to finish:
+
+- **Same machine with a browser** — the dialog opens the URL; nothing else is
+  needed.
+- **Forward the callback port** — run
+  `ssh -L <port>:127.0.0.1:<port> <this host>` from your workstation before
+  opening the URL.
+- **Paste the redirect URL or code** — sign in anywhere, then paste either the
+  URL you were redirected to (`http://127.0.0.1:<port>/?code=…&state=…`) or just
+  the `code` value. Pi forwards it to the server's own loopback listener, so the
+  server still validates the state and performs the token exchange; Pi writes
+  no credential of its own. Submitting an empty line keeps waiting for the
+  browser, and the request timeout is extended to the five-minute login window
+  so a headless sign-in is not cut short.
+
+The dialog does not open the URL for you; use `ctrl+click` or `ctrl+x` to copy
+it. Expect it roughly a minute after the dialog appears, because the server
+first tries to launch a browser of its own and only then prints the URL. If the
+sign-in cannot complete, the dialog shows the server's error (an expired or
+reused code reports `Onboarding failed: The authentication flow did not complete
+successfully.`) and you can run `/login google-antigravity-acp` again.
+
+Copying the token (step 3) remains the fastest option when another machine is
+already signed in to the same account.
+
+`pi auth login google-antigravity-acp` and `pi auth check --provider` cover only
+built-in providers and answer `Unknown provider` / `provider_not_found` for this
+extension provider; use `/login` in the TUI, or `pi -p --model` for a check.
 
 ## Models
 
