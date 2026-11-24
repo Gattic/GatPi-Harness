@@ -123,8 +123,18 @@ its file and shell tools and executes them inside its runtime. Pi keeps the
   no request shape to judge or to grant, so the call is refused outright.
 - **No dialog mid-stream.** Pi cannot render a dialog while the assistant turn
   is streaming and the server is waiting for the permission answer; a prompt
-  there deadlocks the turn until the ACP prompt timeout. Approvals are granted
-  ahead of time with `/policy-approve`, not asked in the middle of a turn.
+  there deadlocks the turn. Approvals are granted ahead of time with
+  `/policy-approve`, not asked in the middle of a turn.
+- **A turn lasts as long as the server needs.** There is no client-side prompt
+  deadline: while a background command runs (`WaitMsBeforeAsync`), the server
+  sends nothing at all, so a timer cannot tell a long command from a hang and
+  would fail turns that are still working. Esc aborts the turn and sends
+  `session/cancel`, which stops the server's work. `promptTimeoutMs` remains
+  available for programmatic callers that need a bound; when set, a timeout
+  also cancels the server turn and names the last activity.
+- **Failures name the real cause.** Error messages report the last server
+  activity (tool, status and command or path) and filter the bundle's own
+  Python `SyntaxWarning` output instead of appending it verbatim.
 - **Pi decides the workspace.** The ACP server confines itself to the session
   cwd. Pi passes its own project scope (`PI_HARNESS_PROJECT_DIRS` plus
   `/policy-approve-directory` grants) to `session/new` as

@@ -133,10 +133,33 @@ export class AcpAbortError extends Error {
 	}
 }
 
+/**
+ * A request passed its deadline. Prompt deadlines are opt-in: an ACP turn lasts
+ * as long as the server needs, and the server sends nothing at all while a
+ * background command runs, so an arbitrary deadline can only fail a turn that is
+ * still working. The user's abort is the control for a turn that never returns.
+ */
+export class AcpTimeoutError extends Error {
+	readonly method: string;
+	readonly timeoutMs: number;
+
+	constructor(method: string, timeoutMs: number, detail: string) {
+		super(`ACP ${method} timed out after ${timeoutMs}ms${detail ? `; ${detail}` : ""}`);
+		this.name = "TimeoutError";
+		this.method = method;
+		this.timeoutMs = timeoutMs;
+	}
+}
+
 const DEFAULT_INITIALIZE_TIMEOUT_MS = 120_000;
 const DEFAULT_OPERATION_TIMEOUT_MS = 120_000;
-const DEFAULT_PROMPT_TIMEOUT_MS = 10 * 60_000;
 const DEFAULT_MAX_FRAME_BYTES = 16 * 1024 * 1024;
+
+// The server is a Python bundle that prints SyntaxWarnings about its own
+// sources. They have nothing to do with the failure and otherwise bury the
+// real cause in every error message.
+const STDERR_NOISE =
+	/(?:SyntaxWarning|DeprecationWarning|UserWarning|RuntimeWarning|invalid escape sequence|raw string is also an option|Did you mean)/u;
 
 export class AcpClient implements AcpClientLike {
 	readonly exited: Promise<{ code: number | null; signal: NodeJS.Signals | null }>;
@@ -144,20 +167,22 @@ export class AcpClient implements AcpClientLike {
 	private readonly options: AcpClientOptions;
 	private readonly initializeTimeoutMs: number;
 	private readonly operationTimeoutMs: number;
-	private readonly promptTimeoutMs: number;
+	/** Undefined means a prompt waits for the server until the turn aborts. */
+	readonly promptTimeoutMs: number | undefined;
 	private readonly maxFrameBytes: number;
 	private readonly pending = new Map<JsonRpcId, PendingRequest>();
 	private readonly sessions = new Map<string, AcpSessionNewResult>();
 	private nextId = 1;
 	private buffer = "";
 	private stderrTail = "";
+	private lastActivity: { at: number; summary: string } | undefined;
 	private closed = false;
 
 	constructor(options: AcpClientOptions) {
 		this.options = options;
 		this.initializeTimeoutMs = options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS;
 		this.operationTimeoutMs = options.operationTimeoutMs ?? DEFAULT_OPERATION_TIMEOUT_MS;
-		this.promptTimeoutMs = options.promptTimeoutMs ?? DEFAULT_PROMPT_TIMEOUT_MS;
+		this.promptTimeoutMs = options.promptTimeoutMs;
 		this.maxFrameBytes = options.maxFrameBytes ?? DEFAULT_MAX_FRAME_BYTES;
 		this.child = spawn(options.command, options.args ?? [], {
 			cwd: options.cwd,
@@ -251,10 +276,41 @@ export class AcpClient implements AcpClientLike {
 
 	private handleNotification(message: Record<string, unknown>): void {
 		if (message.method === "session/update" && message.params) {
-			void Promise.resolve(
-				this.options.onUpdate?.(message.params as AcpSessionUpdateNotification),
-			).catch(() => undefined);
+			const notification = message.params as AcpSessionUpdateNotification;
+			this.recordActivity(notification);
+			void Promise.resolve(this.options.onUpdate?.(notification)).catch(() => undefined);
 		}
+	}
+
+	/** Remember what the server last reported, for timeout and exit messages. */
+	private recordActivity(notification: AcpSessionUpdateNotification): void {
+		const update = (notification.update ?? {}) as Record<string, unknown>;
+		const parts = [String(update.sessionUpdate ?? "update")];
+		if (update.kind) parts.push(String(update.kind));
+		if (update.status) parts.push(String(update.status));
+		const hint = activityHint(update);
+		if (hint) parts.push(JSON.stringify(hint));
+		this.lastActivity = { at: Date.now(), summary: parts.join(" ") };
+	}
+
+	/** One line naming the last server activity plus any non-noise stderr. */
+	private describeFailureContext(): string {
+		const parts: string[] = [];
+		if (this.lastActivity) {
+			const seconds = Math.max(0, Math.round((Date.now() - this.lastActivity.at) / 1000));
+			parts.push(`last activity: ${this.lastActivity.summary} (${seconds}s ago)`);
+		}
+		const stderr = this.meaningfulStderr();
+		if (stderr) parts.push(`server stderr: ${stderr}`);
+		return parts.join("; ");
+	}
+
+	private meaningfulStderr(limit = 6): string {
+		const lines = this.stderrTail
+			.split(/\r?\n/u)
+			.map((line) => line.trim())
+			.filter((line) => line && !STDERR_NOISE.test(line));
+		return lines.slice(-limit).join(" | ").slice(0, 1_000);
 	}
 
 	private async handleServerRequest(
@@ -290,7 +346,7 @@ export class AcpClient implements AcpClientLike {
 	private request<T>(
 		method: string,
 		params: unknown,
-		timeoutMs: number,
+		timeoutMs: number | undefined,
 		signal?: AbortSignal,
 	): Promise<T> {
 		if (this.closed) return Promise.reject(new Error("ACP client is closed"));
@@ -311,24 +367,21 @@ export class AcpClient implements AcpClientLike {
 				},
 			};
 			this.pending.set(id, pending);
-			const timer = setTimeout(() => {
-				this.pending.delete(id);
-				cleanup();
-				const detail = this.stderrTail.trim();
-				reject(
-					new Error(
-						`ACP ${method} timed out after ${timeoutMs}ms${detail ? `: ${detail}` : ""}`,
-					),
-				);
-			}, timeoutMs);
+			const timer =
+				timeoutMs === undefined
+					? undefined
+					: setTimeout(() => {
+							this.pending.delete(id);
+							cleanup();
+							reject(new AcpTimeoutError(method, timeoutMs, this.describeFailureContext()));
+						}, timeoutMs);
 			const onAbort = (): void => {
 				this.pending.delete(id);
-				clearTimeout(timer);
-				signal?.removeEventListener("abort", onAbort);
+				cleanup();
 				reject(new AcpAbortError());
 			};
 			const cleanup = (): void => {
-				clearTimeout(timer);
+				if (timer !== undefined) clearTimeout(timer);
 				signal?.removeEventListener("abort", onAbort);
 			};
 			if (signal) signal.addEventListener("abort", onAbort, { once: true });
@@ -461,6 +514,11 @@ export class AcpClient implements AcpClientLike {
 				this.promptTimeoutMs,
 				signal,
 			);
+		} catch (error) {
+			// A deadline Pi imposed must stop the server's turn too, or the agent keeps
+			// working invisibly after Pi has already reported the turn as failed.
+			if (error instanceof AcpTimeoutError) this.notify("session/cancel", { sessionId });
+			throw error;
 		} finally {
 			signal?.removeEventListener("abort", onAbort);
 		}
@@ -491,9 +549,9 @@ export class AcpClient implements AcpClientLike {
 	private onExit(code: number | null, signal: NodeJS.Signals | null): void {
 		this.closed = true;
 		const status = signal ? `signal ${signal}` : `code ${String(code)}`;
-		const detail = this.stderrTail.trim();
+		const detail = this.describeFailureContext();
 		this.failAll(
-			new Error(`ACP process exited with ${status}${detail ? `: ${detail}` : ""}`),
+			new Error(`ACP process exited with ${status}${detail ? `; ${detail}` : ""}`),
 		);
 	}
 
@@ -502,6 +560,23 @@ export class AcpClient implements AcpClientLike {
 		for (const pending of this.pending.values()) pending.reject(error);
 		this.pending.clear();
 	}
+}
+
+function activityHint(update: Record<string, unknown>): string | undefined {
+	const raw = update.rawInput;
+	const candidate =
+		raw && typeof raw === "object"
+			? ["CommandLine", "command", "TargetFile", "file_path", "path"]
+					.map((key) => (raw as Record<string, unknown>)[key])
+					.find((value) => typeof value === "string" && value.trim())
+			: undefined;
+	const hint =
+		typeof candidate === "string"
+			? candidate
+			: typeof update.title === "string"
+				? update.title
+				: undefined;
+	return hint ? hint.slice(0, 120) : undefined;
 }
 
 function findSelector(

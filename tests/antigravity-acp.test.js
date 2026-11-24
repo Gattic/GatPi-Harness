@@ -436,6 +436,7 @@ async function main() {
     assert.equal(restored.find((model) => model.id === "gemini-4-neon").thinkingLevelMap.medium, "gemini-4-neon-medium");
 
     await acpTests();
+    await acpDeadlineTests();
     await loginTests();
     await providerTests();
     await streamAuthorityTests();
@@ -482,36 +483,42 @@ rl.on("line", (line) => {
   const message = JSON.parse(line);
   if (logPath) fs.appendFileSync(logPath, line + "\n");
   if (message.id === 999 && message.method === undefined) {
-    send({
-      jsonrpc: "2.0",
-      method: "session/update",
-      params: {
-        sessionId: "session-1",
-        update: {
-          sessionUpdate: "agent_thought_chunk",
-          content: { type: "text", text: "Think" },
+    const finish = () => {
+      send({
+        jsonrpc: "2.0",
+        method: "session/update",
+        params: {
+          sessionId: "session-1",
+          update: {
+            sessionUpdate: "agent_thought_chunk",
+            content: { type: "text", text: "Think" },
+          },
         },
-      },
-    });
-    send({
-      jsonrpc: "2.0",
-      method: "session/update",
-      params: {
-        sessionId: "session-1",
-        update: {
-          sessionUpdate: "agent_message_chunk",
-          content: { type: "text", text: "Hi" },
+      });
+      send({
+        jsonrpc: "2.0",
+        method: "session/update",
+        params: {
+          sessionId: "session-1",
+          update: {
+            sessionUpdate: "agent_message_chunk",
+            content: { type: "text", text: "Hi" },
+          },
         },
-      },
-    });
-    send({
-      jsonrpc: "2.0",
-      id: promptId,
-      result: {
-        stopReason: "end_turn",
-        usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
-      },
-    });
+      });
+      send({
+        jsonrpc: "2.0",
+        id: promptId,
+        result: {
+          stopReason: "end_turn",
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        },
+      });
+    };
+    // A long background command leaves the server silent until it finishes.
+    const delay = Number(process.env.ACP_MOCK_PROMPT_DELAY_MS || 0);
+    if (delay > 0) setTimeout(finish, delay);
+    else finish();
     return;
   }
   switch (message.method) {
@@ -566,6 +573,22 @@ rl.on("line", (line) => {
           options: [{ optionId: "allow_once", name: "Allow once" }],
         },
       });
+      if (process.env.ACP_MOCK_TOOL_UPDATE === "1") {
+        send({
+          jsonrpc: "2.0",
+          method: "session/update",
+          params: {
+            sessionId: "session-1",
+            update: {
+              sessionUpdate: "tool_call",
+              kind: "execute",
+              status: "in_progress",
+              title: "Run the baseline unit tests",
+              rawInput: { CommandLine: "npm test", WaitMsBeforeAsync: 1000 },
+            },
+          },
+        });
+      }
       break;
     case "session/cancel":
       break;
@@ -673,6 +696,112 @@ async function acpTests() {
     (error) => error.name === "AcpRpcError" && error.code === -32603,
   );
   await errorClient.close().catch(() => undefined);
+}
+
+const NOISY_ACP_SERVER = String.raw`
+process.stderr.write('/home/x/types.py:18270: SyntaxWarning: "\\/" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\\\/"? A raw string is also an option.\n');
+process.stderr.write('agent runtime: model backend unavailable\n');
+require("node:readline").createInterface({ input: process.stdin }).on("line", () => {});
+`;
+
+async function acpDeadlineTests() {
+  const acpModule = await jiti.import(path.join(EXT, "acp.ts"));
+  const dir = tempDir("pi-acp-deadline-");
+  const mockPath = path.join(dir, "mock-acp.cjs");
+  fs.writeFileSync(mockPath, MOCK_ACP_SERVER);
+  let logCount = 0;
+
+  const make = (options = {}, env = {}) => {
+    const logPath = path.join(dir, `mock-${logCount++}.jsonl`);
+    const client = new acpModule.AcpClient({
+      command: process.execPath,
+      args: [mockPath],
+      cwd: dir,
+      env: { ...process.env, ACP_MOCK_LOG: logPath, ...env },
+      initializeTimeoutMs: 5_000,
+      operationTimeoutMs: 5_000,
+      onPermission: async () => ({ outcome: { outcome: "selected", optionId: "allow_once" } }),
+      ...options,
+    });
+    return { client, logPath };
+  };
+
+  // A prompt has no deadline of its own: the server is silent while a background
+  // command runs, so a timer could only fail a turn that is still working.
+  const patient = make({}, { ACP_MOCK_PROMPT_DELAY_MS: "1200" });
+  assert.equal(
+    patient.client.promptTimeoutMs,
+    undefined,
+    "a prompt waits for the server instead of an arbitrary deadline",
+  );
+  await patient.client.initialize();
+  await patient.client.newSession(dir);
+  const started = Date.now();
+  const slow = await patient.client.prompt("session-1", [{ type: "text", text: "Run the tests" }]);
+  assert.equal(slow.stopReason, "end_turn");
+  assert(Date.now() - started >= 1_000, "a slow turn is allowed to finish");
+  await patient.client.close().catch(() => undefined);
+
+  // A deadline that is asked for explicitly still fails, names what the server was
+  // doing, and stops the server's turn rather than leaving it running invisibly.
+  const impatient = make(
+    { promptTimeoutMs: 200 },
+    { ACP_MOCK_PROMPT_DELAY_MS: "1200", ACP_MOCK_TOOL_UPDATE: "1" },
+  );
+  await impatient.client.initialize();
+  await impatient.client.newSession(dir);
+  await assert.rejects(
+    impatient.client.prompt("session-1", [{ type: "text", text: "Run the tests" }]),
+    (error) => {
+      assert.equal(error.name, "TimeoutError");
+      assert.match(error.message, /ACP session\/prompt timed out after 200ms/u);
+      assert.match(
+        error.message,
+        /last activity: tool_call execute in_progress "npm test" \(\d+s ago\)/u,
+        "the timeout names what the server was doing",
+      );
+      return true;
+    },
+  );
+  const cancelDeadline = Date.now() + 2_000;
+  let cancelled = false;
+  while (!cancelled && Date.now() < cancelDeadline) {
+    const written = fs.existsSync(impatient.logPath)
+      ? fs.readFileSync(impatient.logPath, "utf8").trim().split("\n").filter(Boolean)
+      : [];
+    cancelled = written.some((line) => {
+      try {
+        return JSON.parse(line).method === "session/cancel";
+      } catch {
+        return false;
+      }
+    });
+    if (!cancelled) await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  assert(cancelled, "an imposed deadline cancels the server turn");
+  await impatient.client.close().catch(() => undefined);
+
+  // The bundle's own Python warnings are noise, not the reason for a failure.
+  const noisyPath = path.join(dir, "noisy-acp.cjs");
+  fs.writeFileSync(noisyPath, NOISY_ACP_SERVER);
+  const noisy = new acpModule.AcpClient({
+    command: process.execPath,
+    args: [noisyPath],
+    cwd: dir,
+    initializeTimeoutMs: 200,
+    operationTimeoutMs: 200,
+  });
+  await assert.rejects(noisy.initialize(), (error) => {
+    assert.match(error.message, /ACP initialize timed out after 200ms/u);
+    assert.match(error.message, /server stderr: .*model backend unavailable/u);
+    assert.doesNotMatch(
+      error.message,
+      /SyntaxWarning|invalid escape sequence/u,
+      "the bundle's syntax warnings never reach a failure message",
+    );
+    return true;
+  });
+  await noisy.close().catch(() => undefined);
 }
 
 async function loginTests() {
