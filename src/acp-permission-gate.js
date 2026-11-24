@@ -6,9 +6,13 @@
  * The ACP server asks Pi before it edits a file or runs a command. This module
  * answers that request from Pi's policy: the same `.pi/policy-gate/policy.json`
  * rules, the same approval store and the same mode that gate Pi's own tool
- * calls. Requests the policy cannot judge (unknown ACP tool kinds, or a known
- * kind without a path or command) need an explicit grant, and an interactive
- * approval is offered through the shared desktop/phone surfaces.
+ * calls. A conforming call is approved without involving a person; a violation
+ * is refused, and the notification carries the approval key so
+ * `/policy-approve <key>` grants it when the person accepts the risk.
+ *
+ * The answer is never blocked on a dialog. Pi cannot render one while the
+ * assistant turn is streaming and the server is waiting for this response, so
+ * an interactive prompt here deadlocks the turn until the ACP prompt timeout.
  */
 
 const path = require("node:path");
@@ -20,7 +24,6 @@ const {
   formatAcpPermissionDecision,
 } = require("./acp-permission-policy");
 const { policyMode } = require("./policy-mode");
-const { requestApproval } = require("./policy-approval");
 const { readJson } = require("./pi-extension-kit");
 
 const GATE_STATE_DIR = path.join(".pi", "policy-gate");
@@ -33,8 +36,7 @@ function gatePolicy(cwd) {
 /**
  * @param {object} options
  * @param {string} options.cwd session working directory (the ACP session cwd)
- * @param {object} [options.pi] extension API, used to reach the paired-phone approval channel
- * @param {() => object|undefined} [options.getContext] returns the live extension context
+ * @param {() => object|undefined} [options.getContext] returns the live extension context for notifications
  * @param {object} [options.policy] policy override (defaults to the project policy file)
  * @param {string} [options.mode] mode override (defaults to the shared policy mode)
  * @param {object} [options.approvalStore] approval store override
@@ -56,34 +58,23 @@ function createAcpPermissionGate(options = {}) {
 
   function report(decision, ctx) {
     if (onDecision) onDecision(decision);
-    // An allowed call is routine; a denial must say why, or the model's own
-    // "denied by pre-tool hook" wording is the only explanation the user sees.
-    if (!decision.allow && ctx?.ui?.notify) {
-      ctx.ui.notify(formatAcpPermissionDecision(decision), "warning");
-    }
+    // An allowed call is routine. A refusal must say why and how to accept it,
+    // or the server's own "denied by pre-tool hook" wording is the only thing
+    // the user sees.
+    if (decision.allow || !ctx?.ui?.notify) return;
+    const keys = (decision.missingApprovals || []).map((item) => item.key);
+    const hint = keys.length ? `\nApprove once with: /policy-approve ${keys[0]}` : "";
+    ctx.ui.notify(`${formatAcpPermissionDecision(decision)}${hint}`, "warning");
   }
 
   return {
     cwd,
     store,
     decide,
-    /** Answer one ACP `session/request_permission` request. */
+    /** Answer one ACP `session/request_permission` request immediately. */
     async request(request) {
-      let decision = decide(request);
-      const ctx = options.getContext ? options.getContext() : undefined;
-      if (!decision.allow && decision.action === "approval-required" && options.pi && ctx?.hasUI) {
-        const approved = await requestApproval(options.pi, ctx, decision, {
-          title: "Antigravity ACP tool approval",
-          format: formatAcpPermissionDecision,
-        });
-        if (approved) {
-          for (const item of decision.missingApprovals || []) {
-            store.approve(item.request, { reason: "interactive ACP approval" });
-          }
-          decision = decide(request);
-        }
-      }
-      report(decision, ctx);
+      const decision = decide(request);
+      report(decision, options.getContext ? options.getContext() : undefined);
       return acpPermissionResponse(request, decision);
     },
   };

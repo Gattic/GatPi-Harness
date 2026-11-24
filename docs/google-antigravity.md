@@ -99,19 +99,32 @@ its file and shell tools and executes them inside its runtime. Pi keeps the
   request then runs through the same shell parsing, path rules and approval
   store as Pi's own tool calls (`src/policy-enforcement.js`), using the
   project's `.pi/policy-gate/policy.json`.
+- **A conforming call is approved from policy.** No dialog and no approval
+  prompt: a command Pi's shell rules accept, a write inside the project, or a
+  read is answered with the server's `allow` option straight away.
 - **One mode for both surfaces.** `/policy-mode advisory|warn|block|approval`
   changes Pi tool calls and ACP tool calls together (`src/policy-mode.js`).
-  In `block` mode a denied ACP call is refused without a prompt; in `approval`
-  mode a person is asked.
+  `advisory` and `warn` never refuse; `block` refuses a violation; `approval`
+  reports the approval key for a violation instead of opening a dialog.
 - **Approvals are Pi's, not the server's.** A granted request is stored in
   `.pi/policy-enforcer/approvals.json`; `/policy-approve`, `/policy-approve-
   directory` and `/policy-approvals` work unchanged. Pi answers with the
   server's one-shot `allow` option, never its `allow_always` option, unless Pi
   already holds the grant — a persistent server-side approval would bypass
   Pi's policy on later calls.
-- **Tool kinds Pi cannot judge need a grant.** An ACP tool kind with no path or
-  command (for example a fetch tool) is not silently allowed: it needs one
-  explicit approval per ACP tool name, after which that tool is authorized.
+- **A refusal says why and how to accept it.** The notification carries the
+  policy reasons and `Approve once with: /policy-approve <key>`. Granting the
+  key makes that call conform, and it is approved without further prompting.
+- **ACP tools Pi has no rule for are not blocked.** A tool kind such as
+  `fetch` follows Pi's convention for unknown tools: policy decides, and a
+  missing tool-allowlist entry is only an advisory warning.
+- **A write or command Pi cannot see is refused.** If an `execute` or
+  `edit`/`write`/`delete` request arrives without a command or path, there is
+  no request shape to judge or to grant, so the call is refused outright.
+- **No dialog mid-stream.** Pi cannot render a dialog while the assistant turn
+  is streaming and the server is waiting for the permission answer; a prompt
+  there deadlocks the turn until the ACP prompt timeout. Approvals are granted
+  ahead of time with `/policy-approve`, not asked in the middle of a turn.
 - **Pi decides the workspace.** The ACP server confines itself to the session
   cwd. Pi passes its own project scope (`PI_HARNESS_PROJECT_DIRS` plus
   `/policy-approve-directory` grants) to `session/new` as
