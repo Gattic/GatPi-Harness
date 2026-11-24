@@ -1,8 +1,8 @@
 "use strict";
 
 // ACP tool authority: Antigravity's permission requests are decided by Pi's own
-// policy. These tests pin the tool-call mapping, the allow/deny/approval
-// decisions, the ACP option selection and the interactive grant flow.
+// policy. These tests pin the tool-call mapping, the auto-approve/deny/approval
+// decisions, the ACP option selection and the non-blocking gate.
 
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -39,7 +39,7 @@ function permission(toolCall, options = OPTIONS) {
   const execute = acpToolRequest({ kind: "execute", rawInput: { CommandLine: "git worktree add ../x" } });
   assert.equal(execute.toolName, "bash");
   assert.equal(execute.input.command, "git worktree add ../x");
-  assert.equal(execute.unmapped, false);
+  assert.equal(execute.missing, undefined);
 
   const snake = acpToolRequest({ kind: "execute", rawInput: { command_line: "ls -1", working_dir: "/tmp" } });
   assert.equal(snake.input.command, "ls -1", "snake_case raw input is read too");
@@ -56,15 +56,17 @@ function permission(toolCall, options = OPTIONS) {
   assert.equal(read.toolName, "read");
   assert.equal(read.input.path, path.join(cwd, "src/app.js"));
 
-  const unknown = acpToolRequest({ kind: "fetch", rawInput: { Url: "https://example.com" } });
-  assert.equal(unknown.unmapped, true);
-  assert.equal(unknown.toolName, "acp_fetch");
+  // An ACP tool Pi has no rule for is judged like an unknown Pi tool, not
+  // forced through an approval prompt.
+  const fetch = acpToolRequest({ kind: "fetch", rawInput: { Url: "https://example.com" } });
+  assert.equal(fetch.toolName, "acp_fetch");
+  assert.equal(fetch.missing, undefined);
 
   const pathless = acpToolRequest({ kind: "edit", rawInput: { CodeContent: "x" } });
-  assert.equal(pathless.unmapped, true, "a write without a path cannot be judged by policy");
+  assert.equal(pathless.missing, "path", "a write without a path cannot be judged by policy");
 
   const commandless = acpToolRequest({ kind: "execute", rawInput: {} });
-  assert.equal(commandless.unmapped, true);
+  assert.equal(commandless.missing, "command");
 }
 
 // --- decisions ---------------------------------------------------------------
@@ -78,12 +80,22 @@ function permission(toolCall, options = OPTIONS) {
   assert.equal(allowed.optionId, "allow");
   assert.equal(acpPermissionResponse(permission({ kind: "execute" }), allowed).outcome.outcome, "selected");
 
+  // A conforming fetch is approved from policy: no dialog, no approval key.
+  const fetch = decideAcpPermission(
+    permission({ kind: "fetch", rawInput: { Url: "https://example.com" } }),
+    { cwd, mode: "block", approvalStore: store },
+  );
+  assert.equal(fetch.allow, true, "an ACP tool without a path or command is not a violation");
+  assert.equal(fetch.optionId, "allow");
+  assert.equal(fetch.missingApprovals.length, 0);
+
   const denied = decideAcpPermission(
     permission({ kind: "execute", rawInput: { CommandLine: "rm -rf .", Cwd: cwd } }),
     { cwd, mode: "block", approvalStore: store },
   );
   assert.equal(denied.allow, false);
   assert.equal(denied.optionId, "deny");
+  assert.equal(denied.missingApprovals.length, 1, "a refused call carries the key that would allow it");
   assert.match(formatAcpPermissionDecision(denied), /acp-permission block bash/u);
 
   const outsideWrite = decideAcpPermission(
@@ -114,6 +126,27 @@ function permission(toolCall, options = OPTIONS) {
   assert.equal(advisory.allow, true);
 }
 
+// --- requests Pi cannot judge are refused, never prompted -------------------
+{
+  const store = new FileApprovalStore({ cwd });
+  const pathless = decideAcpPermission(
+    permission({ kind: "delete", rawInput: { CodeContent: "x" } }),
+    { cwd, mode: "block", approvalStore: store },
+  );
+  assert.equal(pathless.allow, false);
+  assert.equal(pathless.action, "block");
+  assert.equal(pathless.optionId, "deny");
+  assert.match(pathless.reasons[0], /carries no path/u);
+  assert.equal(pathless.missingApprovals.length, 0, "there is no request shape to grant");
+
+  const commandless = decideAcpPermission(
+    permission({ kind: "execute", rawInput: { WaitMsBeforeAsync: 5000 } }),
+    { cwd, mode: "approval", approvalStore: store },
+  );
+  assert.equal(commandless.allow, false, "approval mode cannot approve a command it cannot see");
+  assert.equal(commandless.optionId, "deny");
+}
+
 // --- approval store and directory grants ------------------------------------
 {
   const store = new FileApprovalStore({ cwd });
@@ -137,26 +170,6 @@ function permission(toolCall, options = OPTIONS) {
   assert.equal(grantedDirectory.allow, true, "a directory grant extends write authority");
 }
 
-// --- unmapped requests need an explicit grant --------------------------------
-{
-  const store = new FileApprovalStore({ cwd: tmpFixture("pi-acp-authority-grant-") });
-  const unmapped = decideAcpPermission(
-    permission({ kind: "fetch", rawInput: { Url: "https://example.com" } }),
-    { cwd, mode: "block", approvalStore: store },
-  );
-  assert.equal(unmapped.allow, false);
-  assert.equal(unmapped.action, "approval-required", "an ACP tool Pi cannot judge needs a person");
-  assert.equal(unmapped.optionId, "deny");
-  assert.equal(unmapped.missingApprovals.length, 1);
-  for (const item of unmapped.missingApprovals) store.approve(item.request, { ttlMs: 60_000 });
-  const approved = decideAcpPermission(
-    permission({ kind: "fetch", rawInput: { Url: "https://elsewhere.example" } }),
-    { cwd, mode: "block", approvalStore: store },
-  );
-  assert.equal(approved.allow, true, "one grant covers every call of that ACP tool");
-  assert.equal(approved.action, "approved");
-}
-
 // --- option selection --------------------------------------------------------
 {
   const allow = { allow: true, action: "allow", evaluations: [] };
@@ -173,60 +186,56 @@ function permission(toolCall, options = OPTIONS) {
   assert.deepEqual(acpPermissionResponse({ options: [] }, deny), { outcome: { outcome: "cancelled" } });
 }
 
-// --- the gate asks a person and records the grant ----------------------------
+// --- the gate answers immediately and never opens a dialog ------------------
 async function gateTests() {
   const gateCwd = tmpFixture("pi-acp-authority-gate-");
   const store = new FileApprovalStore({ cwd: gateCwd });
-  const asked = [];
   const notifications = [];
-  const pi = { events: { emit: () => {} } };
   const ctx = {
     hasUI: true,
     ui: {
-      confirm: async (title, message) => {
-        asked.push({ title, message });
-        return true;
-      },
+      confirm: () => assert.fail("the ACP gate must never open a dialog mid-stream"),
       notify: (message, type) => notifications.push({ message, type }),
     },
   };
   const gate = createAcpPermissionGate({
     cwd: gateCwd,
-    pi,
     getContext: () => ctx,
     approvalStore: store,
   });
-  const unmapped = permission({ kind: "fetch", rawInput: { Url: "https://example.com" } });
-  const response = await gate.request(unmapped);
-  assert.equal(asked.length, 1);
-  assert.match(asked[0].message, /acp-permission approval-required acp_fetch/u);
-  assert.deepEqual(response.outcome, { outcome: "selected", optionId: "allow" });
-  assert.equal(store.list().length, 1, "the interactive answer becomes a Pi approval grant");
 
-  // A denied decision never reaches the dialog and always explains itself.
-  const deniedGate = createAcpPermissionGate({
-    cwd: gateCwd,
-    pi,
-    getContext: () => ({ hasUI: true, ui: { confirm: async () => assert.fail("must not ask"), notify: (m, t) => notifications.push({ message: m, type: t }) } }),
-    approvalStore: store,
-  });
-  const deniedResponse = await deniedGate.request(
+  // A conforming call is approved silently.
+  const allowed = await gate.request(permission({ kind: "fetch", rawInput: { Url: "https://example.com" } }));
+  assert.deepEqual(allowed.outcome, { outcome: "selected", optionId: "allow" });
+  assert.equal(notifications.length, 0, "an approved call does not notify");
+
+  // A violation is refused at once, with the reason and the grant command.
+  const denied = await gate.request(permission({ kind: "execute", rawInput: { CommandLine: "rm -rf ." } }));
+  assert.deepEqual(denied.outcome, { outcome: "selected", optionId: "deny" });
+  const warning = notifications.find((item) => item.type === "warning");
+  assert(warning);
+  assert.match(warning.message, /acp-permission block bash/u);
+  assert.match(warning.message, /Approve once with: \/policy-approve approval_[a-f0-9]+/u);
+
+  // Granting that key makes the next identical call conform.
+  const key = denied.outcome.optionId === "deny" ? warning.message.match(/\/policy-approve (approval_[a-f0-9]+)/u)[1] : undefined;
+  const blocked = decideAcpPermission(
     permission({ kind: "execute", rawInput: { CommandLine: "rm -rf ." } }),
+    { cwd: gateCwd, mode: "block", approvalStore: store },
   );
-  assert.deepEqual(deniedResponse.outcome, { outcome: "selected", optionId: "deny" });
-  assert(notifications.some((item) => item.type === "warning" && /rm -rf/u.test(item.message)));
+  for (const item of blocked.missingApprovals) assert.equal(item.key, key);
+  store.approve({ ...blocked.missingApprovals[0].request }, { ttlMs: 60_000, key });
+  const regranted = await gate.request(permission({ kind: "execute", rawInput: { CommandLine: "rm -rf ." } }));
+  assert.deepEqual(regranted.outcome, { outcome: "selected", optionId: "allow" });
 
-  // Without a UI an approval-required request is denied instead of hanging.
+  // Without a UI the decision is identical: nothing depends on a prompt.
   const headless = createAcpPermissionGate({
     cwd: gateCwd,
-    pi,
-    getContext: () => ({ hasUI: false, ui: { notify: () => {} } }),
+    getContext: () => ({ hasUI: false, ui: {} }),
     approvalStore: new FileApprovalStore({ cwd: tmpFixture("pi-acp-authority-headless-") }),
   });
-  const headlessResponse = await headless.request(
-    permission({ kind: "fetch", rawInput: { Url: "https://example.com" } }),
-  );
-  assert.deepEqual(headlessResponse.outcome, { outcome: "selected", optionId: "deny" });
+  const headlessDenied = await headless.request(permission({ kind: "execute", rawInput: { CommandLine: "sudo -n true" } }));
+  assert.deepEqual(headlessDenied.outcome, { outcome: "selected", optionId: "deny" });
 
   // --- the gate reads the project policy file and the shared mode ------------
   const policyCwd = tmpFixture("pi-acp-authority-policy-");
@@ -237,10 +246,10 @@ async function gateTests() {
   );
   assert.deepEqual(gatePolicy(policyCwd).denyPathPrefixes, [path.join(policyCwd, "secrets")]);
   const policyGate = createAcpPermissionGate({ cwd: policyCwd });
-  const blocked = await policyGate.request(
+  const blockedWrite = await policyGate.request(
     permission({ kind: "edit", rawInput: { TargetFile: path.join(policyCwd, "secrets", "key.txt") } }),
   );
-  assert.deepEqual(blocked.outcome, { outcome: "selected", optionId: "deny" });
+  assert.deepEqual(blockedWrite.outcome, { outcome: "selected", optionId: "deny" });
 
   const previous = policyMode();
   try {

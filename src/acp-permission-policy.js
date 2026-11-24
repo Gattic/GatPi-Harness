@@ -9,11 +9,18 @@
  * cancelling everything: the same shell parsing, path rules, approval store and
  * mode that gate Pi tool calls decide what the ACP agent may do.
  *
+ * The gate never asks a person mid-stream. A Pi dialog cannot render while the
+ * assistant turn is still streaming and the server is waiting for its answer,
+ * so a prompt there deadlocks the turn. Conforming calls are approved from
+ * policy, violations are refused with their approval key, and the person grants
+ * the key with `/policy-approve` (or the policy_enforcer tool) when they accept
+ * the risk.
+ *
  * Only requests the server actually raises are visible here. Tool calls the
  * server's own policy auto-approves never reach this module.
  */
 
-const { enforceToolCall, evaluateToolCall } = require("./policy-enforcement");
+const { enforceToolCall } = require("./policy-enforcement");
 const { policyMode } = require("./policy-mode");
 
 /** Antigravity's `execute` tool call carries a shell command line. */
@@ -46,9 +53,10 @@ function field(rawInput, keys) {
 /**
  * Translate one ACP tool call into the Pi tool call Pi's policy understands.
  *
- * `unmapped` marks a request Pi cannot judge by path or command: an unknown
- * tool kind, or a known kind whose path/command is missing. Those need an
- * explicit grant instead of a silent allow.
+ * `missing` marks an execute/write request whose command or path Pi cannot see.
+ * Those are refused rather than approved, because there is no request shape to
+ * judge or to grant. Unknown kinds are judged like an unknown Pi tool: policy
+ * decides, and a tool allowlist miss is only an advisory warning.
  */
 function acpToolRequest(toolCall = {}) {
   const kind = String(toolCall?.kind || "other").trim().toLowerCase();
@@ -60,19 +68,19 @@ function acpToolRequest(toolCall = {}) {
   if (EXECUTE_KINDS.has(kind)) {
     return command
       ? { kind, toolName: "bash", input: { command }, unmapped: false }
-      : { kind, toolName: `acp_${kind || "execute"}`, input: { ...rawInput }, unmapped: true };
+      : { kind, toolName: `acp_${kind}`, input: { ...rawInput }, unmapped: true, missing: "command" };
   }
   if (WRITE_KINDS.has(kind)) {
     return path
       ? { kind, toolName: kind === "edit" ? "edit" : "write", input: { path }, unmapped: false }
-      : { kind, toolName: `acp_${kind}`, input: { ...rawInput }, unmapped: true };
+      : { kind, toolName: `acp_${kind}`, input: { ...rawInput }, unmapped: true, missing: "path" };
   }
   if (READ_KINDS.has(kind)) {
     return path
       ? { kind, toolName: "read", input: { path }, unmapped: false }
-      : { kind, toolName: `acp_${kind}`, input: { ...rawInput }, unmapped: true };
+      : { kind, toolName: "read", input: {}, unmapped: false };
   }
-  return { kind, toolName: `acp_${kind || "tool"}`, input: { ...rawInput }, unmapped: true };
+  return { kind, toolName: `acp_${kind || "tool"}`, input: { ...rawInput }, unmapped: false };
 }
 
 function optionList(options) {
@@ -107,9 +115,10 @@ function allApproved(decision, approvalStore) {
 /**
  * Decide one ACP permission request.
  *
- * Known kinds run through the policy enforcer's own `enforceToolCall`, so
- * approvals (`/policy-approve`, `/policy-approve-directory`) and the configured
- * mode behave exactly as they do for Pi tools.
+ * Calls run through the policy enforcer's own `enforceToolCall`, so approvals
+ * (`/policy-approve`, `/policy-approve-directory`) and the configured mode
+ * behave exactly as they do for Pi tools: a conforming call is approved, a
+ * violation is refused with the approval key that would allow it.
  */
 function decideAcpPermission(permission, options = {}) {
   const toolCall = permission?.toolCall || permission || {};
@@ -119,44 +128,35 @@ function decideAcpPermission(permission, options = {}) {
   const mode = options.mode || policyMode();
   const approvalStore = options.approvalStore;
 
-  let decision;
-  if (mapped.unmapped) {
-    const evaluated = evaluateToolCall(mapped.toolName, mapped.input, { cwd, policy });
-    const missing = evaluated.evaluations.filter((item) => !approvalStore?.has?.(item.key));
-    decision = {
-      allow: missing.length === 0,
-      action: missing.length ? "approval-required" : "approved",
-      mode,
-      severity: missing.length ? "warn" : "allow",
-      toolName: mapped.toolName,
-      input: mapped.input,
-      acpKind: mapped.kind,
-      requests: evaluated.requests,
-      evaluations: evaluated.evaluations,
-      denied: [],
-      warnings: [],
-      reasons: missing.length
-        ? [`ACP tool ${mapped.toolName} has no path or command to judge; approve it explicitly`]
-        : [`ACP tool ${mapped.toolName} is approved`],
-      missingApprovals: missing.map((item) => ({
-        key: item.key,
-        request: item.request,
-        reasons: item.decision.reasons,
-      })),
-    };
-  } else {
-    decision = {
-      ...enforceToolCall(mapped.toolName, mapped.input, { cwd, policy, mode, approvalStore }),
-      toolName: mapped.toolName,
-      input: mapped.input,
-      acpKind: mapped.kind,
-    };
-  }
+  const decision = mapped.missing
+    ? {
+        allow: false,
+        action: "block",
+        mode,
+        severity: "deny",
+        toolName: mapped.toolName,
+        input: mapped.input,
+        acpKind: mapped.kind,
+        requests: [],
+        evaluations: [],
+        denied: [],
+        warnings: [],
+        reasons: [`ACP ${mapped.kind} request carries no ${mapped.missing}; Pi cannot judge it`],
+        missingApprovals: [],
+      }
+    : {
+        ...enforceToolCall(mapped.toolName, mapped.input, { cwd, policy, mode, approvalStore }),
+        toolName: mapped.toolName,
+        input: mapped.input,
+        acpKind: mapped.kind,
+      };
 
   const persistentApproved = allApproved(decision, approvalStore);
   return {
     ...decision,
     acpKind: mapped.kind,
+    // Keep one decision shape for callers: an allowed call has no missing approvals.
+    missingApprovals: decision.missingApprovals ?? [],
     optionId: selectOption(permission?.options, decision, { persistentApproved }),
   };
 }

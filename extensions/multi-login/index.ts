@@ -55,7 +55,7 @@ export default function multiLogin(pi: ExtensionAPI) {
     // Every ACP tool call the server asks about is decided by Pi's own policy:
     // same policy file, approval store and mode as Pi's tool calls.
     createGate: (cwd: string) =>
-      createAcpPermissionGate({ cwd, pi, getContext }).request,
+      createAcpPermissionGate({ cwd, getContext }).request,
     // The ACP server confines itself to the session cwd; Pi hands it exactly
     // the extra directories Pi's own project scope already authorizes.
     additionalDirectories: (cwd: string) =>
