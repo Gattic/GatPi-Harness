@@ -143,6 +143,14 @@ its file and shell tools and executes them inside its runtime. Pi keeps the
 - **Tool activity is visible.** The footer shows the ACP tool currently
   running, and a denial names the policy reasons instead of leaving only the
   server's "denied by pre-tool hook" wording.
+- **Context is the request's, not the turn's.** The prompt result's usage sums
+  every internal model call of the turn (billing), so it can dwarf the context
+  window even when the turn was small. The server's `usage_update`
+  notifications carry the tokens currently in context; Pi records that
+  occupancy as the message's context size, so the footer percentage and
+  compaction thresholds use the last request rather than the aggregate. When
+  no occupancy is reported, Pi estimates from its own messages instead of
+  reading the aggregate.
 
 Boundaries worth knowing:
 

@@ -7,6 +7,11 @@
  * and runs its tools, so tool calls are never surfaced as Pi tool blocks: Pi
  * answers the server's permission requests instead (`deps.permission`) and
  * observes the resulting tool activity.
+ *
+ * Usage is split in two: the prompt result's usage sums every internal model
+ * call of the turn (billing), while `usage_update` notifications carry the
+ * tokens currently in context. Pi records the latter as `contextTokens` so an
+ * aggregate turn total is never mistaken for the request's context size.
  */
 
 import {
@@ -65,6 +70,8 @@ class PiEventWriter {
 	private open: { kind: "text" | "thinking"; index: number } | undefined;
 	private started = false;
 	private terminal = false;
+	/** Context occupancy reported by the server for its last model call. */
+	private contextTokens: number | null = null;
 
 	constructor(model: AntigravityAcpModel) {
 		this.stream = createAssistantMessageEventStream();
@@ -81,6 +88,7 @@ class PiEventWriter {
 				cacheRead: 0,
 				cacheWrite: 0,
 				totalTokens: 0,
+				contextTokens: null,
 				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 			},
 			stopReason: "pending",
@@ -134,6 +142,7 @@ class PiEventWriter {
 			cacheWrite,
 			totalTokens:
 				usage.totalTokens ?? input + output + cacheRead + cacheWrite + (usage.thoughtTokens ?? 0),
+			contextTokens: this.contextTokens,
 			cost: {
 				input: inputCost,
 				output: outputCost,
@@ -142,6 +151,16 @@ class PiEventWriter {
 				total: inputCost + outputCost + cacheReadCost + cacheWriteCost,
 			},
 		};
+	}
+
+	/**
+	 * Records the tokens the server last had in context. The prompt result's usage
+	 * aggregates every internal model call of the turn, so only this figure may be
+	 * read as Pi's context size; `null` means the server reported none.
+	 */
+	setContextTokens(used: number | null): void {
+		this.contextTokens = used;
+		this.message.usage.contextTokens = used;
 	}
 
 	done(reason: StopReason): void {
@@ -225,6 +244,13 @@ function handleUpdate(
 ): void {
 	const update = notification?.update;
 	if (!update) return;
+	if (update.sessionUpdate === "usage_update") {
+		const used = update.used;
+		writer.setContextTokens(
+			typeof used === "number" && Number.isFinite(used) && used >= 0 ? used : null,
+		);
+		return;
+	}
 	if (update.sessionUpdate === "tool_call" || update.sessionUpdate === "tool_call_update") {
 		if (!onToolActivity) return;
 		const title =
