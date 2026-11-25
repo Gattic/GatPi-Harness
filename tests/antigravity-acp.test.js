@@ -440,6 +440,7 @@ async function main() {
     await loginTests();
     await providerTests();
     await streamAuthorityTests();
+    await streamUsageTests();
     console.log("antigravity-acp runtime, zip, install, auth, login, model and provider tests passed");
   } finally {
     cleanup();
@@ -1375,4 +1376,118 @@ async function streamAuthorityTests() {
     denied.log.find((entry) => entry.method === "session/new").params.additionalDirectories,
     undefined,
   );
+}
+
+// The real server reports context occupancy as `usage_update` notifications (tokens
+// currently in context), while the prompt result's usage sums every internal model call
+// of the turn. A Pi turn that ran 35 model calls reported 3,037,697 aggregate tokens
+// against a 1,048,576 window (289.7%) while its last request held only 135,678 (12.9%).
+function mockUsageServer(options) {
+  return String.raw`
+const readline = require("node:readline");
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\n");
+const update = (payload) =>
+  send({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "session-1", update: payload } });
+let promptId;
+const rl = readline.createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  const message = JSON.parse(line);
+  switch (message.method) {
+    case "initialize":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          protocolVersion: 1,
+          agentInfo: { name: "antigravity-acp", version: "1.5.2" },
+          authMethods: [{ id: "oauth", name: "Google OAuth" }],
+          agentCapabilities: {},
+        },
+      });
+      break;
+    case "session/new":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          sessionId: "session-1",
+          models: { currentModelId: "gemini-4-neon", availableModels: [{ modelId: "gemini-4-neon", name: "Gemini 4 Neon" }] },
+          configOptions: [
+            { id: "model", category: "model", currentValue: "gemini-4-neon", options: [{ value: "gemini-4-neon", name: "Neon" }] },
+            { id: "thinking_level", category: "thought_level", currentValue: "medium", options: [{ value: "medium", name: "Medium" }, { value: "high", name: "High" }] },
+          ],
+        },
+      });
+      break;
+    case "session/set_config_option":
+      send({ jsonrpc: "2.0", id: message.id, result: { configOptions: [] } });
+      break;
+    case "session/prompt":
+      promptId = message.id;
+      ${options.usageUpdate ? 'update({ sessionUpdate: "usage_update", used: 135678, size: 1048576 });' : ""}
+      update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Done" } });
+      send({
+        jsonrpc: "2.0",
+        id: promptId,
+        result: {
+          stopReason: "end_turn",
+          usage: { inputTokens: 165388, outputTokens: 32251, cachedReadTokens: 2840058, totalTokens: 3037697 },
+        },
+      });
+      break;
+  }
+});
+`;
+}
+
+async function streamUsageTests() {
+  const streamModule = await jiti.import(path.join(EXT, "stream.ts"));
+  const modelsModule = await jiti.import(path.join(EXT, "models.ts"));
+  const acpModule = await jiti.import(path.join(EXT, "acp.ts"));
+  const neon = modelsModule.FALLBACK_MODELS.find((model) => model.id === "gemini-4-neon");
+
+  async function run(options) {
+    const dir = tempDir("pi-acp-usage-");
+    const mockPath = path.join(dir, "mock-usage.cjs");
+    fs.writeFileSync(mockPath, mockUsageServer(options));
+    const stream = streamModule.createAcpStream(
+      neon,
+      { systemPrompt: "Be helpful", messages: [{ role: "user", content: "Add the banner" }] },
+      { cwd: dir, thinking: { level: "high" } },
+      {
+        resolveRuntime: async () => ({ command: process.execPath, args: [mockPath], source: "env" }),
+        createClient: (clientOptions) =>
+          new acpModule.AcpClient({
+            ...clientOptions,
+            initializeTimeoutMs: 5_000,
+            operationTimeoutMs: 5_000,
+            promptTimeoutMs: 5_000,
+          }),
+        cwd: dir,
+      },
+    );
+    const events = [];
+    for await (const event of stream) events.push(event);
+    return events.at(-1).message;
+  }
+
+  // The 290% case: billing totals stay the turn aggregate, context is the last request.
+  const reported = await run({ usageUpdate: true });
+  assert.equal(reported.usage.input, 165_388, "billing input stays the turn aggregate");
+  assert.equal(reported.usage.cacheRead, 2_840_058, "billing cache reads stay the turn aggregate");
+  assert.equal(reported.usage.totalTokens, 3_037_697, "billing total stays the turn aggregate");
+  assert.equal(reported.usage.contextTokens, 135_678, "context is the server's last request occupancy");
+  const window = neon.contextWindow;
+  assert.equal(((reported.usage.totalTokens / window) * 100).toFixed(1), "289.7");
+  assert.equal(((reported.usage.contextTokens / window) * 100).toFixed(1), "12.9");
+  assert(
+    reported.usage.contextTokens / window < 0.8,
+    "the context percentage stays below the proactive compaction threshold",
+  );
+
+  // A server that reports no occupancy leaves context unknown; Pi then estimates from
+  // messages instead of reading the aggregate turn usage.
+  const unreported = await run({ usageUpdate: false });
+  assert.equal(unreported.usage.contextTokens, null);
+  assert.equal(unreported.usage.totalTokens, 3_037_697);
 }
