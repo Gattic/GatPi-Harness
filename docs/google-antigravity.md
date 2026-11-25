@@ -407,7 +407,7 @@ parsing, endpoint fallback, default ACP registration, runtime installation and
 verification, ACP login/model/stream behavior, multi-login registration and
 quota classification.
 
-See `antigravity-jetski-probe.md` for the unreached
+See [antigravity-jetski-probe.md](antigravity-jetski-probe.md) for the unreached
 `JetskiRemoteAgentProxyService/ListAvailableModels` alternative, the headless
 probe that showed its token requires an interactive sign-in, and the case for
 dropping that probe.
