@@ -85,6 +85,38 @@ ACP models appear in `/model` without a config entry. Adding
 `"google-antigravity-acp": 1` to `accounts` is only needed for multi-account
 aliases or priority/failover entries.
 
+### Credential requirements
+
+Three things must exist on the host:
+
+1. **Runtime.** The managed install at `~/.local/opt/agy-acp/current`
+   (override the root with `PI_ANTIGRAVITY_ACP_ROOT`), an executable named by
+   `AGY_ACP_BIN`, or `agy_acp_server.par` on `PATH`. When none is present the
+   pinned 1.5.2 archive is downloaded on first use; see the rollout steps for
+   the CPU requirement.
+2. **The server's Google token.**
+   `~/.gemini/antigravity-acp/acp_token.json` (or under `GEMINI_HOME`) with a
+   non-empty `refresh_token`. Pi reads only that field and never copies the
+   token. The states it distinguishes are `oauth-refreshable` (usable),
+   `missing` (no token and no auth type in `settings.json`),
+   `configured-not-authenticated` (an auth type but no token) and `corrupt`
+   (unparsable JSON or an empty refresh token). A prompt fails with
+   "Google Antigravity ACP is not authenticated. Run /login for
+   google-antigravity-acp."; a token refresh fails with "Antigravity ACP token
+   is missing".
+3. **Pi's marker.** An entry named `google-antigravity-acp` in
+   `~/.pi/agent/auth.json` whose `access` and `refresh` are the string
+   `antigravity-acp-managed` and which carries no secret. `/login
+   google-antigravity-acp` writes it once the server reports a token; without
+   it Pi reports the provider as unauthenticated before spawning the server.
+
+No Gemini API key or Cloud Code credential is involved; the ACP token is
+independent of the `google-antigravity` provider above. `pi auth check
+--provider google-antigravity-acp` answers `provider_not_found` because that
+command does not load extension-registered providers; verify instead with
+`pi --list-models antigravity` (the `google-antigravity-acp` models appear) and
+a one-line prompt.
+
 ### Tool authority and approvals
 
 An ACP model runs on Antigravity's own harness, not Pi's agent loop. Pi sends
@@ -261,6 +293,14 @@ server for every Pi turn, against roughly 4 s natively.
    pi -p --no-session --model google-antigravity-acp/gemini-4-neon:high \
      "Reply with exactly: OK"
    ```
+
+   Then check a turn that runs many server-side calls. The prompt result's
+   usage is the turn's billing aggregate, while `usage_update` reports the
+   request's context, so the footer must stay small: a verified turn of sixteen
+   reads reported an aggregate of 2,273,186 tokens (216.8% of the 1,048,576
+   window) and a context of 53,378 (5.1%). Pi showed 5% and did not compact;
+   the next prompt continued in the same session instead of hitting the
+   proactive threshold.
 
    On gbig04 the raw ACP handshake answered `initialize` in 3.5 s, and a
    `gemini-4-neon` prompt with thought level `high` returned `end_turn` in 9.4 s
