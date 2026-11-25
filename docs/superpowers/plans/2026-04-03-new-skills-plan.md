@@ -1132,8 +1132,8 @@ git commit -m "Add api-design skill: C++ API design and safe evolution"
 In `README.md`, find the Cross-Cutting section table and add two new rows:
 
 ```markdown
-| [test-design](test-design/SKILL.md) | `/test-design <target>` | Test strategy design for C++ components. Dispatches 3 parallel subagents for testability analysis, coverage strategy, and concurrent test design. Produces test matrix, case catalog, fixture/mock design. |
-| [api-design](api-design/SKILL.md) | `/api-design <target>` | C++ API design and safe evolution. Dispatches 3 parallel subagents for consumer analysis, contract extraction, and evolution risk assessment. Produces interface specifications, contract documentation, and evolution plans. |
+| `test-design/SKILL.md` | `/test-design <target>` | Test strategy design for C++ components. Dispatches 3 parallel subagents for testability analysis, coverage strategy, and concurrent test design. Produces test matrix, case catalog, fixture/mock design. |
+| `api-design/SKILL.md` | `/api-design <target>` | C++ API design and safe evolution. Dispatches 3 parallel subagents for consumer analysis, contract extraction, and evolution risk assessment. Produces interface specifications, contract documentation, and evolution plans. |
 ```
 
 - [ ] **Step 2: Add observability to the Tier 2 table**
@@ -1141,7 +1141,7 @@ In `README.md`, find the Cross-Cutting section table and add two new rows:
 Add a new row to the Tier 2 — Specialized Engineering table:
 
 ```markdown
-| [observability](observability/SKILL.md) | `/observability <target>` | Structured logging and runtime diagnostics. Dispatches 3 parallel subagents for logging audit, diagnostic surface analysis, and failure mode inventory. Produces instrumentation design with performance budgets. |
+| `observability/SKILL.md` | `/observability <target>` | Structured logging and runtime diagnostics. Dispatches 3 parallel subagents for logging audit, diagnostic surface analysis, and failure mode inventory. Produces instrumentation design with performance budgets. |
 ```
 
 - [ ] **Step 3: Add security to the Cross-Cutting table**
@@ -1149,7 +1149,7 @@ Add a new row to the Tier 2 — Specialized Engineering table:
 Add a new row to the Cross-Cutting table:
 
 ```markdown
-| [security](security/SKILL.md) | `/security <target>` | Security audit and hardening. Dispatches 3 parallel subagents for input boundary analysis, logic vulnerability scan, and attack surface audit. Trust boundary mapping, severity-ranked findings, hardening recommendations. |
+| `security/SKILL.md` | `/security <target>` | Security audit and hardening. Dispatches 3 parallel subagents for input boundary analysis, logic vulnerability scan, and attack surface audit. Trust boundary mapping, severity-ranked findings, hardening recommendations. |
 ```
 
 - [ ] **Step 4: Update the workflow graph**

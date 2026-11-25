@@ -1,6 +1,6 @@
 # Completing finite, authorized plans
 
-This is the execution contract for the existing roadmap and workflow skills, not a new planning system. The global instruction installation is tracked separately in [external application history and current reconciliation](full-plan-execution-external-changes.json).
+This is the execution contract for the existing roadmap and workflow skills, not a new planning system. The global instruction installation is tracked separately in the external application history and current reconciliation (`full-plan-execution-external-changes.json`).
 
 ## Canonical scope
 
@@ -68,6 +68,6 @@ For each real execution record its canonical plan, session and dates, then asses
 - Separation of nonblocking discoveries from acceptance gates.
 - Final reporting against the entire plan rather than the latest helper.
 
-Current evidence: [2026-10-17 follow-up](full-plan-execution-followup-2026-10-17.md). Three real execution-window reviews are recorded, including negative observations and explicit evidence limits. This completes the lightweight follow-up, not independent certification of those implementations. Exact runtime/skill exposure across the other sessions is not established, so no causal efficacy claim follows.
+Current evidence: the 2026-10-17 follow-up (`full-plan-execution-followup-2026-10-17.md`). Three real execution-window reviews are recorded, including negative observations and explicit evidence limits. This completes the lightweight follow-up, not independent certification of those implementations. Exact runtime/skill exposure across the other sessions is not established, so no causal efficacy claim follows.
 
 A negative observation is information, not permission to force endless execution, delete evidence, repeat failures until green, weaken gates, or automatically publish.
