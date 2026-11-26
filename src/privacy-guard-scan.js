@@ -55,7 +55,7 @@ function scanText(file, text, specs = SECRET_PATTERNS, includeIgnored = false) {
 }
 function isBranchSnapshotFile(file) { return /(?:^|\/)branches\/snapshots\/|(?:^|\/)session-branches\/snapshots\//.test(file.replace(/\\/g, "/")); }
 const PRIVATE_SNAPSHOT_PATH_RE = /"(?:\.env(?:\.[^"]*)?|\.pi(?:\/[^"]*)?)"\s*:/g;
-function scanFile(file, includeIgnored = false, deadlineAt = Infinity) {
+function scanFile(file, includeIgnored = false, deadlineAt = Infinity, now = Date.now) {
   const findings = [];
   const ignored = [];
   const decided = new Set();
@@ -90,7 +90,7 @@ function scanFile(file, includeIgnored = false, deadlineAt = Infinity) {
         } else { findings.push(item); decided.add(spec.name); break; }
       }
     }
-  }, { overlapChars: 512, deadlineAt });
+  }, { overlapChars: 512, deadlineAt, now });
   return { findings, ignored, ...result };
 }
 function defaultRoots(cwd) {
@@ -114,6 +114,12 @@ function publicFinding(item, cwd) {
 function isWithin(parent, child) { const rel = relative(resolve(parent), resolve(child)); return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel)); }
 function scan(cwd, roots, options = {}) {
   reviewIndex.clear();
+  const now = typeof options.now === "function" ? options.now : Date.now;
+  // One deadline for the whole scan, computed before inventory, so the budget
+  // covers the walk and not just the text reads that follow it.
+  const deadlineAt = Number.isFinite(options.deadlineMs) && Number(options.deadlineMs) > 0
+    ? now() + Number(options.deadlineMs)
+    : Infinity;
   const explicitRoots = Boolean(roots?.length);
   const scanRoots = [...(explicitRoots ? roots : defaultRoots(cwd))];
   if (options.includeSource) scanRoots.push(join(cwd, ".pi", "extensions"));
@@ -125,10 +131,10 @@ function scan(cwd, roots, options = {}) {
   const stateFingerprint = `sha256:${stateHash.digest("hex")}`;
   const all = [];
   const coverage = stateInventory.scanTextInventory(inventory, (file, api) => {
-    const result = scanFile(file.path, Boolean(options.includeIgnored), api.deadlineAt);
+    const result = scanFile(file.path, Boolean(options.includeIgnored), api.deadlineAt, api.now);
     all.push(result);
     return result;
-  }, { maxFiles: options.maxFiles, maxBytes: options.maxBytes, deadlineMs: options.deadlineMs });
+  }, { maxFiles: options.maxFiles, maxBytes: options.maxBytes, deadlineAt, now });
   const findings = all.flatMap((x) => x.findings || []);
   const ignoredFindings = all.flatMap((x) => x.ignored || []);
   const sessionRoot = resolve(options.sessionRoot || join(process.env.HOME || ".", ".pi", "agent", "sessions"));
