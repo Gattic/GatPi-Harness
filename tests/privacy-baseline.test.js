@@ -7,6 +7,8 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { buildPrivacyBaseline } = require("../src/privacy-baseline");
 const { scanPrivacy, collectRolloutSources } = require("../src/memory-rollout-telemetry");
+const { inventoryState, scanTextInventory } = require("../src/state-inventory");
+const { scan: scanState } = require("../src/privacy-guard-scan");
 const { tmpFixture } = require("./helpers/tmp-fixture");
 
 const root = path.resolve(__dirname, "..");
@@ -64,10 +66,49 @@ assert.equal(rewritten.status, 0, rewritten.stderr);
 const retained = fs.readdirSync(path.join(cwd, ".pi", "privacy-guard")).filter((name) => /^privacy-baseline-\d{4}-/.test(name));
 assert.equal(retained.length, 1, "the previous baseline is retained, not overwritten");
 
-// An incomplete scan must not produce a baseline.
-const incomplete = spawnSync(process.execPath, [script], { cwd, env: { ...env, PI_PROJECT_MEMORY_SCAN_DEADLINE_MS: "1" }, encoding: "utf8" });
+// An incomplete scan must not produce a baseline. A one-millisecond deadline is
+// not deterministic: a tiny fixture can be read inside the same millisecond, so
+// the scan legitimately reports complete. Force a count budget the scanner
+// already enforces, which makes the incomplete path deterministic.
+const incompleteCwd = tmpFixture("privacy-baseline-incomplete-");
+fs.mkdirSync(path.join(incompleteCwd, ".pi", "project-memory"), { recursive: true });
+for (let index = 0; index < 3; index += 1) {
+  fs.writeFileSync(path.join(incompleteCwd, ".pi", "project-memory", `record-${index}.jsonl`), `${JSON.stringify({ index, note: "benign record" })}\n`);
+}
+const incomplete = spawnSync(process.execPath, [script], {
+  cwd: incompleteCwd,
+  env: { ...env, PI_PROJECT_MEMORY_SCAN_MAX_FILES: "1" },
+  encoding: "utf8",
+});
 assert.notEqual(incomplete.status, 0);
 assert.match(incomplete.stderr, /incomplete baseline/);
+assert.equal(
+  fs.existsSync(path.join(incompleteCwd, ".pi", "privacy-guard", "privacy-baseline.json")),
+  false,
+  "an exhausted scan budget must not write a baseline file",
+);
+
+// The deadline path is deterministic through the injected clock: no wall-clock
+// millisecond race, and the budget covers the inventory walk as well as the reads.
+const clockCwd = tmpFixture("privacy-baseline-clock-");
+fs.mkdirSync(path.join(clockCwd, ".pi", "project-memory"), { recursive: true });
+for (let index = 0; index < 3; index += 1) {
+  fs.writeFileSync(path.join(clockCwd, ".pi", "project-memory", `record-${index}.jsonl`), `${JSON.stringify({ index })}\n`);
+}
+const clockInventory = inventoryState([path.join(clockCwd, ".pi", "project-memory")]);
+assert.equal(clockInventory.summary.discoveredFiles, 3);
+const expired = scanTextInventory(clockInventory, () => ({ ok: true }), { deadlineAt: 5, now: () => 10 });
+assert.equal(expired.summary.complete, false);
+assert.equal(expired.summary.skippedFiles, 3);
+assert.deepEqual(expired.summary.skippedReasons, { deadline: 3 });
+const withinBudget = scanTextInventory(clockInventory, () => ({ ok: true }), { deadlineAt: 5, now: () => 4 });
+assert.equal(withinBudget.summary.complete, true);
+assert.equal(withinBudget.summary.scannedFiles, 3);
+let scanClock = 0;
+const expiredScan = scanState(clockCwd, undefined, { deadlineMs: 1, now: () => (scanClock += 10) });
+assert.equal(expiredScan.coverage.complete, false);
+assert.equal(expiredScan.coverage.skippedReasons.deadline, 3);
+assert.deepEqual(expiredScan.findings, [], "an expired deadline yields no findings and an incomplete scan");
 
 assert.ok(sources.diagnostics !== undefined);
 

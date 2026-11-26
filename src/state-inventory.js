@@ -93,12 +93,19 @@ function inventoryState(roots = [], options = {}) {
 
 function countNewlines(text) { return (String(text).match(/\n/g) || []).length; }
 
+// Deadline checks read through an injectable clock so a caller (or a test) can
+// decide when time has passed without racing a wall-clock millisecond.
+function clockOf(options = {}) {
+  return typeof options.now === "function" ? options.now : Date.now;
+}
+
 /** Stream UTF-8 text with a bounded overlap so regular expressions can match
  * across chunk boundaries. Callers deduplicate by absolute character offset. */
 function scanTextFile(file, onChunk, options = {}) {
   const chunkBytes = Math.max(1024, finiteLimit(options.chunkBytes, DEFAULT_CHUNK_BYTES));
   const overlapChars = Math.max(0, finiteLimit(options.overlapChars, DEFAULT_OVERLAP_CHARS));
   const deadlineAt = Number.isFinite(options.deadlineAt) ? Number(options.deadlineAt) : Infinity;
+  const now = clockOf(options);
   const buffer = Buffer.allocUnsafe(chunkBytes);
   const decoder = new StringDecoder("utf8");
   let fd;
@@ -112,7 +119,7 @@ function scanTextFile(file, onChunk, options = {}) {
     const opened = fs.fstatSync(fd);
     if (!opened.isFile()) return { ok: false, reason: "non-regular", bytesRead, chunks };
     while (true) {
-      if (Date.now() > deadlineAt) return { ok: false, reason: "deadline", bytesRead, chunks };
+      if (now() > deadlineAt) return { ok: false, reason: "deadline", bytesRead, chunks };
       const read = fs.readSync(fd, buffer, 0, buffer.length, null);
       if (!read) break;
       bytesRead += read;
@@ -148,7 +155,12 @@ function scanTextFile(file, onChunk, options = {}) {
 function scanTextInventory(inventory, visitor, options = {}) {
   const maxFiles = finiteLimit(options.maxFiles, Infinity);
   const maxBytes = finiteLimit(options.maxBytes, Infinity);
-  const deadlineAt = Number.isFinite(options.deadlineMs) && Number(options.deadlineMs) > 0 ? Date.now() + Number(options.deadlineMs) : Infinity;
+  const now = clockOf(options);
+  const deadlineAt = Number.isFinite(options.deadlineAt)
+    ? Number(options.deadlineAt)
+    : Number.isFinite(options.deadlineMs) && Number(options.deadlineMs) > 0
+      ? now() + Number(options.deadlineMs)
+      : Infinity;
   const scanned = [];
   const skipped = [];
   const errors = [];
@@ -157,10 +169,10 @@ function scanTextInventory(inventory, visitor, options = {}) {
   for (const file of inventory.files || []) {
     if (scanned.length >= maxFiles) { skipped.push({ ...file, reason: "file-limit" }); continue; }
     if (scannedBytes + file.bytes > maxBytes) { skipped.push({ ...file, reason: "byte-limit" }); continue; }
-    if (Date.now() > deadlineAt) { skipped.push({ ...file, reason: "deadline" }); continue; }
+    if (now() > deadlineAt) { skipped.push({ ...file, reason: "deadline" }); continue; }
     let visitResult;
     try {
-      visitResult = visitor(file, { deadlineAt, scanTextFile });
+      visitResult = visitor(file, { deadlineAt, now, scanTextFile });
     } catch (error) {
       errors.push({ ...file, reason: "visitor-error", code: error?.code || "UNKNOWN" });
       continue;
