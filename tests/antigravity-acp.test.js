@@ -441,6 +441,7 @@ async function main() {
     await providerTests();
     await streamAuthorityTests();
     await streamUsageTests();
+    await streamToolCallTests();
     console.log("antigravity-acp runtime, zip, install, auth, login, model and provider tests passed");
   } finally {
     cleanup();
@@ -1260,7 +1261,7 @@ rl.on("line", (line) => {
       break;
     case "session/prompt":
       promptId = message.id;
-      update({ sessionUpdate: "tool_call", toolCallId: "call-1", kind: "execute", title: "git status --short", status: "pending" });
+      update({ sessionUpdate: "tool_call", toolCallId: "call-1", kind: "execute", title: "git status --short", status: "pending", rawInput: { CommandLine: "git status --short" } });
       send({
         jsonrpc: "2.0",
         id: 4242,
@@ -1363,6 +1364,22 @@ async function streamAuthorityTests() {
   assert(allowed.events.some((event) => event.type === "text_delta" && event.delta === "Done"));
   assert.equal(allowed.events.at(-1).type, "done");
   assert.equal(allowed.events.at(-1).message.stopReason, "stop");
+
+  // The server's tool call is recorded as a provider-executed block: Pi shows it and
+  // never runs it, and the server's own outcome becomes the call's result.
+  const finalMessage = allowed.events.at(-1).message;
+  const call = finalMessage.content.find((block) => block.type === "toolCall");
+  assert(call, "the ACP tool call is recorded in the transcript");
+  assert.equal(call.id, "call-1");
+  assert.equal(call.name, "acp_execute", "ACP kinds are prefixed so they stay distinct from Pi tools");
+  assert.deepEqual(call.arguments, { CommandLine: "git status --short" });
+  assert.equal(call.providerExecuted, true, "Pi must not run a call the server already ran");
+  assert.deepEqual(call.providerResult, { content: "clean", isError: false });
+  assert(
+    allowed.events.some((event) => event.type === "toolcall_start" && event.contentIndex === 0),
+    "the call streams as a tool-call block",
+  );
+  assert(allowed.events.some((event) => event.type === "toolcall_end" && event.toolCall === call));
 
   // Without a gate the provider denies instead of approving, and a server that
   // does not advertise extra directories never receives them.
@@ -1490,4 +1507,149 @@ async function streamUsageTests() {
   const unreported = await run({ usageUpdate: false });
   assert.equal(unreported.usage.contextTokens, null);
   assert.equal(unreported.usage.totalTokens, 3_037_697);
+}
+
+// A server whose tool calls exercise the mapping: an edit announced without
+// rawInput, a failed call whose text arrives as content blocks, a terminal
+// update for a call it never announced, an update with no id, and a call with
+// no kind.
+const MOCK_TOOL_SERVER = String.raw`
+const readline = require("node:readline");
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\n");
+const update = (payload) =>
+  send({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "session-1", update: payload } });
+let promptId;
+const rl = readline.createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  const message = JSON.parse(line);
+  switch (message.method) {
+    case "initialize":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          protocolVersion: 1,
+          agentInfo: { name: "antigravity-acp", version: "1.5.2" },
+          authMethods: [{ id: "oauth", name: "Google OAuth" }],
+          agentCapabilities: {},
+        },
+      });
+      break;
+    case "session/new":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          sessionId: "session-1",
+          models: { currentModelId: "gemini-4-neon", availableModels: [] },
+          configOptions: [],
+        },
+      });
+      break;
+    case "session/set_config_option":
+    case "session/set_model":
+      send({ jsonrpc: "2.0", id: message.id, result: {} });
+      break;
+    case "session/prompt":
+      promptId = message.id;
+      update({ sessionUpdate: "tool_call", toolCallId: "call-edit", kind: "edit", title: "src/app.ts", status: "in_progress" });
+      update({ sessionUpdate: "tool_call_update", toolCallId: "call-edit", status: "failed", content: [{ type: "text", text: "permission denied" }] });
+      update({ sessionUpdate: "tool_call_update", toolCallId: "call-late", status: "completed", rawOutput: "ok" });
+      update({ sessionUpdate: "tool_call_update", status: "completed", rawOutput: "orphan" });
+      update({ sessionUpdate: "tool_call", toolCallId: "call-plain", status: "pending" });
+      // Antigravity reports a shell result as a structured rawOutput, not a string.
+      update({ sessionUpdate: "tool_call", toolCallId: "call-shell", kind: "execute", title: "echo ok", status: "in_progress", rawInput: { command_line: "echo ok", working_dir: "/tmp" } });
+      update({ sessionUpdate: "tool_call_update", toolCallId: "call-shell", status: "completed", rawOutput: { commandLine: "echo ok", workingDir: "/tmp", exitCode: 0, exit_code: 0, combinedOutput: "ok\r\n", formatted_output: "ok\r\n" } });
+      update({ sessionUpdate: "tool_call", toolCallId: "call-exit", kind: "execute", title: "exit 2", status: "in_progress" });
+      update({ sessionUpdate: "tool_call_update", toolCallId: "call-exit", status: "completed", rawOutput: { exitCode: 2, combinedOutput: "boom\r\n" } });
+      update({ sessionUpdate: "tool_call", toolCallId: "call-nested", kind: "read", title: "a.txt", status: "in_progress" });
+      update({ sessionUpdate: "tool_call_update", toolCallId: "call-nested", status: "completed", content: [{ type: "content", content: { type: "text", text: "nested" } }] });
+      update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Done" } });
+      send({ jsonrpc: "2.0", id: promptId, result: { stopReason: "end_turn", usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } } });
+      break;
+    case "session/cancel":
+      break;
+    default:
+      if (message.id !== undefined) {
+        send({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Method not found" } });
+      }
+  }
+});
+`;
+
+async function streamToolCallTests() {
+  const streamModule = await jiti.import(path.join(EXT, "stream.ts"));
+  const modelsModule = await jiti.import(path.join(EXT, "models.ts"));
+  const acpModule = await jiti.import(path.join(EXT, "acp.ts"));
+  const neon = modelsModule.FALLBACK_MODELS.find((model) => model.id === "gemini-4-neon");
+  const dir = tempDir("pi-acp-tools-");
+  const mockPath = path.join(dir, "mock-tools.cjs");
+  fs.writeFileSync(mockPath, MOCK_TOOL_SERVER);
+  const events = [];
+  const stream = streamModule.createAcpStream(
+    neon,
+    { systemPrompt: "Be helpful", messages: [{ role: "user", content: "Edit the file" }] },
+    { cwd: dir },
+    {
+      resolveRuntime: async () => ({ command: process.execPath, args: [mockPath], source: "env" }),
+      createClient: (clientOptions) =>
+        new acpModule.AcpClient({
+          ...clientOptions,
+          initializeTimeoutMs: 5_000,
+          operationTimeoutMs: 5_000,
+          promptTimeoutMs: 5_000,
+        }),
+      cwd: dir,
+    },
+  );
+  for await (const event of stream) events.push(event);
+
+  const message = events.at(-1).message;
+  const calls = message.content.filter((block) => block.type === "toolCall");
+  assert.equal(calls.length, 6, "each announced call is recorded once");
+
+  const edit = calls.find((call) => call.id === "call-edit");
+  assert.equal(edit.name, "acp_edit");
+  assert.deepEqual(edit.arguments, { title: "src/app.ts" }, "a call without rawInput keeps its title");
+  assert.equal(edit.providerExecuted, true);
+  assert.deepEqual(
+    edit.providerResult,
+    { content: "permission denied", isError: true },
+    "a failed call reports an error result",
+  );
+
+  const late = calls.find((call) => call.id === "call-late");
+  assert.equal(late.name, "acp_tool", "a call reported only by its update is recorded");
+  assert.deepEqual(late.providerResult, { content: "ok", isError: false });
+
+  const plain = calls.find((call) => call.id === "call-plain");
+  assert.equal(plain.name, "acp_tool", "a call without a kind keeps the generic name");
+  assert.equal(plain.providerResult, undefined, "a running call has no result yet");
+
+  const shell = calls.find((call) => call.id === "call-shell");
+  assert.deepEqual(
+    shell.providerResult,
+    { content: "ok\r\n", isError: false },
+    "a structured rawOutput contributes the shell's output",
+  );
+
+  const exit = calls.find((call) => call.id === "call-exit");
+  assert.deepEqual(
+    exit.providerResult,
+    { content: "boom\r\n", isError: true },
+    "a non-zero exit marks the result as an error",
+  );
+
+  const nested = calls.find((call) => call.id === "call-nested");
+  assert.deepEqual(
+    nested.providerResult,
+    { content: "nested", isError: false },
+    "a nested content block contributes its text",
+  );
+
+  assert(
+    !calls.some((call) => call.providerResult?.content === "orphan"),
+    "an update without an id records nothing",
+  );
+  assert.equal(message.stopReason, "stop");
 }
