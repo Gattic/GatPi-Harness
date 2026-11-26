@@ -172,9 +172,14 @@ its file and shell tools and executes them inside its runtime. Pi keeps the
   `/policy-approve-directory` grants) to `session/new` as
   `additionalDirectories`, so the server sees exactly the directories Pi is
   allowed to work in, and Pi's write rules still gate every change.
-- **Tool activity is visible.** The footer shows the ACP tool currently
-  running, and a denial names the policy reasons instead of leaving only the
-  server's "denied by pre-tool hook" wording.
+- **Tool activity is visible.** Each tool the server runs is recorded in the
+  transcript as a provider-executed `acp_<kind>` call (`acp_execute`,
+  `acp_edit`, …) with the server's arguments, status and output, so the TUI,
+  Fleet and the HTML export show the work instead of only the model's text.
+  Pi records those calls without running them: the server owns its tools. The
+  footer also shows the tool currently running, and a denial names the policy
+  reasons instead of leaving only the server's "denied by pre-tool hook"
+  wording.
 - **Context is the request's, not the turn's.** The prompt result's usage sums
   every internal model call of the turn (billing), so it can dwarf the context
   window even when the turn was small. The server's `usage_update`
@@ -188,8 +193,10 @@ Boundaries worth knowing:
 
 - The server's own policy can auto-approve calls (for example reads) without
   asking Pi; those never reach Pi's gate.
-- Pi cannot see the server's tool results as Pi tool results, so the
-  transcript records the model's text only.
+- Pi cannot run the server's tools, so the transcript records each call as a
+  provider-executed block whose result is the server's own reported output.
+  Pi's `before`/`after` tool hooks do not apply to those calls; the ACP
+  permission gate is their authority.
 - ACP sessions provision `skills/system/run-workflow/SKILL.md` inside the
   session cwd; that directory is not a Pi skill and is untracked in Git.
 

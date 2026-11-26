@@ -4,9 +4,10 @@
  * Each Pi turn creates one ACP session, selects the requested model and
  * thought level, sends the current transcript as a text prompt, and maps the
  * server's message/thought chunks to Pi's stream events. The ACP server owns
- * and runs its tools, so tool calls are never surfaced as Pi tool blocks: Pi
- * answers the server's permission requests instead (`deps.permission`) and
- * observes the resulting tool activity.
+ * and runs its tools, so its `tool_call`/`tool_call_update` notifications
+ * become provider-executed `toolCall` blocks (`acp_<kind>`): Pi records each
+ * call and the server's own outcome in the transcript without running it, and
+ * answers the server's permission requests instead (`deps.permission`).
  *
  * Usage is split in two: the prompt result's usage sums every internal model
  * call of the turn (billing), while `usage_update` notifications carry the
@@ -72,6 +73,8 @@ class PiEventWriter {
 	private terminal = false;
 	/** Context occupancy reported by the server for its last model call. */
 	private contextTokens: number | null = null;
+	/** Content index of each ACP call, so a later update finds the block it describes. */
+	private readonly toolCalls = new Map<string, number>();
 
 	constructor(model: AntigravityAcpModel) {
 		this.stream = createAssistantMessageEventStream();
@@ -122,6 +125,58 @@ class PiEventWriter {
 			delta,
 			partial: this.message,
 		} as never);
+	}
+
+	/**
+	 * Records a tool call the ACP server is running. The block is marked provider-executed, so Pi
+	 * shows it without running it: the server owns its tools, and its own outcome becomes the
+	 * result Pi records for the call.
+	 */
+	toolCall(update: Record<string, unknown>): void {
+		if (this.terminal) return;
+		const id = toolCallId(update);
+		if (!id || this.toolCalls.has(id)) return;
+		this.closeOpen();
+		this.ensureStarted();
+		const index = this.message.content.length;
+		const block = {
+			type: "toolCall",
+			id,
+			name: acpToolName(update),
+			arguments: acpToolArguments(update),
+			providerExecuted: true,
+		};
+		this.message.content.push(block);
+		this.toolCalls.set(id, index);
+		this.stream.push({ type: "toolcall_start", contentIndex: index, partial: this.message } as never);
+		this.stream.push({
+			type: "toolcall_end",
+			contentIndex: index,
+			toolCall: block,
+			partial: this.message,
+		} as never);
+	}
+
+	/**
+	 * Applies a `tool_call_update`: a call reported only by its update is recorded first, and a
+	 * terminal status becomes the call's result. Progress updates are left to the footer, because
+	 * the transcript records the call once and its outcome once.
+	 */
+	toolUpdate(update: Record<string, unknown>): void {
+		if (this.terminal) return;
+		const id = toolCallId(update);
+		if (!id) return;
+		if (!this.toolCalls.has(id)) this.toolCall(update);
+		const status = typeof update.status === "string" ? update.status : undefined;
+		if (status !== "completed" && status !== "failed" && status !== "cancelled") return;
+		const index = this.toolCalls.get(id);
+		if (index === undefined) return;
+		const block = this.message.content[index];
+		if (!block || block.type !== "toolCall") return;
+		block.providerResult = {
+			content: acpToolOutput(update),
+			isError: acpToolFailed(update, status),
+		};
 	}
 
 	setUsage(usage: AcpPromptUsage | undefined): void {
@@ -251,20 +306,14 @@ function handleUpdate(
 		);
 		return;
 	}
-	if (update.sessionUpdate === "tool_call" || update.sessionUpdate === "tool_call_update") {
-		if (!onToolActivity) return;
-		const title =
-			typeof update.title === "string"
-				? update.title
-				: typeof (update as any).rawInput?.CommandLine === "string"
-					? (update as any).rawInput.CommandLine
-					: undefined;
-		onToolActivity({
-			...(typeof update.toolCallId === "string" ? { toolCallId: update.toolCallId } : {}),
-			...(typeof update.kind === "string" ? { kind: update.kind } : {}),
-			...(title ? { title } : {}),
-			...(typeof update.status === "string" ? { status: update.status } : {}),
-		});
+	if (update.sessionUpdate === "tool_call") {
+		writer.toolCall(update);
+		if (onToolActivity) onToolActivity(activityOf(update));
+		return;
+	}
+	if (update.sessionUpdate === "tool_call_update") {
+		writer.toolUpdate(update);
+		if (onToolActivity) onToolActivity(activityOf(update));
 		return;
 	}
 	if (update.sessionUpdate === "agent_message_chunk") {
@@ -286,6 +335,95 @@ function handleUpdate(
 					: undefined;
 		if (text) writer.thinking(text);
 	}
+}
+
+/** ACP tool kinds are the server's vocabulary; the prefix keeps them apart from Pi's own tools. */
+const ACP_TOOL_PREFIX = "acp_";
+
+/** ACP tool output can be large; keep the recorded result bounded like Pi's own tool output. */
+const TOOL_OUTPUT_LIMIT = 8000;
+
+function toolCallId(update: Record<string, unknown>): string | undefined {
+	return typeof update.toolCallId === "string" && update.toolCallId ? update.toolCallId : undefined;
+}
+
+function acpToolName(update: Record<string, unknown>): string {
+	const kind = typeof update.kind === "string" ? update.kind.trim() : "";
+	return `${ACP_TOOL_PREFIX}${kind || "tool"}`;
+}
+
+function acpToolArguments(update: Record<string, unknown>): Record<string, unknown> {
+	const raw = update.rawInput;
+	if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, unknown>;
+	const title = typeof update.title === "string" ? update.title.trim() : "";
+	return title ? { title } : {};
+}
+
+/**
+ * Text of a tool output: the server's `rawOutput`, else the update's content blocks.
+ */
+function acpToolOutput(update: Record<string, unknown>): string {
+	const output = rawOutputText(update.rawOutput) || contentText(update.content);
+	return output.length > TOOL_OUTPUT_LIMIT ? `${output.slice(0, TOOL_OUTPUT_LIMIT - 1)}…` : output;
+}
+
+/**
+ * `rawOutput` is a plain string for some servers and a structured object for others: Antigravity
+ * reports a shell result as `{exitCode, combinedOutput, formatted_output, ...}`.
+ */
+function rawOutputText(raw: unknown): string {
+	if (typeof raw === "string") return raw;
+	if (!raw || typeof raw !== "object") return "";
+	const record = raw as Record<string, unknown>;
+	for (const key of ["combinedOutput", "formatted_output", "output", "stdout"]) {
+		const value = record[key];
+		if (typeof value === "string" && value.trim()) return value;
+	}
+	return "";
+}
+
+/** Text of an update's content blocks, which ACP nests one level below the block. */
+function contentText(content: unknown): string {
+	const blocks = Array.isArray(content) ? content : content === undefined ? [] : [content];
+	return blocks
+		.map((block: any) => {
+			if (typeof block === "string") return block;
+			if (typeof block?.text === "string") return block.text;
+			if (typeof block?.content?.text === "string") return block.content.text;
+			return "";
+		})
+		.filter(Boolean)
+		.join("\n");
+}
+
+/**
+ * A call failed when the server says so, or when the shell it ran exited non-zero: Pi's own bash
+ * rows treat a non-zero exit the same way.
+ */
+function acpToolFailed(update: Record<string, unknown>, status: string): boolean {
+	if (status === "failed" || status === "cancelled") return true;
+	const raw = update.rawOutput;
+	if (!raw || typeof raw !== "object") return false;
+	const record = raw as Record<string, unknown>;
+	const exitCode = Number(record.exitCode ?? record.exit_code);
+	return Number.isFinite(exitCode) && exitCode !== 0;
+}
+
+/** What the footer shows while the ACP server runs a tool. */
+function activityOf(update: Record<string, unknown>): AcpToolActivity {
+	const rawInput = update.rawInput as { CommandLine?: unknown } | undefined;
+	const title =
+		typeof update.title === "string"
+			? update.title
+			: typeof rawInput?.CommandLine === "string"
+				? rawInput.CommandLine
+				: undefined;
+	return {
+		...(typeof update.toolCallId === "string" ? { toolCallId: update.toolCallId } : {}),
+		...(typeof update.kind === "string" ? { kind: update.kind } : {}),
+		...(title ? { title } : {}),
+		...(typeof update.status === "string" ? { status: update.status } : {}),
+	};
 }
 
 function systemText(systemPrompt: unknown): string {
