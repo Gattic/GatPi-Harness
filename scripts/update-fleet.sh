@@ -247,7 +247,8 @@ PLAN_STATE=ok
 PLAN_REASON=""
 PLAN_BUNDLE=""
 plan_host() {
-  local h="$1" log="$EVIDENCE_DIR/$h-preflight.log" blocked="$EVIDENCE_DIR/$h-plan.blocked"
+  local h="$1"
+  local log="$EVIDENCE_DIR/$h-preflight.log" blocked="$EVIDENCE_DIR/$h-plan.blocked"
   PLAN_STATE=ok
   PLAN_REASON=""
   PLAN_BUNDLE=""
@@ -491,8 +492,8 @@ NODE
       "$harness_sha" "$pi_sha" "$pi_version" "$agents_sha" "$skills_count" "$skills_manifest_sha" "$skills_digest"
     printf '| Host | Machine | User | pi-harness | Source | Pi runtime | AGENTS.md | Skills claude/agent | Setup exit/failures | RPC entries | Checks | Status |\n'
     printf '|---|---|---|---|---|---|---|---|---|---|---|---|\n'
-    local alias hostname user hb ha src pa pc aa am cl ag sr rpc st checks n
-    while IFS=$'\t' read -r alias hostname user hb ha src pa pc aa am cl ag sr rpc st checks n; do
+    local alias hostname user hb ha src pa pc aa am cl ag sr rpc st checks _notes
+    while IFS=$'\t' read -r alias hostname user hb ha src pa pc aa am cl ag sr rpc st checks _notes; do
       printf '| %s | %s | %s | %s → %s | %s | %s (%s) | %s, mode %s | %s / %s | %s | %s | %s | %s |\n' \
         "$alias" "${hostname:-?}" "${user:-?}" "${hb:0:8}" "${ha:0:8}" "${src:-—}" "${pa:-—}" "${pc:-—}" \
         "${aa:-—}" "${am:-—}" "$cl" "$ag" "${sr:-—}" "${rpc:-—}" "${checks:-0}" "$st"
@@ -503,9 +504,9 @@ NODE
     if [[ -n "$bad" ]]; then printf '\nNot passing:\n%s\n' "$bad"; fi
   } > "$EVIDENCE_DIR/RESULT.md"
 
-  local alias hostname user hb ha src pa pc aa am cl ag sr rpc st checks n
+  local alias hostname user hb ha src pa pc aa am cl ag sr rpc st checks _notes
   printf '\nhost      status   checks  harness           source  pi                        agents\n'
-  while IFS=$'\t' read -r alias hostname user hb ha src pa pc aa am cl ag sr rpc st checks n; do
+  while IFS=$'\t' read -r alias hostname user hb ha src pa pc aa am cl ag sr rpc st checks _notes; do
     printf '%-9s %-8s %-7s %-17s %-7s %-25s %s\n' "$alias" "$st" "${checks:-0}" "${hb:0:8}→${ha:0:8}" "${src:-—}" "${pa:-—}/${pc:-—}" "${aa:-—}"
   done < "$EVIDENCE_DIR/summary.tsv"
 
