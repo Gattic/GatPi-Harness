@@ -14,9 +14,11 @@
 
 import {
 	AcpClient,
+	type AcpClientFileHandlers,
 	type AcpClientLike,
 	type AcpClientOptions,
 	type AcpInitializeResult,
+	type AcpMcpServer,
 	type AcpPermissionRequest,
 	type AcpPermissionResponse,
 } from "./acp";
@@ -62,6 +64,15 @@ export interface AcpLoginInteraction {
 	}) => Promise<string>;
 }
 
+/**
+ * Pi's authority over the ACP server: it answers the server's permission
+ * requests and decides the calls Pi executes itself (the file callbacks).
+ */
+export interface AcpAuthority {
+	request(request: AcpPermissionRequest): Promise<AcpPermissionResponse>;
+	enforce(toolName: string, input: Record<string, unknown>): { allow: boolean };
+}
+
 export interface AntigravityAcpProviderDeps {
 	fetch?: typeof globalThis.fetch;
 	runtime?: () => Promise<RuntimeLaunch>;
@@ -71,8 +82,12 @@ export interface AntigravityAcpProviderDeps {
 	inspectAuth?: () => AcpAuthHealth;
 	waitForAuth?: (signal?: AbortSignal, timeoutMs?: number) => Promise<boolean>;
 	now?: () => number;
-	/** Builds the authority handler that answers the server's permission requests. */
-	createGate?: (cwd: string) => (request: AcpPermissionRequest) => Promise<AcpPermissionResponse>;
+	/** Builds the authority that answers permission requests and file callbacks. */
+	createGate?: (cwd: string) => AcpAuthority;
+	/** Builds the handlers for the server's `fs/read_text_file` and `fs/write_text_file` callbacks. */
+	createFileHandlers?: (cwd: string, gate: AcpAuthority) => AcpClientFileHandlers;
+	/** Pi's MCP servers for this session, which the server connects itself. */
+	mcpServers?: (cwd: string) => AcpMcpServer[];
 	/** Workspace directories Pi grants beyond the session cwd. */
 	additionalDirectories?: (cwd: string) => string[];
 	/** Observes server-side tool activity, for example in Pi's footer. */
@@ -187,7 +202,11 @@ export function antigravityAcpProvider(deps: AntigravityAcpProviderDeps = {}) {
 		options?: AcpStreamOptions,
 	) => {
 		const cwd = options?.cwd ?? process.cwd();
-		const permission = deps.createGate ? deps.createGate(cwd) : undefined;
+		const gate = deps.createGate ? deps.createGate(cwd) : undefined;
+		const permission = gate ? (request: AcpPermissionRequest) => gate.request(request) : undefined;
+		const fileHandlers =
+			gate && deps.createFileHandlers ? deps.createFileHandlers(cwd, gate) : undefined;
+		const mcpServers = deps.mcpServers ? deps.mcpServers(cwd) : undefined;
 		const additionalDirectories = deps.additionalDirectories
 			? deps.additionalDirectories(cwd)
 			: undefined;
@@ -200,6 +219,8 @@ export function antigravityAcpProvider(deps: AntigravityAcpProviderDeps = {}) {
 			hasAuth: () => authHealth().status === "oauth-refreshable",
 			cwd,
 			...(permission ? { permission } : {}),
+			...(fileHandlers ? { fileHandlers } : {}),
+			...(mcpServers?.length ? { mcpServers } : {}),
 			...(additionalDirectories?.length ? { additionalDirectories } : {}),
 			...(onToolActivity ? { onToolActivity } : {}),
 		});

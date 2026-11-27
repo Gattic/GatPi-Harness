@@ -4,8 +4,16 @@
  * The server speaks newline-delimited JSON-RPC over stdio. This client covers
  * the provider's needs: initialize, authenticate, create a session, select the
  * model/thought level, prompt, and surface `session/update` notifications.
- * Permission requests default to cancellation; the server's own tools run
- * inside its runtime and are not delegated to Pi.
+ * Permission requests default to cancellation.
+ *
+ * The server runs its own shell and file tools inside its runtime. Two surfaces
+ * let it reach Pi instead: the `mcpServers` of `session/new` hand it MCP servers
+ * to connect itself, and the `fs/read_text_file`/`fs/write_text_file` client
+ * capabilities make its `client_view_file`/`client_create_file`/`client_edit_file`
+ * tools read and write through Pi. Pi advertises those capabilities only when
+ * it has handlers for them, and the handlers decide every call with Pi's own
+ * policy before touching a file. `terminal/*` stays unadvertised: the server
+ * runs commands in its own sandbox and never asks the client to run one.
  */
 
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
@@ -67,6 +75,66 @@ export interface AcpSessionUpdateNotification {
 	};
 }
 
+export interface AcpEnvVariable {
+	name: string;
+	value: string;
+}
+
+export interface AcpHttpHeader {
+	name: string;
+	value: string;
+}
+
+/**
+ * A stdio MCP server as ACP v1 spells it. The v1 union has no `type` tag on this
+ * variant: the entry is recognised by `command`, while HTTP/SSE entries carry
+ * `type`. Extra keys are ignored by the server's schema, so nothing is invented
+ * here that the protocol does not define.
+ */
+export interface AcpMcpServerStdio {
+	name: string;
+	command: string;
+	args: string[];
+	env: AcpEnvVariable[];
+}
+
+export interface AcpMcpServerHttp {
+	type: "http";
+	name: string;
+	url: string;
+	headers: AcpHttpHeader[];
+}
+
+export type AcpMcpServer = AcpMcpServerStdio | AcpMcpServerHttp;
+
+export interface AcpReadTextFileRequest {
+	sessionId: string;
+	/** Absolute path to the file to read. */
+	path: string;
+	/** 1-based line to start at. */
+	line?: number;
+	/** Maximum number of lines to read. */
+	limit?: number;
+}
+
+export interface AcpWriteTextFileRequest {
+	sessionId: string;
+	/** Absolute path to the file to write. */
+	path: string;
+	/** Complete replacement content. */
+	content: string;
+}
+
+/**
+ * Pi's side of the ACP file callbacks. Advertising a capability without its
+ * handler would invite requests Pi cannot answer, so the two handlers are
+ * declared together and the capabilities follow their presence.
+ */
+export interface AcpClientFileHandlers {
+	readTextFile(request: AcpReadTextFileRequest): Promise<{ content: string }>;
+	writeTextFile(request: AcpWriteTextFileRequest): Promise<void>;
+}
+
 export interface AcpPermissionRequest {
 	sessionId: string;
 	toolCall?: unknown;
@@ -84,6 +152,10 @@ export interface AcpClientOptions {
 	env?: NodeJS.ProcessEnv;
 	onUpdate?: (notification: AcpSessionUpdateNotification) => void | Promise<void>;
 	onPermission?: (request: AcpPermissionRequest) => Promise<AcpPermissionResponse>;
+	/** MCP servers the server connects itself, sent with `session/new`. */
+	mcpServers?: AcpMcpServer[];
+	/** Serves `fs/read_text_file` and `fs/write_text_file`; absent, neither is advertised. */
+	fileHandlers?: AcpClientFileHandlers;
 	onStderr?: (line: string) => void;
 	initializeTimeoutMs?: number;
 	operationTimeoutMs?: number;
@@ -326,7 +398,35 @@ export class AcpClient implements AcpClientLike {
 			this.respond(id, response);
 			return;
 		}
+		if (method === "fs/read_text_file" || method === "fs/write_text_file") {
+			await this.handleFileRequest(method, message.params, id);
+			return;
+		}
 		this.respondError(id, -32601, `ACP method not supported: ${method}`);
+	}
+
+	/**
+	 * Answer one file callback. A refusal carries Pi's policy reasons and the
+	 * approval key, which the server reports as the tool's failure, so the reason
+	 * reaches both the transcript and the model instead of a bare "denied".
+	 */
+	private async handleFileRequest(
+		method: "fs/read_text_file" | "fs/write_text_file",
+		params: unknown,
+		id: JsonRpcId,
+	): Promise<void> {
+		const handlers = this.options.fileHandlers;
+		if (!handlers) {
+			this.respondError(id, -32601, `ACP method not supported: ${method}`);
+			return;
+		}
+		if (method === "fs/read_text_file") {
+			const response = await handlers.readTextFile(params as AcpReadTextFileRequest);
+			this.respond(id, { content: response.content });
+			return;
+		}
+		await handlers.writeTextFile(params as AcpWriteTextFileRequest);
+		this.respond(id, {});
 	}
 
 	private respond(id: JsonRpcId, result: unknown): void {
@@ -409,7 +509,13 @@ export class AcpClient implements AcpClientLike {
 			{
 				protocolVersion: 1,
 				clientCapabilities: {
-					fs: { readTextFile: false, writeTextFile: false },
+					// The server only offers its client file tools when the matching
+					// capability is advertised, and turns off its own create/edit
+					// built-ins in favour of them, so a write always reaches Pi.
+					fs: {
+						readTextFile: Boolean(this.options.fileHandlers?.readTextFile),
+						writeTextFile: Boolean(this.options.fileHandlers?.writeTextFile),
+					},
 					terminal: false,
 				},
 				clientInfo: { name: "pi-antigravity-acp", version: "0.1.0" },
@@ -438,7 +544,7 @@ export class AcpClient implements AcpClientLike {
 			"session/new",
 			{
 				cwd,
-				mcpServers: [],
+				mcpServers: this.options.mcpServers ?? [],
 				...(additionalDirectories?.length ? { additionalDirectories } : {}),
 			},
 			this.operationTimeoutMs,
