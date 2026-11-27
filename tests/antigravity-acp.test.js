@@ -48,7 +48,11 @@ function tempDir(prefix) {
   return dir;
 }
 
-function cleanup() {
+async function cleanup() {
+  try {
+    const streamModule = await jiti.import(path.join(EXT, "stream.ts"));
+    await streamModule.closeAcpConversations?.();
+  } catch {}
   for (const dir of tempDirs) {
     try {
       fs.rmSync(dir, { recursive: true, force: true });
@@ -442,9 +446,13 @@ async function main() {
     await streamAuthorityTests();
     await streamUsageTests();
     await streamToolCallTests();
+    await streamToolFidelityTests();
+    await promptFidelityTests();
+    await sessionContinuityTests();
+    await questionAuthorityTests();
     console.log("antigravity-acp runtime, zip, install, auth, login, model and provider tests passed");
   } finally {
-    cleanup();
+    await cleanup();
   }
 }
 
@@ -1322,7 +1330,7 @@ async function streamAuthorityTests() {
           ? {
               permission: async (request) => {
                 permissions.push(request);
-                return options.permission;
+                return { response: options.permission };
               },
             }
           : {}),
@@ -1371,8 +1379,8 @@ async function streamAuthorityTests() {
   const call = finalMessage.content.find((block) => block.type === "toolCall");
   assert(call, "the ACP tool call is recorded in the transcript");
   assert.equal(call.id, "call-1");
-  assert.equal(call.name, "acp_execute", "ACP kinds are prefixed so they stay distinct from Pi tools");
-  assert.deepEqual(call.arguments, { CommandLine: "git status --short" });
+  assert.equal(call.name, "bash", "a shell call keeps Pi's own tool name so it renders like any command");
+  assert.deepEqual(call.arguments, { command: "git status --short" });
   assert.equal(call.providerExecuted, true, "Pi must not run a call the server already ran");
   assert.deepEqual(call.providerResult, { content: "clean", isError: false });
   assert(
@@ -1627,6 +1635,8 @@ async function streamToolCallTests() {
   assert.equal(plain.providerResult, undefined, "a running call has no result yet");
 
   const shell = calls.find((call) => call.id === "call-shell");
+  assert.equal(shell.name, "bash", "an execute kind becomes Pi's own shell row");
+  assert.deepEqual(shell.arguments, { command: "echo ok", cwd: "/tmp" });
   assert.deepEqual(
     shell.providerResult,
     { content: "ok\r\n", isError: false },
@@ -1634,6 +1644,7 @@ async function streamToolCallTests() {
   );
 
   const exit = calls.find((call) => call.id === "call-exit");
+  assert.equal(exit.name, "acp_execute", "a shell call with no command stays generic");
   assert.deepEqual(
     exit.providerResult,
     { content: "boom\r\n", isError: true },
@@ -1652,4 +1663,748 @@ async function streamToolCallTests() {
     "an update without an id records nothing",
   );
   assert.equal(message.stopReason, "stop");
+}
+const MOCK_FIDELITY_SERVER = String.raw`
+const readline = require("node:readline");
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\n");
+const update = (payload) =>
+  send({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "session-1", update: payload } });
+const root = process.cwd();
+const notes = root + "/notes.txt";
+const letters = root + "/a.txt";
+const big = Array.from({ length: 40000 }, (_, index) => "line " + (index + 1)).join("\n");
+let promptId;
+let nextRequestId = 900;
+const waiters = new Map();
+const rl = readline.createInterface({ input: process.stdin });
+
+function request(method, params) {
+  const id = nextRequestId++;
+  return new Promise((resolve) => {
+    waiters.set(id, resolve);
+    send({ jsonrpc: "2.0", id, method, params });
+  });
+}
+
+rl.on("line", (line) => {
+  const message = JSON.parse(line);
+  if (message.method === undefined && message.id !== undefined) {
+    const waiter = waiters.get(message.id);
+    if (waiter) {
+      waiters.delete(message.id);
+      waiter(message);
+    }
+    return;
+  }
+  switch (message.method) {
+    case "initialize":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          protocolVersion: 1,
+          agentInfo: { name: "antigravity-acp", version: "1.5.2" },
+          authMethods: [{ id: "oauth", name: "Google OAuth" }],
+          agentCapabilities: {
+            sessionCapabilities: { additionalDirectories: {} },
+          },
+        },
+      });
+      break;
+    case "session/new":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          sessionId: "session-1",
+          models: { currentModelId: "gemini-4-neon", availableModels: [] },
+          configOptions: [],
+        },
+      });
+      break;
+    case "session/set_config_option":
+    case "session/set_model":
+      send({ jsonrpc: "2.0", id: message.id, result: {} });
+      break;
+    case "session/prompt":
+      promptId = message.id;
+      runPrompt();
+      break;
+    case "session/cancel":
+      break;
+    default:
+      if (message.id !== undefined) {
+        send({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Method not found" } });
+      }
+  }
+});
+
+async function runPrompt() {
+  // A shell call whose output is far longer than Pi shows: the row keeps the tail and names
+  // a file holding the whole text, exactly as Pi's own bash tool does.
+  update({
+    sessionUpdate: "tool_call",
+    toolCallId: "call-big",
+    kind: "execute",
+    title: "seq 1 40000",
+    status: "pending",
+    rawInput: { CommandLine: "seq 1 40000", Cwd: "/tmp" },
+  });
+  update({
+    sessionUpdate: "tool_call_update",
+    toolCallId: "call-big",
+    status: "in_progress",
+    rawOutput: { combinedOutput: big.slice(0, 20000) },
+  });
+  update({
+    sessionUpdate: "tool_call_update",
+    toolCallId: "call-big",
+    status: "completed",
+    rawOutput: { exitCode: 0, combinedOutput: big },
+  });
+
+  // A call that is still running keeps the output its last update carried.
+  update({
+    sessionUpdate: "tool_call",
+    toolCallId: "call-progress",
+    kind: "execute",
+    title: "npm test",
+    status: "in_progress",
+    rawInput: { CommandLine: "npm test" },
+  });
+  update({
+    sessionUpdate: "tool_call_update",
+    toolCallId: "call-progress",
+    status: "in_progress",
+    rawOutput: { combinedOutput: "running 3 of 12 suites" },
+  });
+
+  // The server describes a file it creates as a diff, and asks Pi to write it.
+  update({
+    sessionUpdate: "tool_call",
+    toolCallId: "call-write",
+    kind: "edit",
+    title: "Create notes.txt",
+    status: "pending",
+    locations: [{ path: notes }],
+    content: [{ type: "diff", path: notes, newText: "hello", _meta: { kind: "add" } }],
+    rawInput: { TargetFile: notes, CodeContent: "hello" },
+  });
+  await request("fs/write_text_file", { sessionId: "session-1", path: notes, content: "hello" });
+  update({ sessionUpdate: "tool_call_update", toolCallId: "call-write", status: "completed", rawOutput: "Create notes.txt" });
+
+  // A read comes back through Pi, so the row has to say what Pi read.
+  update({
+    sessionUpdate: "tool_call",
+    toolCallId: "call-read",
+    kind: "read",
+    title: "Read a.txt",
+    status: "pending",
+    locations: [{ path: letters }],
+    rawInput: { file_path: letters },
+  });
+  const read = await request("fs/read_text_file", { sessionId: "session-1", path: letters });
+  update({
+    sessionUpdate: "tool_call_update",
+    toolCallId: "call-read",
+    status: "completed",
+    content: [{ type: "text", text: read.result.content }],
+  });
+
+  update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Done" } });
+  send({
+    jsonrpc: "2.0",
+    id: promptId,
+    result: { stopReason: "end_turn", usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } },
+  });
+}
+`;
+
+// ACP tool rows carry what Pi's own tools carry: a command the server ran reads as a command,
+// the full output of a long call is kept in a file the row names, a running call shows its latest
+// output, and file work Pi performed for the server is reported on the row that asked for it.
+async function streamToolFidelityTests() {
+  const streamModule = await jiti.import(path.join(EXT, "stream.ts"));
+  const modelsModule = await jiti.import(path.join(EXT, "models.ts"));
+  const acpModule = await jiti.import(path.join(EXT, "acp.ts"));
+  const neon = modelsModule.FALLBACK_MODELS.find((model) => model.id === "gemini-4-neon");
+  const dir = tempDir("pi-acp-fidelity-");
+  fs.writeFileSync(path.join(dir, "a.txt"), "alpha\nbeta");
+  const mockPath = path.join(dir, "mock-fidelity.cjs");
+  fs.writeFileSync(mockPath, MOCK_FIDELITY_SERVER);
+  const events = [];
+  const stream = streamModule.createAcpStream(
+    neon,
+    { systemPrompt: "Be helpful", messages: [{ role: "user", content: "Work the task" }] },
+    { cwd: dir },
+    {
+      resolveRuntime: async () => ({ command: process.execPath, args: [mockPath], source: "env" }),
+      createClient: (clientOptions) =>
+        new acpModule.AcpClient({
+          ...clientOptions,
+          initializeTimeoutMs: 5_000,
+          operationTimeoutMs: 5_000,
+          promptTimeoutMs: 5_000,
+        }),
+      cwd: dir,
+      fileHandlers: {
+        async readTextFile(request) {
+          return { content: fs.readFileSync(request.path, "utf8") };
+        },
+        async writeTextFile(request) {
+          fs.writeFileSync(request.path, request.content, "utf8");
+        },
+      },
+    },
+  );
+  for await (const event of stream) events.push(event);
+
+  const message = events.at(-1).message;
+  const calls = message.content.filter((block) => block.type === "toolCall");
+  const bigOutputPath = path.join(dir, "notes.txt");
+  assert.equal(fs.readFileSync(bigOutputPath, "utf8"), "hello", "Pi wrote the file the server asked for");
+
+  const big = calls.find((call) => call.id === "call-big");
+  assert.equal(big.name, "bash", "an execute kind renders as Pi's own shell row");
+  assert.deepEqual(big.arguments, { command: "seq 1 40000", cwd: "/tmp" });
+  const bigContent = big.providerResult.content;
+  const notice = /\[Showing lines (\d+)-(\d+) of 40000(?: \(50KB limit\))?\. Full output: (.+)\]$/u.exec(bigContent);
+  assert(notice, "the row names where the whole output went");
+  const shown = bigContent.slice(0, bigContent.indexOf("\n\n[Showing"));
+  assert(shown.trimEnd().endsWith("line 40000"), "the row keeps the tail of a long output");
+  assert(!shown.includes("line 1\n"), "the head of a long output is not what the row shows");
+  const fullOutputPath = notice[3];
+  assert(fullOutputPath.startsWith(os.tmpdir()), "the full output goes to the output directory");
+  const fullOutput = fs.readFileSync(fullOutputPath, "utf8");
+  assert(fullOutput.startsWith("line 1\nline 2"), "the file holds the whole output, not just the tail");
+  assert(fullOutput.endsWith("line 40000"));
+  assert.equal(fullOutput.split("\n").length, 40000);
+  fs.rmSync(fullOutputPath, { force: true });
+
+  const progress = calls.find((call) => call.id === "call-progress");
+  assert.deepEqual(
+    progress.providerResult,
+    { content: "running 3 of 12 suites", isError: false },
+    "a running call shows the output its last update carried",
+  );
+
+  const write = calls.find((call) => call.id === "call-write");
+  assert.equal(write.name, "write", "a diff the server described renders as Pi's own write row");
+  assert.deepEqual(write.arguments, { path: bigOutputPath, content: "hello" });
+  assert(
+    write.providerResult.content.includes(`Pi wrote 5 bytes to ${bigOutputPath}`),
+    "the row reports the file Pi wrote for the server",
+  );
+  assert(write.providerResult.content.includes("Create notes.txt"));
+
+  const read = calls.find((call) => call.id === "call-read");
+  assert.equal(read.name, "read", "a read kind renders as Pi's own read row");
+  assert.deepEqual(read.arguments, { path: path.join(dir, "a.txt") });
+  assert(
+    read.providerResult.content.includes(`Pi read 2 lines of ${path.join(dir, "a.txt")}`),
+    "the row reports the file Pi read for the server",
+  );
+  assert(read.providerResult.content.includes("alpha\nbeta"));
+  assert.equal(message.stopReason, "stop");
+}
+const MOCK_PROMPT_SERVER = String.raw`
+const fs = require("node:fs");
+const readline = require("node:readline");
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\n");
+const logPath = process.env.ACP_PROMPT_LOG;
+const append = process.env.ACP_APPEND === "1";
+const rl = readline.createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  const message = JSON.parse(line);
+  if (logPath) fs.appendFileSync(logPath, line + "\n");
+  switch (message.method) {
+    case "initialize":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          protocolVersion: 1,
+          agentInfo: { name: "antigravity-acp", version: "1.5.2" },
+          authMethods: [{ id: "oauth", name: "Google OAuth" }],
+          agentCapabilities: append ? { _meta: { antigravity: { systemPrompt: { append: true } } } } : {},
+        },
+      });
+      break;
+    case "session/new":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          sessionId: "session-1",
+          models: { currentModelId: "gemini-4-neon", availableModels: [] },
+          configOptions: [],
+        },
+      });
+      break;
+    case "session/set_config_option":
+    case "session/set_model":
+      send({ jsonrpc: "2.0", id: message.id, result: {} });
+      break;
+    case "session/prompt":
+      send({
+        jsonrpc: "2.0",
+        method: "session/update",
+        params: {
+          sessionId: "session-1",
+          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Done" } },
+        },
+      });
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: { stopReason: "end_turn", usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } },
+      });
+      break;
+    case "session/cancel":
+      break;
+    default:
+      if (message.id !== undefined) {
+        send({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Method not found" } });
+      }
+  }
+});
+`;
+
+// The prompt is Pi's transcript, not a retelling of it: Pi's system prompt reaches the session as
+// metadata when the server says it takes one, images Pi was given are forwarded, and prior thinking
+// stays out of the assistant's visible text.
+async function promptFidelityTests() {
+  const streamModule = await jiti.import(path.join(EXT, "stream.ts"));
+  const modelsModule = await jiti.import(path.join(EXT, "models.ts"));
+  const acpModule = await jiti.import(path.join(EXT, "acp.ts"));
+  const neon = modelsModule.FALLBACK_MODELS.find((model) => model.id === "gemini-4-neon");
+  const context = {
+    systemPrompt: "Pi's rules",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "look at this" },
+          { type: "image", data: "aGVsbG8=", mimeType: "image/png" },
+        ],
+      },
+      {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: "hidden reasoning" },
+          { type: "text", text: "I see it" },
+        ],
+      },
+    ],
+  };
+
+  const withSystem = streamModule.buildPrompt(context);
+  assert.equal(withSystem[0].type, "text");
+  assert(withSystem[0].text.startsWith("System instructions:\nPi's rules"));
+  assert.deepEqual(
+    withSystem.find((block) => block.type === "image"),
+    { type: "image", data: "aGVsbG8=", mimeType: "image/png" },
+    "an image Pi was given reaches the server",
+  );
+  assert(
+    !withSystem.some((block) => block.text?.includes("hidden reasoning")),
+    "prior thinking is not resent as assistant prose",
+  );
+  assert(
+    withSystem.some((block) => block.text === "Assistant:\nI see it"),
+    "the assistant's visible answer is resent",
+  );
+  const withoutSystem = streamModule.buildPrompt(context, { omitSystemPrompt: true });
+  assert(
+    !withoutSystem.some((block) => block.text?.includes("System instructions")),
+    "the session metadata carries the system prompt instead of the prompt",
+  );
+
+  async function run(append) {
+    // Each run is its own workspace, so each gets its own server and session.
+    const workspace = tempDir(`pi-acp-prompt-${append ? "append" : "plain"}-`);
+    const mockPath = path.join(workspace, "mock-prompt.cjs");
+    fs.writeFileSync(mockPath, MOCK_PROMPT_SERVER);
+    const logPath = path.join(workspace, "log.jsonl");
+    const events = [];
+    const stream = streamModule.createAcpStream(neon, context, { cwd: workspace }, {
+      resolveRuntime: async () => ({ command: process.execPath, args: [mockPath], source: "env" }),
+      createClient: (clientOptions) =>
+        new acpModule.AcpClient({
+          ...clientOptions,
+          initializeTimeoutMs: 5_000,
+          operationTimeoutMs: 5_000,
+          promptTimeoutMs: 5_000,
+          env: { ...process.env, ACP_PROMPT_LOG: logPath, ACP_APPEND: append ? "1" : "0" },
+        }),
+      cwd: workspace,
+    });
+    for await (const event of stream) events.push(event);
+    const lines = fs
+      .readFileSync(logPath, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    return { events, lines };
+  }
+
+  const withAppend = await run(true);
+  const appendNew = withAppend.lines.find((line) => line.method === "session/new");
+  assert.deepEqual(
+    appendNew.params._meta,
+    { antigravity: { systemPrompt: { append: "Pi's rules" } } },
+    "Pi's system prompt is offered as session metadata",
+  );
+  const appendPrompt = withAppend.lines.find((line) => line.method === "session/prompt");
+  assert(
+    !appendPrompt.params.prompt.some((block) => block.text?.includes("System instructions")),
+    "the system prompt is not repeated in the prompt",
+  );
+  assert(
+    appendPrompt.params.prompt.some((block) => block.type === "image" && block.data === "aGVsbG8="),
+    "the image is sent in the prompt",
+  );
+  assert.equal(withAppend.events.at(-1).message.stopReason, "stop");
+
+  const withoutAppend = await run(false);
+  const plainNew = withoutAppend.lines.find((line) => line.method === "session/new");
+  assert.equal(plainNew.params._meta, undefined, "a server without the capability gets no metadata");
+  const plainPrompt = withoutAppend.lines.find((line) => line.method === "session/prompt");
+  assert(
+    plainPrompt.params.prompt.some((block) => block.text?.startsWith("System instructions:\nPi's rules")),
+    "a server without the capability gets the system prompt in the prompt",
+  );
+}
+const MOCK_CONTINUITY_SERVER = String.raw`
+const fs = require("node:fs");
+const readline = require("node:readline");
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\n");
+const logPath = process.env.ACP_CONTINUITY_LOG;
+const rl = readline.createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  const message = JSON.parse(line);
+  if (logPath) fs.appendFileSync(logPath, line + "\n");
+  switch (message.method) {
+    case "initialize":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          protocolVersion: 1,
+          agentInfo: { name: "antigravity-acp", version: "1.5.2" },
+          authMethods: [{ id: "oauth", name: "Google OAuth" }],
+          agentCapabilities: { _meta: { antigravity: { systemPrompt: { append: true } } } },
+        },
+      });
+      break;
+    case "session/new":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          sessionId: "session-1",
+          models: { currentModelId: "gemini-4-neon", availableModels: [] },
+          configOptions: [],
+        },
+      });
+      break;
+    case "session/set_config_option":
+    case "session/set_model":
+      send({ jsonrpc: "2.0", id: message.id, result: {} });
+      break;
+    case "session/prompt":
+      send({
+        jsonrpc: "2.0",
+        method: "session/update",
+        params: {
+          sessionId: "session-1",
+          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Done" } },
+        },
+      });
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: { stopReason: "end_turn", usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } },
+      });
+      break;
+    case "session/cancel":
+      break;
+    default:
+      if (message.id !== undefined) {
+        send({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Method not found" } });
+      }
+  }
+});
+`;
+
+// A workspace keeps one server and one session between Pi turns, and a turn sends only what the
+// session has not seen. A transcript Pi rewrote (a compaction, a branch edit) no longer matches
+// what the session holds, so that turn starts a fresh session with the whole transcript.
+async function sessionContinuityTests() {
+  const streamModule = await jiti.import(path.join(EXT, "stream.ts"));
+  const modelsModule = await jiti.import(path.join(EXT, "models.ts"));
+  const acpModule = await jiti.import(path.join(EXT, "acp.ts"));
+  const neon = modelsModule.FALLBACK_MODELS.find((model) => model.id === "gemini-4-neon");
+  const workspace = tempDir("pi-acp-continuity-");
+  const mockPath = path.join(workspace, "mock-continuity.cjs");
+  fs.writeFileSync(mockPath, MOCK_CONTINUITY_SERVER);
+  const logPath = path.join(workspace, "log.jsonl");
+  let clients = 0;
+
+  async function turn(context) {
+    const events = [];
+    const stream = streamModule.createAcpStream(neon, context, { cwd: workspace }, {
+      resolveRuntime: async () => ({ command: process.execPath, args: [mockPath], source: "env" }),
+      createClient: (clientOptions) => {
+        clients++;
+        return new acpModule.AcpClient({
+          ...clientOptions,
+          initializeTimeoutMs: 5_000,
+          operationTimeoutMs: 5_000,
+          promptTimeoutMs: 5_000,
+          env: { ...process.env, ACP_CONTINUITY_LOG: logPath },
+        });
+      },
+      cwd: workspace,
+    });
+    for await (const event of stream) events.push(event);
+    return events;
+  }
+
+  const readLog = () =>
+    fs
+      .readFileSync(logPath, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+  const prompts = () => readLog().filter((line) => line.method === "session/prompt");
+  const newSessions = () => readLog().filter((line) => line.method === "session/new");
+
+  const userOne = { role: "user", content: "first task" };
+  const first = await turn({ systemPrompt: "Pi's rules", messages: [userOne] });
+  const assistantOne = first.at(-1).message;
+  assert.equal(assistantOne.stopReason, "stop");
+  assert.equal(clients, 1, "the first turn starts the server");
+  assert.equal(newSessions().length, 1, "the first turn creates the session");
+  assert.equal(prompts().length, 1);
+
+  const userTwo = { role: "user", content: "second task" };
+  await turn({ systemPrompt: "Pi's rules", messages: [userOne, assistantOne, userTwo] });
+  assert.equal(clients, 1, "the next turn reuses the running server");
+  assert.equal(newSessions().length, 1, "the next turn reuses the session");
+  const secondPrompt = prompts()[1].params.prompt;
+  assert.equal(secondPrompt.length, 1, "only the new message is sent");
+  assert.equal(secondPrompt[0].text, "User:\nsecond task");
+  assert(
+    !secondPrompt.some((block) => block.text?.includes("System instructions")),
+    "the session keeps the system prompt it was given",
+  );
+
+  // Pi rewrote its transcript: the session's context no longer describes it.
+  const summary = { role: "user", content: "Summary of the conversation so far" };
+  const userThree = { role: "user", content: "third task" };
+  await turn({ systemPrompt: "Pi's rules", messages: [summary, userThree] });
+  assert.equal(clients, 2, "a rewritten transcript starts a fresh server");
+  assert.equal(newSessions().length, 2, "a rewritten transcript starts a fresh session");
+  const thirdPrompt = prompts()[2].params.prompt;
+  assert(
+    thirdPrompt.some((block) => block.text === "User:\nSummary of the conversation so far"),
+    "the fresh session gets the whole transcript",
+  );
+  assert(thirdPrompt.some((block) => block.text === "User:\nthird task"));
+  await streamModule.closeAcpConversations();
+}
+
+// A server that asks the person a question instead of asking permission for a
+// call, and ends its turn when the question is declined.
+const MOCK_QUESTION_SERVER = String.raw`
+const fs = require("node:fs");
+const readline = require("node:readline");
+const logPath = process.env.ACP_MOCK_LOG;
+const trustPrompt = process.env.ACP_MOCK_TRUST === "1";
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\n");
+const log = (entry) => fs.appendFileSync(logPath, JSON.stringify(entry) + "\n");
+const update = (payload) =>
+  send({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "session-1", update: payload } });
+let promptId;
+const rl = readline.createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  const message = JSON.parse(line);
+  if (message.id !== undefined && message.method === undefined) {
+    log({ permissionResponse: message.result });
+    update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Waiting for your answer." } });
+    send({
+      jsonrpc: "2.0",
+      id: promptId,
+      result: {
+        stopReason: trustPrompt ? "end_turn" : "cancelled",
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+      },
+    });
+    return;
+  }
+  switch (message.method) {
+    case "initialize":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          protocolVersion: 1,
+          agentInfo: { name: "antigravity-acp", version: "1.5.2" },
+          authMethods: [{ id: "oauth", name: "Google OAuth" }],
+          agentCapabilities: {},
+        },
+      });
+      break;
+    case "session/new":
+      send({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          sessionId: "session-1",
+          models: { currentModelId: "gemini-4-neon", availableModels: [{ modelId: "gemini-4-neon", name: "Gemini 4 Neon" }] },
+          configOptions: [
+            { id: "model", category: "model", currentValue: "gemini-4-neon", options: [{ value: "gemini-4-neon", name: "Neon" }] },
+            { id: "thinking_level", category: "thought_level", currentValue: "medium", options: [{ value: "medium", name: "Medium" }, { value: "high", name: "High" }] },
+          ],
+        },
+      });
+      break;
+    case "session/set_config_option":
+      send({ jsonrpc: "2.0", id: message.id, result: { configOptions: [] } });
+      break;
+    case "session/prompt":
+      promptId = message.id;
+      update({
+        sessionUpdate: "tool_call",
+        toolCallId: "call-9",
+        kind: trustPrompt ? "other" : "ask_user",
+        title: trustPrompt ? "Trust this workspace?" : "Which package manager should I use?",
+        status: "pending",
+        rawInput: { Question: trustPrompt ? "Trust this workspace?" : "Which package manager should I use?" },
+      });
+      send({
+        jsonrpc: "2.0",
+        id: 9001,
+        method: "session/request_permission",
+        params: {
+          sessionId: "session-1",
+          toolCall: {
+            toolCallId: "call-9",
+            kind: trustPrompt ? "other" : "ask_user",
+            title: trustPrompt ? "Trust this workspace?" : "Which package manager should I use?",
+          },
+          options: trustPrompt
+            ? [
+                { optionId: "allow", name: "Trust", kind: "allow_once" },
+                { optionId: "deny", name: "Do not trust", kind: "reject_once" },
+              ]
+            : [
+                { optionId: "npm", name: "npm" },
+                { optionId: "pnpm", name: "pnpm" },
+              ],
+        },
+      });
+      break;
+    default:
+      if (message.id !== undefined) {
+        send({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Method not found" } });
+      }
+  }
+});
+`;
+
+// A question is the person's decision: Pi declines it, shows it in the
+// transcript, and ends the turn instead of failing it. A workspace-trust prompt
+// is answered from Pi's own trust decision, never with a standing grant.
+async function questionAuthorityTests() {
+  const streamModule = await jiti.import(path.join(EXT, "stream.ts"));
+  const modelsModule = await jiti.import(path.join(EXT, "models.ts"));
+  const acpModule = await jiti.import(path.join(EXT, "acp.ts"));
+  const { createAcpPermissionGate } = require(path.join(ROOT, "src", "acp-permission-gate.js"));
+  const neon = modelsModule.FALLBACK_MODELS.find((model) => model.id === "gemini-4-neon");
+
+  async function ask(options = {}) {
+    const dir = tempDir("pi-acp-question-");
+    const mockPath = path.join(dir, "mock-question.cjs");
+    fs.writeFileSync(mockPath, MOCK_QUESTION_SERVER);
+    const logPath = path.join(dir, "mock.log");
+    const asked = [];
+    const gate = createAcpPermissionGate({
+      cwd: dir,
+      getContext: () => ({ isProjectTrusted: () => options.trusted === true }),
+    });
+    const stream = streamModule.createAcpStream(
+      neon,
+      { systemPrompt: "Be helpful", messages: [{ role: "user", content: "Set up the repo" }] },
+      { cwd: dir },
+      {
+        resolveRuntime: async () => ({ command: process.execPath, args: [mockPath], source: "env" }),
+        createClient: (clientOptions) =>
+          new acpModule.AcpClient({
+            ...clientOptions,
+            env: {
+              ...process.env,
+              ACP_MOCK_LOG: logPath,
+              ACP_MOCK_TRUST: options.trustPrompt ? "1" : "0",
+            },
+            initializeTimeoutMs: 5_000,
+            operationTimeoutMs: 5_000,
+            promptTimeoutMs: 5_000,
+          }),
+        cwd: dir,
+        permission: (request) => gate.request(request),
+        onQuestion: (question) => asked.push(question),
+      },
+    );
+    const events = [];
+    for await (const event of stream) events.push(event);
+    const log = fs
+      .readFileSync(logPath, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    return { events, asked, log };
+  }
+
+  const declined = await ask();
+  assert.equal(
+    declined.log.find((entry) => entry.permissionResponse).permissionResponse.outcome.outcome,
+    "cancelled",
+    "a question is declined, never answered with one of its options",
+  );
+  assert.equal(declined.asked.length, 1, "the question reaches Pi's transcript callback");
+  assert.equal(declined.asked[0].text, "Which package manager should I use?");
+  assert.equal(declined.asked[0].kind, "ask_user");
+  assert.equal(declined.asked[0].trust, false);
+  assert.deepEqual(
+    declined.asked[0].options.map((option) => option.id),
+    ["npm", "pnpm"],
+    "the question keeps every answer the server offered",
+  );
+  assert.equal(declined.events.at(-1).type, "done", "an unanswered question ends the turn instead of failing it");
+  assert.equal(declined.events.at(-1).message.stopReason, "stop");
+  assert(
+    declined.events.some((event) => event.type === "text_delta" && event.delta === "Waiting for your answer."),
+    "what the server said before asking stays in the transcript",
+  );
+
+  // Pi trusts the workspace, so its own trust decision answers the prompt.
+  const trusted = await ask({ trustPrompt: true, trusted: true });
+  assert.equal(trusted.asked[0].trust, true, "a trust prompt is recognized as one");
+  assert.equal(
+    trusted.log.find((entry) => entry.permissionResponse).permissionResponse.outcome.optionId,
+    "allow",
+    "a trusted workspace is accepted",
+  );
+  assert.equal(trusted.events.at(-1).message.stopReason, "stop");
+
+  // An untrusted workspace leaves the prompt to the person.
+  const untrusted = await ask({ trustPrompt: true, trusted: false });
+  assert.equal(
+    untrusted.log.find((entry) => entry.permissionResponse).permissionResponse.outcome.outcome,
+    "cancelled",
+    "an untrusted workspace is never accepted on the person's behalf",
+  );
+  await streamModule.closeAcpConversations();
 }

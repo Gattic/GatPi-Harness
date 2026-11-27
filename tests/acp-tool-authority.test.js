@@ -12,6 +12,7 @@ const { FileApprovalStore } = require("../src/policy-enforcement");
 const { setPolicyMode, policyMode } = require("../src/policy-mode");
 const {
   acpToolRequest,
+  acpQuestion,
   decideAcpPermission,
   acpPermissionResponse,
   formatAcpPermissionDecision,
@@ -170,6 +171,56 @@ function permission(toolCall, options = OPTIONS) {
   assert.equal(grantedDirectory.allow, true, "a directory grant extends write authority");
 }
 
+// --- questions are the person's decision ------------------------------------
+{
+  const ask = permission({ toolCallId: "call-2", kind: "ask_user", title: "Which package manager should I use?" }, [
+    { optionId: "npm", name: "npm" },
+    { optionId: "pnpm", name: "pnpm" },
+  ]);
+  const question = acpQuestion(ask);
+  assert(question, "a question is recognized as one");
+  assert.equal(question.kind, "ask_user");
+  assert.equal(question.trust, false);
+  assert.deepEqual(question.options, [
+    { id: "npm", name: "npm" },
+    { id: "pnpm", name: "pnpm" },
+  ]);
+  const decision = decideAcpPermission(ask, { cwd, mode: "block" });
+  assert.equal(decision.allow, false, "no option is chosen on the person's behalf");
+  assert.equal(decision.action, "ask");
+  assert.equal(decision.optionId, undefined);
+  assert.deepEqual(acpPermissionResponse(ask, decision), { outcome: { outcome: "cancelled" } });
+  assert.match(formatAcpPermissionDecision(decision), /question: Which package manager/u);
+  assert.match(formatAcpPermissionDecision(decision), /- npm npm/u);
+
+  // A call Pi can judge is never mistaken for a question.
+  assert.equal(acpQuestion(permission({ kind: "execute", rawInput: { CommandLine: "git status" } })), undefined);
+  assert.equal(acpQuestion(permission({ kind: "edit", rawInput: { TargetFile: path.join(cwd, "a.txt") } })), undefined);
+  assert.equal(acpQuestion(permission({ kind: "read", rawInput: { TargetFile: path.join(cwd, "a.txt") } })), undefined);
+  // An action kind stays a call: Pi's policy judges it, even without a path.
+  assert.equal(acpQuestion(permission({ kind: "fetch", rawInput: { Url: "https://example.com" } })), undefined);
+  assert.equal(acpQuestion(permission({ kind: "mcp", rawInput: { Tool: "read_file" } })), undefined);
+
+  // A workspace-trust prompt is a question Pi's own trust answers.
+  const trust = permission({ toolCallId: "call-3", kind: "other", title: "Trust this workspace?" }, [
+    { optionId: "allow", name: "Trust", kind: "allow_once" },
+    { optionId: "deny", name: "Do not trust", kind: "reject_once" },
+  ]);
+  assert.equal(acpQuestion(trust).trust, true);
+  const trusted = decideAcpPermission(trust, { cwd, mode: "block", projectTrusted: true });
+  assert.deepEqual(acpPermissionResponse(trust, trusted), { outcome: { outcome: "selected", optionId: "allow" } });
+  const untrusted = decideAcpPermission(trust, { cwd, mode: "block", projectTrusted: false });
+  assert.deepEqual(acpPermissionResponse(trust, untrusted), { outcome: { outcome: "cancelled" } });
+
+  // Pi never gives the server a standing grant, even when it trusts the workspace.
+  const standing = decideAcpPermission(
+    { ...trust, options: [{ optionId: "trust_always", name: "Always trust", kind: "allow_always" }] },
+    { cwd, mode: "block", projectTrusted: true },
+  );
+  assert.deepEqual(acpPermissionResponse(trust, standing), { outcome: { outcome: "cancelled" } });
+  assert.match(standing.reasons.join(" "), /standing grant/u);
+}
+
 // --- option selection --------------------------------------------------------
 {
   const allow = { allow: true, action: "allow", evaluations: [] };
@@ -206,19 +257,19 @@ async function gateTests() {
 
   // A conforming call is approved silently.
   const allowed = await gate.request(permission({ kind: "fetch", rawInput: { Url: "https://example.com" } }));
-  assert.deepEqual(allowed.outcome, { outcome: "selected", optionId: "allow" });
+  assert.deepEqual(allowed.response.outcome, { outcome: "selected", optionId: "allow" });
   assert.equal(notifications.length, 0, "an approved call does not notify");
 
   // A violation is refused at once, with the reason and the grant command.
   const denied = await gate.request(permission({ kind: "execute", rawInput: { CommandLine: "rm -rf ." } }));
-  assert.deepEqual(denied.outcome, { outcome: "selected", optionId: "deny" });
+  assert.deepEqual(denied.response.outcome, { outcome: "selected", optionId: "deny" });
   const warning = notifications.find((item) => item.type === "warning");
   assert(warning);
   assert.match(warning.message, /acp-permission block bash/u);
   assert.match(warning.message, /Approve once with: \/policy-approve approval_[a-f0-9]+/u);
 
   // Granting that key makes the next identical call conform.
-  const key = denied.outcome.optionId === "deny" ? warning.message.match(/\/policy-approve (approval_[a-f0-9]+)/u)[1] : undefined;
+  const key = denied.response.outcome.optionId === "deny" ? warning.message.match(/\/policy-approve (approval_[a-f0-9]+)/u)[1] : undefined;
   const blocked = decideAcpPermission(
     permission({ kind: "execute", rawInput: { CommandLine: "rm -rf ." } }),
     { cwd: gateCwd, mode: "block", approvalStore: store },
@@ -226,7 +277,7 @@ async function gateTests() {
   for (const item of blocked.missingApprovals) assert.equal(item.key, key);
   store.approve({ ...blocked.missingApprovals[0].request }, { ttlMs: 60_000, key });
   const regranted = await gate.request(permission({ kind: "execute", rawInput: { CommandLine: "rm -rf ." } }));
-  assert.deepEqual(regranted.outcome, { outcome: "selected", optionId: "allow" });
+  assert.deepEqual(regranted.response.outcome, { outcome: "selected", optionId: "allow" });
 
   // Without a UI the decision is identical: nothing depends on a prompt.
   const headless = createAcpPermissionGate({
@@ -235,7 +286,7 @@ async function gateTests() {
     approvalStore: new FileApprovalStore({ cwd: tmpFixture("pi-acp-authority-headless-") }),
   });
   const headlessDenied = await headless.request(permission({ kind: "execute", rawInput: { CommandLine: "sudo -n true" } }));
-  assert.deepEqual(headlessDenied.outcome, { outcome: "selected", optionId: "deny" });
+  assert.deepEqual(headlessDenied.response.outcome, { outcome: "selected", optionId: "deny" });
 
   // --- the gate reads the project policy file and the shared mode ------------
   const policyCwd = tmpFixture("pi-acp-authority-policy-");
@@ -249,7 +300,34 @@ async function gateTests() {
   const blockedWrite = await policyGate.request(
     permission({ kind: "edit", rawInput: { TargetFile: path.join(policyCwd, "secrets", "key.txt") } }),
   );
-  assert.deepEqual(blockedWrite.outcome, { outcome: "selected", optionId: "deny" });
+  assert.deepEqual(blockedWrite.response.outcome, { outcome: "selected", optionId: "deny" });
+
+  // A question has no call for Pi to judge, so it is declined and reported.
+  const asked = await gate.request(
+    permission({ toolCallId: "call-2", kind: "ask_user", title: "Which package manager should I use?" }, [
+      { optionId: "npm", name: "npm" },
+      { optionId: "pnpm", name: "pnpm" },
+    ]),
+  );
+  assert.deepEqual(asked.response.outcome, { outcome: "cancelled" });
+  assert.equal(asked.question.text, "Which package manager should I use?");
+  assert.deepEqual(asked.question.options.map((option) => option.id), ["npm", "pnpm"]);
+
+  // A workspace-trust prompt is answered from Pi's trust decision.
+  const trusting = createAcpPermissionGate({
+    cwd: gateCwd,
+    getContext: () => ({ isProjectTrusted: () => true }),
+    approvalStore: store,
+  });
+  const trustRequest = permission({ toolCallId: "call-3", kind: "other", title: "Trust this workspace?" }, [
+    { optionId: "allow", name: "Trust", kind: "allow_once" },
+    { optionId: "deny", name: "Do not trust", kind: "reject_once" },
+  ]);
+  const trustAccepted = await trusting.request(trustRequest);
+  assert.deepEqual(trustAccepted.response.outcome, { outcome: "selected", optionId: "allow" });
+  assert.equal(trustAccepted.question.trust, true);
+  const trustDeclined = await gate.request(trustRequest);
+  assert.deepEqual(trustDeclined.response.outcome, { outcome: "cancelled" });
 
   const previous = policyMode();
   try {
