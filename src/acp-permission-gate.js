@@ -13,11 +13,14 @@
  * The answer is never blocked on a dialog. Pi cannot render one while the
  * assistant turn is streaming and the server is waiting for this response, so
  * an interactive prompt here deadlocks the turn until the ACP prompt timeout.
+ *
+ * `enforce` applies the same decision to a call Pi executes itself, which is how
+ * the ACP file callbacks stay under Pi's policy.
  */
 
 const path = require("node:path");
 
-const { FileApprovalStore } = require("./policy-enforcement");
+const { FileApprovalStore, enforceToolCall } = require("./policy-enforcement");
 const {
   decideAcpPermission,
   acpPermissionResponse,
@@ -47,11 +50,19 @@ function createAcpPermissionGate(options = {}) {
   const store = options.approvalStore || new FileApprovalStore({ cwd });
   const onDecision = options.onDecision;
 
+  function currentPolicy() {
+    return options.policy || gatePolicy(cwd);
+  }
+
+  function currentMode() {
+    return options.mode || policyMode();
+  }
+
   function decide(request) {
     return decideAcpPermission(request, {
       cwd,
-      policy: options.policy || gatePolicy(cwd),
-      mode: options.mode || policyMode(),
+      policy: currentPolicy(),
+      mode: currentMode(),
       approvalStore: store,
     });
   }
@@ -71,6 +82,25 @@ function createAcpPermissionGate(options = {}) {
     cwd,
     store,
     decide,
+    /**
+     * Decide a call Pi is about to execute itself, such as an ACP file callback,
+     * with the same policy, approval store and mode as its own tool calls. A
+     * refusal is reported here, because no permission request preceded it.
+     */
+    enforce(toolName, input) {
+      const decision = {
+        ...enforceToolCall(toolName, input, {
+          cwd,
+          policy: currentPolicy(),
+          mode: currentMode(),
+          approvalStore: store,
+        }),
+        toolName,
+        input,
+      };
+      report(decision, options.getContext ? options.getContext() : undefined);
+      return decision;
+    },
     /** Answer one ACP `session/request_permission` request immediately. */
     async request(request) {
       const decision = decide(request);

@@ -124,6 +124,27 @@ the transcript as text and never hands the model Pi's tools; the server owns
 its file and shell tools and executes them inside its runtime. Pi keeps the
 *authority* over them:
 
+- **Pi serves the server's file callbacks.** Pi advertises the ACP client
+  capabilities `fs.readTextFile` and `fs.writeTextFile`, so the server stops
+  using its own create/edit built-ins and adds `client_view_file`,
+  `client_create_file` and `client_edit_file` instead: every file read and write
+  comes back to Pi as `fs/read_text_file` or `fs/write_text_file`
+  (`src/acp-client-tools.js`). Each callback is decided by the same gate before
+  the file is touched, because a call the server's own harness policy
+  auto-approves never reaches `session/request_permission`; a refusal throws
+  with the policy reasons and the approval key, which the server reports as the
+  tool's failure. `terminal` stays unadvertised: the server runs commands in its
+  own sandbox and never asks the client to run one.
+- **Pi forwards its MCP servers.** `session/new` carries Pi's `mcp.json` servers
+  (`extensions/multi-login/antigravity-acp/mcp-servers.ts`), global first and
+  then `<project>/.pi/mcp.json` when the project is trusted, with Pi's own
+  replacement and override-only rules. `env` and header values are resolved the
+  way Pi resolves them (`${NAME}`), and an entry Pi cannot hand over faithfully
+  is skipped and reported once instead of silently dropped: stdio servers with
+  their own `cwd` (ACP has no such field), values that are shell commands
+  (`!cmd`), entries that rely on Pi's OAuth login, and values naming an unset
+  variable. The forwarded servers connect inside the ACP runtime, so their
+  tools belong to the ACP agent and are **not** gated by Pi.
 - **Every permission request is a Pi policy decision.** When the server asks
   `session/request_permission`, `src/acp-permission-gate.js` maps the tool call
   onto Pi's policy: `execute` becomes a Pi `bash` command, `edit`/`write`/
@@ -176,7 +197,8 @@ its file and shell tools and executes them inside its runtime. Pi keeps the
   transcript as a provider-executed `acp_<kind>` call (`acp_execute`,
   `acp_edit`, …) with the server's arguments, status and output, so the TUI,
   Fleet and the HTML export show the work instead of only the model's text.
-  Pi records those calls without running them: the server owns its tools. The
+  Pi records those calls without running them: the server owns its tools, and
+  the file callbacks above are the one surface where Pi executes. The
   footer also shows the tool currently running, and a denial names the policy
   reasons instead of leaving only the server's "denied by pre-tool hook"
   wording.
@@ -193,10 +215,14 @@ Boundaries worth knowing:
 
 - The server's own policy can auto-approve calls (for example reads) without
   asking Pi; those never reach Pi's gate.
-- Pi cannot run the server's tools, so the transcript records each call as a
-  provider-executed block whose result is the server's own reported output.
+- Pi cannot run the server's shell tools, so the transcript records each call
+  as a provider-executed block whose result is the server's own reported output.
   Pi's `before`/`after` tool hooks do not apply to those calls; the ACP
-  permission gate is their authority.
+  permission gate is their authority, and the file callbacks are decided by that
+  same gate.
+- Forwarded MCP servers run in the ACP runtime. Their tools are declared to the
+  ACP agent, not to Pi, so Pi's policy, tool hooks and tool search never see
+  them; only the server's own policy applies.
 - ACP sessions provision `skills/system/run-workflow/SKILL.md` inside the
   session cwd; that directory is not a Pi skill and is untracked in Git.
 

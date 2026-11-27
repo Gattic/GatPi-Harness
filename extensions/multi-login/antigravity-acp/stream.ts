@@ -21,9 +21,11 @@ import {
 } from "@earendil-works/pi-ai";
 
 import type {
+	AcpClientFileHandlers,
 	AcpClientLike,
 	AcpClientOptions,
 	AcpInitializeResult,
+	AcpMcpServer,
 	AcpPermissionRequest,
 	AcpPermissionResponse,
 	AcpPromptUsage,
@@ -56,6 +58,10 @@ export interface AcpStreamDeps {
 	cwd?: string;
 	/** Answers the server's permission requests; without one every request is cancelled. */
 	permission?: (request: AcpPermissionRequest) => Promise<AcpPermissionResponse>;
+	/** Serves the server's file callbacks; without them Pi advertises no fs capability. */
+	fileHandlers?: AcpClientFileHandlers;
+	/** Pi's MCP servers, which the server connects itself. */
+	mcpServers?: AcpMcpServer[];
 	/** Additional workspace directories for the session (Pi's project scope). */
 	additionalDirectories?: string[];
 	/** Reports server-side tool activity so Pi can show what the ACP agent is doing. */
@@ -515,6 +521,8 @@ export function createAcpStream(
 				// Pi's policy decides; the safe default without a gate is to deny.
 				onPermission:
 					deps.permission ?? (async () => ({ outcome: { outcome: "cancelled" as const } })),
+				...(deps.fileHandlers ? { fileHandlers: deps.fileHandlers } : {}),
+				...(deps.mcpServers?.length ? { mcpServers: deps.mcpServers } : {}),
 			});
 			const initialized = await client.initialize(options.signal);
 			if (deps.hasAuth && !deps.hasAuth()) {

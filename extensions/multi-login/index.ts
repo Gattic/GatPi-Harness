@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
 import { ANTIGRAVITY_PROVIDER_ID, antigravityProvider } from "./antigravity/index";
 import { ANTIGRAVITY_ACP_PROVIDER_ID, antigravityAcpProvider } from "./antigravity-acp/index";
+import { loadAcpMcpServers } from "./antigravity-acp/mcp-servers";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -23,6 +24,7 @@ const {
 const { withAnthropicOAuth } = require(join(LIB_ROOT, "src", "anthropic-oauth.js"));
 const { instrumentExtensionCommands } = require(join(LIB_ROOT, "src", "pi-extension-kit.js"));
 const { createAcpPermissionGate } = require(join(LIB_ROOT, "src", "acp-permission-gate.js"));
+const { createAcpClientFileHandlers } = require(join(LIB_ROOT, "src", "acp-client-tools.js"));
 const { projectScope } = require(join(LIB_ROOT, "src", "project-scope.js"));
 
 const EXTENSION_VERSION = "multi-login-2026-10-12.1";
@@ -51,11 +53,44 @@ export default function multiLogin(pi: ExtensionAPI) {
   // Code Assist provider above. It is registered by default so its models and
   // login method are available without a config opt-in; `accounts` only adds
   // aliases and priority entries for it.
+  // MCP servers Pi cannot hand to the ACP server are reported once, not on every
+  // turn: the configuration does not change between turns in normal use.
+  const reportedMcpServers = new Set();
+  const reportAcpMcpServers = (result: { skipped: Array<{ name: string; reason: string }>; errors: string[] }) => {
+    const ctx = getContext();
+    if (!ctx?.ui?.notify) return;
+    for (const { name, reason } of result.skipped) {
+      const key = `skipped:${name}:${reason}`;
+      if (reportedMcpServers.has(key)) continue;
+      reportedMcpServers.add(key);
+      ctx.ui.notify(`ACP: MCP server "${name}" is not forwarded: ${reason}`, "warning");
+    }
+    for (const error of result.errors) {
+      const key = `error:${error}`;
+      if (reportedMcpServers.has(key)) continue;
+      reportedMcpServers.add(key);
+      ctx.ui.notify(`ACP: MCP config: ${error}`, "warning");
+    }
+  };
+
   const acp = antigravityAcpProvider({
     // Every ACP tool call the server asks about is decided by Pi's own policy:
-    // same policy file, approval store and mode as Pi's tool calls.
-    createGate: (cwd: string) =>
-      createAcpPermissionGate({ cwd, getContext }).request,
+    // same policy file, approval store and mode as Pi's tool calls. The same
+    // gate decides the file callbacks Pi executes itself.
+    createGate: (cwd: string) => createAcpPermissionGate({ cwd, getContext }),
+    createFileHandlers: (cwd: string, gate: any) => createAcpClientFileHandlers({ gate, cwd }),
+    // The server connects Pi's MCP servers itself, so their configuration is
+    // forwarded to `session/new`. Their tools then belong to the ACP agent and
+    // are not gated by Pi; only the file callbacks stay under Pi's policy.
+    mcpServers: (cwd: string) => {
+      const result = loadAcpMcpServers({
+        agentDir: AGENT_DIR,
+        cwd,
+        projectTrusted: Boolean(getContext()?.isProjectTrusted?.()),
+      });
+      reportAcpMcpServers(result);
+      return result.servers;
+    },
     // The ACP server confines itself to the session cwd; Pi hands it exactly
     // the extra directories Pi's own project scope already authorizes.
     additionalDirectories: (cwd: string) =>
