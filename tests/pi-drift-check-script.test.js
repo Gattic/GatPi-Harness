@@ -26,10 +26,16 @@ function setupLinkedFork() {
   const packageRoot = path.join(sourceRoot, "packages", "coding-agent");
   const distDir = path.join(packageRoot, "dist", "bundle");
   const binDir = path.join(tmp, "bin");
+  const nodeBin = path.join(tmp, "node-bin");
   fs.mkdirSync(scriptsDir, { recursive: true });
   fs.mkdirSync(configDir, { recursive: true });
   fs.mkdirSync(distDir, { recursive: true });
   fs.mkdirSync(binDir, { recursive: true });
+  fs.mkdirSync(nodeBin, { recursive: true });
+  // A Node installation directory the fixture controls, so wrapper launchers
+  // resolve against the fixture's npm-linked pi instead of this machine's.
+  fs.writeFileSync(path.join(nodeBin, "node"), `#!/bin/sh\nexec "${process.execPath}" "$@"\n`);
+  fs.chmodSync(path.join(nodeBin, "node"), 0o755);
   fs.copyFileSync(scriptPath, path.join(scriptsDir, "check-pi-drift.sh"));
   fs.chmodSync(path.join(scriptsDir, "check-pi-drift.sh"), 0o755);
   fs.writeFileSync(path.join(packageRoot, "package.json"), JSON.stringify({ version: "0.80.6", bin: { pi: "dist/bundle/cli.js" } }));
@@ -60,7 +66,7 @@ function setupLinkedFork() {
   const env = {
     ...process.env,
     PI_SOURCE_ROOT: "",
-    PATH: `${binDir}:${path.dirname(process.execPath)}:/usr/bin:/bin`,
+    PATH: `${binDir}:${nodeBin}:/usr/bin:/bin`,
   };
   const check = (checkoutRoot = harnessRoot) =>
     spawnSync("bash", [path.join(checkoutRoot, "scripts", "check-pi-drift.sh")], {
@@ -68,7 +74,7 @@ function setupLinkedFork() {
       cwd: checkoutRoot,
       env,
     });
-  return { tmp, check, harnessRoot, sourceRoot, binDir };
+  return { tmp, check, harnessRoot, sourceRoot, binDir, nodeBin, distDir };
 }
 
 {
@@ -101,6 +107,25 @@ function setupLinkedFork() {
   const wrongTarget = fixture.check();
   assert.equal(wrongTarget.status, 1, `expected wrong link drift:\n${wrongTarget.stdout}\n${wrongTarget.stderr}`);
   assert.match(wrongTarget.stderr, /active pi does not resolve/);
+  fs.rmSync(fixture.tmp, { recursive: true, force: true });
+}
+
+{
+  // Hosts without the pinned Node on their login PATH install a wrapper in
+  // ~/.local/bin that execs the npm-linked pi beside that Node. The drift check
+  // must accept that launcher when its link resolves to the fork build.
+  const fixture = setupLinkedFork();
+  fs.unlinkSync(path.join(fixture.binDir, "pi"));
+  fs.writeFileSync(
+    path.join(fixture.binDir, "pi"),
+    `#!/usr/bin/env bash\nexport PATH="${fixture.nodeBin}:$PATH"\nexec "${path.join(fixture.nodeBin, "pi")}" "$@"\n`,
+  );
+  fs.chmodSync(path.join(fixture.binDir, "pi"), 0o755);
+  fs.symlinkSync(path.join(fixture.distDir, "cli.js"), path.join(fixture.nodeBin, "pi"));
+  const wrapper = fixture.check();
+  assert.equal(wrapper.status, 0, `expected wrapper launcher to resolve to the linked fork build:\n${wrapper.stdout}\n${wrapper.stderr}`);
+  assert.match(wrapper.stdout, /active launcher:   script/);
+  assert.match(wrapper.stdout, /no drift: active Pi is the clean, current configured fork source build/);
   fs.rmSync(fixture.tmp, { recursive: true, force: true });
 }
 

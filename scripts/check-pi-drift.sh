@@ -50,6 +50,35 @@ drift() {
   fail=1
 }
 
+# Classify and resolve the active launcher. A symlink is the npm link itself and
+# resolves directly. A wrapper script is what hosts without the pinned Node on
+# their login PATH use; it execs the npm-linked `pi` beside that Node, which is
+# also how scripts/fleet-host-update.sh identifies the active runtime.
+launcher_kind() {
+  local launcher="$1"
+  if [[ -L "$launcher" ]]; then
+    printf 'symlink\n'
+    return 0
+  fi
+  if [[ -f "$launcher" ]] && head -c2 -- "$launcher" 2>/dev/null | grep -q '#!'; then
+    printf 'script\n'
+    return 0
+  fi
+  printf 'regular\n'
+}
+resolve_active_target() {
+  local launcher="$1" node_bin pi_link
+  if [[ "$(launcher_kind "$launcher")" != script ]]; then
+    readlink -f -- "$launcher"
+    return 0
+  fi
+  node_bin="$(command -v node 2>/dev/null || true)"
+  [[ -n "$node_bin" ]] || return 1
+  pi_link="$(dirname -- "$(readlink -f -- "$node_bin")")/pi"
+  [[ -e "$pi_link" ]] || return 1
+  readlink -f -- "$pi_link"
+}
+
 origin_url="$(git -C "$PI_SOURCE_ROOT" remote get-url origin 2>/dev/null || true)"
 branch="$(git -C "$PI_SOURCE_ROOT" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
 head_sha="$(git -C "$PI_SOURCE_ROOT" rev-parse HEAD 2>/dev/null || true)"
@@ -77,10 +106,11 @@ if ! command -v pi >/dev/null 2>&1; then
   drift "pi is not on PATH"
 else
   pi_bin="$(command -v pi)"
-  pi_bin_real="$(readlink -f "$pi_bin" 2>/dev/null || true)"
+  pi_bin_real="$(resolve_active_target "$pi_bin" 2>/dev/null || true)"
   expected_bin_real="$(readlink -f "$EXPECTED_BIN" 2>/dev/null || true)"
   active_version="$(pi --version 2>/dev/null | tail -n 1 || true)"
   printf 'active pi:         %s\n' "$pi_bin"
+  printf 'active launcher:   %s\n' "$(launcher_kind "$pi_bin")"
   printf 'active target:     %s\n' "${pi_bin_real:-unknown}"
   printf 'active version:    %s\n' "${active_version:-unknown}"
   [[ -n "$pi_bin_real" && "$pi_bin_real" == "$expected_bin_real" ]] || drift "active pi does not resolve to $EXPECTED_BIN"

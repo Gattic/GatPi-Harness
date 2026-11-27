@@ -5,7 +5,7 @@
 The active Pi runtime patches now live in TypeScript source on the [`Gattic/GatPi`](https://github.com/Gattic/GatPi) fork. The expected local checkout and Git configuration are:
 
 ```text
-~/pi
+~/GatPi
 origin   git@github.com:Gattic/GatPi.git
 upstream git@github.com:earendil-works/pi.git
 ```
@@ -24,7 +24,7 @@ For a complete Pi, extension, and skill refresh use `scripts/pi-harness-refresh.
 
 The lower-level Pi setup script checks required commands, Node/npm and the user-writable global prefix, free disk, repository remotes/branches/cleanliness, remote synchronization, patch ancestry, build outputs, and the active global link. Missing fork checkouts are cloned; existing repositories are fast-forwarded only. Dirty, locally ahead, diverged, misidentified, or detached repositories are refused without stashing or resetting.
 
-The build first runs Pi's `hydrate:model-data` workflow to create the ignored provider JSON required by a fresh checkout, then runs the canonical `build:offline` workflow. This compiles the committed AI catalog sources without rewriting them, validates and copies the hydrated data, and follows Pi's current workspace build order. Hydration requires access to the model-catalog endpoints. Use `scripts/setup-pi-fork.sh --check` for a Pi-only read-only diagnostic. The active `pi` executable must resolve to the fork's `packages/coding-agent/dist/cli.js`, and both checkouts must remain clean and match cached `origin/main`.
+The build first runs Pi's `hydrate:model-data` workflow to create the ignored provider JSON required by a fresh checkout, then runs the canonical `build:offline` workflow. This compiles the committed AI catalog sources without rewriting them, validates and copies the hydrated data, and follows Pi's current workspace build order. Hydration requires access to the model-catalog endpoints. Use `scripts/setup-pi-fork.sh --check` for a Pi-only read-only diagnostic. The active `pi` executable must resolve to the fork's `packages/coding-agent/dist/bundle/cli.js`, and both checkouts must remain clean and match cached `origin/main`. On hosts where the pinned Node is not on the login PATH, `~/.local/bin/pi` may be a wrapper that execs the npm-linked `pi` beside that Node; `scripts/check-pi-drift.sh` resolves that launcher the same way `scripts/fleet-host-update.sh` does.
 
 The patch files below are retained as a rollback and migration archive for old published npm installs. Direct edits under `$(npm root -g)` are no longer the normal runtime-management workflow because `pi update`, `npm install -g`, or a new dev box can overwrite them.
 

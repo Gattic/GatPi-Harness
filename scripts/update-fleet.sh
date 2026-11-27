@@ -54,6 +54,10 @@ Options:
   --run-id ID         Run identifier used in evidence paths and host backups
   -h, --help          Show this help
 
+Host layout: every host keeps the harness at ~/GatPi-Harness and the Gattic/GatPi
+fork at ~/GatPi, both on main and tracking the Gattic repositories. The payload
+accepts HARNESS_DIR/PI_DIR overrides, but this driver deploys that standard layout.
+
 Examples:
   scripts/update-fleet.sh                       # update and verify the whole fleet
   scripts/update-fleet.sh --preflight-only      # inspect hosts without changing them
@@ -284,7 +288,7 @@ plan_host() {
   shallow="$(get_val "$log" PI_SHALLOW)"
   if [[ "$pi_head" != "$pi_sha" && "$shallow" != false ]]; then
     PLAN_STATE=blocked
-    PLAN_REASON="Pi checkout is a shallow clone; run 'git -C ~/pi fetch --unshallow' on the host first"
+    PLAN_REASON="Pi checkout is a shallow clone; run 'git -C $PI_SOURCE_ROOT fetch --unshallow' on the host first"
   fi
 }
 

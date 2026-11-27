@@ -30,7 +30,7 @@ export LC_ALL=C
 
 agent_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 harness="${HARNESS_DIR:-$HOME/GatPi-Harness}"
-pi_source="${PI_DIR:-$HOME/pi}"
+pi_source="${PI_DIR:-$HOME/GatPi}"
 pi_user_skills="$agent_dir/skills"
 host="$(hostname)"
 user="$(id -un)"
