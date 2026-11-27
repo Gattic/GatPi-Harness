@@ -52,6 +52,14 @@ export interface AcpSessionNewResult {
 	_meta?: unknown;
 }
 
+/** What a client may add to `session/new` beyond the workspace it is offering. */
+export interface AcpNewSessionOptions {
+	/** Workspace directories Pi grants beyond the session cwd. */
+	additionalDirectories?: string[];
+	/** Provider metadata the server reads, such as Antigravity's system-prompt append. */
+	meta?: Record<string, unknown>;
+}
+
 export interface AcpPromptUsage {
 	inputTokens?: number;
 	outputTokens?: number;
@@ -145,6 +153,26 @@ export type AcpPermissionResponse =
 	| { outcome: { outcome: "selected"; optionId: string } }
 	| { outcome: { outcome: "cancelled" } };
 
+/**
+ * Something the server asks the person instead of asking permission for an
+ * action: a workspace-trust prompt, a plan approval, a free-form question.
+ * Pi cannot render a dialog while the server waits inside a streaming turn, so
+ * the request is declined and the question is shown in the transcript.
+ */
+export interface AcpQuestion {
+	text: string;
+	kind: string;
+	/** The question is a workspace-trust decision, which Pi's own trust answers. */
+	trust: boolean;
+	options: Array<{ id: string; name: string }>;
+}
+
+/** Pi's answer to one permission request, plus what it could not decide. */
+export interface AcpPermissionOutcome {
+	response: AcpPermissionResponse;
+	question?: AcpQuestion;
+}
+
 export interface AcpClientOptions {
 	command: string;
 	args?: string[];
@@ -166,7 +194,7 @@ export interface AcpClientOptions {
 export interface AcpClientLike {
 	initialize(signal?: AbortSignal): Promise<AcpInitializeResult>;
 	authenticate(methodId: string, signal?: AbortSignal): Promise<void>;
-	newSession(cwd: string, signal?: AbortSignal, additionalDirectories?: string[]): Promise<AcpSessionNewResult>;
+	newSession(cwd: string, signal?: AbortSignal, options?: AcpNewSessionOptions): Promise<AcpSessionNewResult>;
 	setModel(sessionId: string, modelId: string, signal?: AbortSignal): Promise<void>;
 	prompt(sessionId: string, prompt: unknown[], signal?: AbortSignal): Promise<AcpPromptResponse>;
 	close(): Promise<void>;
@@ -538,14 +566,16 @@ export class AcpClient implements AcpClientLike {
 	async newSession(
 		cwd: string,
 		signal?: AbortSignal,
-		additionalDirectories?: string[],
+		options: AcpNewSessionOptions = {},
 	): Promise<AcpSessionNewResult> {
+		const additionalDirectories = options.additionalDirectories;
 		const result = await this.request<AcpSessionNewResult>(
 			"session/new",
 			{
 				cwd,
 				mcpServers: this.options.mcpServers ?? [],
 				...(additionalDirectories?.length ? { additionalDirectories } : {}),
+				...(options.meta ? { _meta: options.meta } : {}),
 			},
 			this.operationTimeoutMs,
 			signal,

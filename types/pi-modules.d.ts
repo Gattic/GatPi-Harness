@@ -22,6 +22,27 @@ declare module "@earendil-works/pi-coding-agent" {
   export const withFileMutationQueue: any;
   export const convertToLlm: any;
   export const serializeConversation: any;
+  export const DEFAULT_MAX_BYTES: number;
+  export const DEFAULT_MAX_LINES: number;
+  export function formatSize(bytes: number): string;
+  export interface TruncationResult {
+    content: string;
+    truncated: boolean;
+    truncatedBy: "lines" | "bytes" | null;
+    totalLines: number;
+    totalBytes: number;
+    outputLines: number;
+    outputBytes: number;
+    lastLinePartial: boolean;
+    firstLineExceedsLimit: boolean;
+    maxLines: number;
+    maxBytes: number;
+  }
+  export interface TruncationOptions {
+    maxLines?: number;
+    maxBytes?: number;
+  }
+  export function truncateTail(content: string, options?: TruncationOptions): TruncationResult;
 }
 
 declare module "@earendil-works/pi-ai" {

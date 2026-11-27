@@ -29,6 +29,25 @@ const EXECUTE_KINDS = new Set(["execute", "execute_command", "run_command", "ter
 const WRITE_KINDS = new Set(["edit", "write", "create", "delete", "move", "rename", "patch", "apply_patch"]);
 /** Reads carry a path but never need a write grant. */
 const READ_KINDS = new Set(["read", "list", "search", "glob", "grep"]);
+/** Kinds the server uses to ask the person something instead of requesting a call. */
+const QUESTION_KINDS = new Set(["ask", "ask_user", "question", "elicit", "plan", "confirm"]);
+/** Kinds that are actions Pi judges even when they carry no command or path. */
+const ACTION_KINDS = new Set([
+  ...EXECUTE_KINDS,
+  ...WRITE_KINDS,
+  ...READ_KINDS,
+  "fetch",
+  "http",
+  "download",
+  "upload",
+  "web",
+  "browser",
+  "mcp",
+]);
+/** A workspace-trust prompt: Pi's own trust decision answers it. */
+const TRUST_PATTERN = /\b(trust|trusted|workspace trust)\b/iu;
+/** Titles that read as a question for the person rather than a call to judge. */
+const QUESTION_PATTERN = /\?\s*$|\b(plan|question|confirm|proceed|approve)\b/iu;
 
 // The server spells raw input keys differently per build and mode
 // (`CommandLine`/`command_line`, `TargetFile`/`file_path`), so look them up
@@ -87,6 +106,48 @@ function optionList(options) {
   return Array.isArray(options) ? options : [];
 }
 
+/** Every string the server put in the call, so a question reads as one line. */
+function questionText(toolCall = {}) {
+  const rawInput = toolCall?.rawInput && typeof toolCall.rawInput === "object" ? toolCall.rawInput : {};
+  const parts = [];
+  if (typeof toolCall?.title === "string" && toolCall.title.trim()) parts.push(toolCall.title.trim());
+  for (const value of Object.values(rawInput)) {
+    if (typeof value === "string" && value.trim()) parts.push(value.trim());
+  }
+  return [...new Set(parts)].join(" — ").slice(0, 4000);
+}
+
+/**
+ * Whether a request is a question for the person rather than permission for an
+ * action. Pi can only judge calls: it has a command or a path, and its policy
+ * decides. A question has neither, so answering it with the first allow option
+ * would decide something only the person can.
+ */
+function acpQuestion(request) {
+  const toolCall = request?.toolCall || request || {};
+  const mapped = acpToolRequest(toolCall);
+  // A call Pi can judge is a permission request, not a question.
+  if (mapped.missing) return undefined;
+  if (["bash", "write", "edit"].includes(mapped.toolName)) return undefined;
+  if (mapped.toolName === "read" && mapped.input.path) return undefined;
+  const text = questionText(toolCall);
+  if (!text) return undefined;
+  const kind = String(toolCall?.kind || "other").trim().toLowerCase();
+  const options = optionList(request?.options);
+  const trust = TRUST_PATTERN.test(text);
+  const asks = QUESTION_KINDS.has(kind) || trust || (!ACTION_KINDS.has(kind) && QUESTION_PATTERN.test(text));
+  if (!asks) return undefined;
+  return {
+    text,
+    kind,
+    trust,
+    options: options.map((option) => ({
+      id: String(option?.optionId ?? ""),
+      name: String(option?.name ?? option?.optionId ?? ""),
+    })),
+  };
+}
+
 /**
  * Pi grants a single request, never a standing grant in the server's own store:
  * a persistent server-side approval would let later calls bypass Pi's policy.
@@ -127,6 +188,43 @@ function decideAcpPermission(permission, options = {}) {
   const policy = options.policy || {};
   const mode = options.mode || policyMode();
   const approvalStore = options.approvalStore;
+
+  const question = acpQuestion(permission);
+  if (question) {
+    // Pi answers a trust prompt from its own trust decision. Every other
+    // question is one only the person can answer, so it is declined and shown
+    // in the transcript; picking an option here would decide it for them.
+    const trusted = options.projectTrusted === true;
+    // Pi grants one request, never a standing server-side trust, because the
+    // server's own approvals would then bypass this gate.
+    const optionId = trusted && question.trust ? selectOption(permission?.options, { allow: true }) : undefined;
+    const answered = optionId !== undefined;
+    return {
+      allow: answered,
+      action: answered ? "allow" : "ask",
+      mode,
+      severity: answered ? "allow" : "deny",
+      toolName: `acp_${question.kind}`,
+      input: {},
+      acpKind: question.kind,
+      question,
+      requests: [],
+      evaluations: [],
+      denied: [],
+      warnings: [],
+      reasons: [
+        question.trust
+          ? !trusted
+            ? "the workspace is not trusted in Pi"
+            : answered
+              ? "the workspace is trusted in Pi"
+              : "the workspace is trusted in Pi, but the server offers only a standing grant"
+          : "the server asked a question Pi cannot answer while the turn streams",
+      ],
+      missingApprovals: [],
+      optionId,
+    };
+  }
 
   const decision = mapped.missing
     ? {
@@ -177,6 +275,12 @@ function formatAcpPermissionDecision(decision) {
   ];
   if (decision?.input?.command) lines.push(`command: ${decision.input.command}`);
   if (decision?.input?.path) lines.push(`path: ${decision.input.path}`);
+  if (decision?.question) {
+    lines.push(`question: ${decision.question.text}`);
+    if (decision.question.options.length) {
+      lines.push("options:", ...decision.question.options.map((option) => `- ${option.id} ${option.name}`));
+    }
+  }
   if (decision?.reasons?.length) lines.push("reasons:", ...decision.reasons.map((reason) => `- ${reason}`));
   if (decision?.missingApprovals?.length) {
     lines.push("approval keys:", ...decision.missingApprovals.map((item) => `- ${item.key} ${JSON.stringify(item.request)}`));
@@ -188,7 +292,9 @@ module.exports = {
   EXECUTE_KINDS,
   WRITE_KINDS,
   READ_KINDS,
+  QUESTION_KINDS,
   acpToolRequest,
+  acpQuestion,
   selectOption,
   decideAcpPermission,
   acpPermissionResponse,

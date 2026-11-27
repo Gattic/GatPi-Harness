@@ -64,6 +64,7 @@ function createAcpPermissionGate(options = {}) {
       policy: currentPolicy(),
       mode: currentMode(),
       approvalStore: store,
+      projectTrusted: Boolean(options.getContext?.()?.isProjectTrusted?.()),
     });
   }
 
@@ -101,11 +102,17 @@ function createAcpPermissionGate(options = {}) {
       report(decision, options.getContext ? options.getContext() : undefined);
       return decision;
     },
-    /** Answer one ACP `session/request_permission` request immediately. */
+    /**
+     * Answer one ACP `session/request_permission` request immediately, and
+     * report a question the server asked instead of a call Pi could judge.
+     */
     async request(request) {
       const decision = decide(request);
       report(decision, options.getContext ? options.getContext() : undefined);
-      return acpPermissionResponse(request, decision);
+      return {
+        response: acpPermissionResponse(request, decision),
+        ...(decision.question ? { question: decision.question } : {}),
+      };
     },
   };
 }

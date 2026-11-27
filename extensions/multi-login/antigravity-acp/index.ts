@@ -19,8 +19,9 @@ import {
 	type AcpClientOptions,
 	type AcpInitializeResult,
 	type AcpMcpServer,
+	type AcpPermissionOutcome,
 	type AcpPermissionRequest,
-	type AcpPermissionResponse,
+	type AcpQuestion,
 } from "./acp";
 import {
 	type AcpAuthHealth,
@@ -69,7 +70,7 @@ export interface AcpLoginInteraction {
  * requests and decides the calls Pi executes itself (the file callbacks).
  */
 export interface AcpAuthority {
-	request(request: AcpPermissionRequest): Promise<AcpPermissionResponse>;
+	request(request: AcpPermissionRequest): Promise<AcpPermissionOutcome>;
 	enforce(toolName: string, input: Record<string, unknown>): { allow: boolean };
 }
 
@@ -92,6 +93,8 @@ export interface AntigravityAcpProviderDeps {
 	additionalDirectories?: (cwd: string) => string[];
 	/** Observes server-side tool activity, for example in Pi's footer. */
 	onToolActivity?: (activity: AcpToolActivity, cwd: string) => void;
+	/** Shows a question the server asked instead of a call Pi could judge. */
+	onQuestion?: (question: AcpQuestion, cwd: string) => void;
 }
 
 const LOGIN_TIMEOUT_MS = 5 * 60_000;
@@ -213,6 +216,9 @@ export function antigravityAcpProvider(deps: AntigravityAcpProviderDeps = {}) {
 		const onToolActivity = deps.onToolActivity
 			? (activity: AcpToolActivity) => deps.onToolActivity?.(activity, cwd)
 			: undefined;
+		const onQuestion = deps.onQuestion
+			? (question: AcpQuestion) => deps.onQuestion?.(question, cwd)
+			: undefined;
 		return createAcpStream(model, context, options, {
 			resolveRuntime: runtime,
 			createClient,
@@ -223,6 +229,7 @@ export function antigravityAcpProvider(deps: AntigravityAcpProviderDeps = {}) {
 			...(mcpServers?.length ? { mcpServers } : {}),
 			...(additionalDirectories?.length ? { additionalDirectories } : {}),
 			...(onToolActivity ? { onToolActivity } : {}),
+			...(onQuestion ? { onQuestion } : {}),
 		});
 	};
 

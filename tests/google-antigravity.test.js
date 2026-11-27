@@ -33,6 +33,11 @@ const aiRoot = fs.existsSync(path.join(piPackageRoot, "node_modules", "@earendil
   ? fs.realpathSync(path.join(piPackageRoot, "node_modules", "@earendil-works", "pi-ai"))
   : fs.realpathSync(path.resolve(piPackageRoot, "..", "ai"));
 
+// Pi's extension loader aliases @earendil-works/pi-tui, which a TUI renderer imports.
+const piTuiRoot = fs.existsSync(path.join(piPackageRoot, "node_modules", "@earendil-works", "pi-tui"))
+  ? fs.realpathSync(path.join(piPackageRoot, "node_modules", "@earendil-works", "pi-tui"))
+  : fs.realpathSync(path.resolve(piPackageRoot, "..", "tui"));
+
 function jsonResponse(value, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
 }
@@ -85,6 +90,7 @@ function stateFromAuthUrl(url) {
       "@earendil-works/pi-coding-agent": piPackageRoot,
       "@earendil-works/pi-ai/providers/all": path.join(aiRoot, "dist", "providers", "all.js"),
       "@earendil-works/pi-ai": aiRoot,
+      "@earendil-works/pi-tui": piTuiRoot,
     },
   });
   const antigravity = await jiti.import(moduleFile);

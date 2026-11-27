@@ -277,6 +277,9 @@ globalThis.fetch = async () => { throw new Error("multi-login test attempted an 
   const aiRoot = fs.existsSync(path.join(piPackageRoot, "node_modules", "@earendil-works", "pi-ai"))
     ? fs.realpathSync(path.join(piPackageRoot, "node_modules", "@earendil-works", "pi-ai"))
     : fs.realpathSync(path.resolve(piPackageRoot, "..", "ai"));
+  const piTuiRoot = fs.existsSync(path.join(piPackageRoot, "node_modules", "@earendil-works", "pi-tui"))
+    ? fs.realpathSync(path.join(piPackageRoot, "node_modules", "@earendil-works", "pi-tui"))
+    : fs.realpathSync(path.resolve(piPackageRoot, "..", "tui"));
   const agentDir = tmpFixture("multi-login-agent-");
   process.env.PI_CODING_AGENT_DIR = agentDir;
   fs.writeFileSync(
@@ -293,14 +296,26 @@ globalThis.fetch = async () => { throw new Error("multi-login test attempted an 
       "@earendil-works/pi-coding-agent": piPackageRoot,
       "@earendil-works/pi-ai/providers/all": path.join(aiRoot, "dist", "providers", "all.js"),
       "@earendil-works/pi-ai": aiRoot,
+      "@earendil-works/pi-tui": piTuiRoot,
     },
   });
   const mod = await jiti.import(extensionFile);
 
   function loadExtension(ctx, setModelOverride) {
-    const instance = { ctx, providers: [], virtualModels: [], handlers: new Map(), commands: [], selected: [] };
+    const instance = {
+      ctx,
+      providers: [],
+      virtualModels: [],
+      handlers: new Map(),
+      commands: [],
+      selected: [],
+      entryRenderers: new Map(),
+      entries: [],
+    };
     (mod.default || mod)({
       registerProvider: (provider) => instance.providers.push(provider),
+      registerEntryRenderer: (type, renderer) => instance.entryRenderers.set(type, renderer),
+      appendEntry: (type, data) => instance.entries.push({ type, data }),
       registerVirtualModel: (definition) => instance.virtualModels.push(definition),
       registerCommand: (name) => instance.commands.push(name),
       setModel: async (m) => {
@@ -329,6 +344,21 @@ globalThis.fetch = async () => { throw new Error("multi-login test attempted an 
   const acpProvider = providers.find((provider) => provider.id === "google-antigravity-acp");
   assert(acpProvider);
   assert.equal(typeof acpProvider.auth.oauth.login, "function");
+  // A question the ACP server asks and Pi cannot answer is a transcript entry,
+  // not a transient toast, so the person still sees it after the turn ends.
+  assert(initial.entryRenderers.has("acp-question"), "the ACP question renderer is registered");
+  const questionRenderer = initial.entryRenderers.get("acp-question");
+  const rendered = questionRenderer(
+    { data: { text: "Which package manager should I use?", options: [{ id: "npm", name: "npm" }] } },
+    {},
+    { fg: (_color, text) => text },
+  );
+  assert(rendered, "a question entry renders");
+  const drawn = rendered.render(120).join("\n");
+  assert.match(drawn, /ACP question: Which package manager should I use\?/u);
+  assert.match(drawn, /npm/u);
+  assert.match(drawn, /reply in your next message/u);
+  assert.equal(questionRenderer({ data: {} }, {}, { fg: (_color, text) => text }), undefined, "an empty entry draws nothing");
   const anthropicProviders = providers.filter((provider) => provider.id === "anthropic" || provider.id.startsWith("anthropic-account-"));
   for (const provider of anthropicProviders) await assertAnthropicHandshake(provider);
 

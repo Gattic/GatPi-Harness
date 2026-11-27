@@ -1,7 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
 import { ANTIGRAVITY_PROVIDER_ID, antigravityProvider } from "./antigravity/index";
 import { ANTIGRAVITY_ACP_PROVIDER_ID, antigravityAcpProvider } from "./antigravity-acp/index";
+import { closeAcpConversations } from "./antigravity-acp/stream";
 import { loadAcpMcpServers } from "./antigravity-acp/mcp-servers";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
@@ -29,6 +31,8 @@ const { projectScope } = require(join(LIB_ROOT, "src", "project-scope.js"));
 
 const EXTENSION_VERSION = "multi-login-2026-10-12.1";
 const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
+/** Transcript entry for a question the ACP server asked and Pi could not answer. */
+const ACP_QUESTION_ENTRY = "acp-question";
 
 export default function multiLogin(pi: ExtensionAPI) {
   pi = instrumentExtensionCommands(pi, { extension: "multi-login", version: EXTENSION_VERSION }) as ExtensionAPI;
@@ -107,9 +111,26 @@ export default function multiLogin(pi: ExtensionAPI) {
       const label = [activity.kind, activity.title].filter(Boolean).join(" ");
       ui.setStatus("acp-tools", label ? `ACP ${label}` : "ACP tool running");
     },
+    // A question is one only the person can answer, and Pi cannot show a dialog
+    // while the server waits inside the turn. The request is declined and the
+    // question is appended to the transcript, where it stays visible.
+    onQuestion: (question: any) => {
+      pi.appendEntry?.(ACP_QUESTION_ENTRY, question);
+    },
   });
   bases.set(ANTIGRAVITY_ACP_PROVIDER_ID, acp);
   pi.registerProvider(acp);
+  // A declined question is part of the conversation, not a transient toast.
+  pi.registerEntryRenderer?.(ACP_QUESTION_ENTRY, (entry: any, _options: any, theme: any) => {
+    const data = entry.data as { text?: string; options?: Array<{ id?: string; name?: string }> } | undefined;
+    if (!data?.text) return undefined;
+    const lines = [`${theme.fg("warning", "ACP question")}: ${data.text}`];
+    for (const option of data.options ?? []) {
+      lines.push(`  ${theme.fg("dim", option.name || option.id || "")}`);
+    }
+    lines.push(theme.fg("dim", "Pi could not answer it during the turn; reply in your next message."));
+    return new Text(lines.join("\n"), 0, 0);
+  });
   for (const [baseId, count] of Object.entries(config.accounts) as [string, number][]) {
     const base = bases.get(baseId);
     if (!base) throw new Error(`multi-login: ${config.file}: accounts.${baseId} is not a supported provider`);
@@ -136,6 +157,12 @@ export default function multiLogin(pi: ExtensionAPI) {
 
   pi.on("turn_end", () => {
     activeContext?.ui?.setStatus?.("acp-tools", undefined);
+  });
+
+  // The ACP provider keeps its server and session alive between turns, so a
+  // shutting-down session is what ends them.
+  pi.on("session_shutdown", async () => {
+    await closeAcpConversations();
   });
 
   pi.on("session_start", async (event, ctx) => {
