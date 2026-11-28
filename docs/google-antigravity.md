@@ -211,6 +211,17 @@ its file and shell tools and executes them inside its runtime. Pi keeps the
   no occupancy is reported, Pi estimates from its own messages instead of
   reading the aggregate.
 
+- **A replay fits the server's one-message cap.** The server joins Pi's prompt
+  blocks into a single user input step, and its harness cuts a step over
+  roughly 192 KB from the end, replacing the cut with `<truncated N bytes>`.
+  A replay that long loses the request at the end of the transcript, and the
+  model answers a transcript with no task instead of continuing the work. Pi
+  keeps the whole user message — the session's appended system prompt plus the
+  transcript — under 160 KB (`REPLAY_MAX_BYTES` in
+  `extensions/multi-login/antigravity-acp/stream.ts`): the oldest messages are
+  dropped and announced as omitted, the newest message is always sent, and a
+  live session still receives only the messages it does not have.
+
 Boundaries worth knowing:
 
 - The server's own policy can auto-approve calls (for example reads) without

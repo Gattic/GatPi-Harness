@@ -448,6 +448,7 @@ async function main() {
     await streamToolCallTests();
     await streamToolFidelityTests();
     await promptFidelityTests();
+    await replayBoundTests();
     await sessionContinuityTests();
     await questionAuthorityTests();
     console.log("antigravity-acp runtime, zip, install, auth, login, model and provider tests passed");
@@ -2075,6 +2076,114 @@ async function promptFidelityTests() {
     "a server without the capability gets the system prompt in the prompt",
   );
 }
+
+// The server joins every prompt block into one user message, and the harness
+// cuts a message over its cap from the end: a 401 KB replay reached the model
+// as 192,150 bytes plus `<truncated 209346 bytes>`, so the request that ends the
+// transcript never arrived. Pi keeps the replay under that cap by dropping the
+// oldest messages instead, which leaves the request as the last thing it reads.
+async function replayBoundTests() {
+  const streamModule = await jiti.import(path.join(EXT, "stream.ts"));
+  const bytes = (text) => Buffer.byteLength(text);
+  const omitted = (blocks) => blocks.filter((block) => block.text?.startsWith("Earlier transcript omitted"));
+
+  const small = streamModule.buildPrompt(
+    { messages: [{ role: "user", content: "short task" }] },
+    { omitSystemPrompt: true, maxBytes: 4096 },
+  );
+  assert.equal(small.length, 1, "a transcript under the cap is sent as it is");
+  assert.equal(small[0].text, "User:\nshort task");
+  assert.equal(omitted(small).length, 0, "nothing is announced as omitted");
+
+  const big = "x".repeat(400);
+  const bigBlock = bytes(`User:\n${big}`);
+  const request = "the request";
+  const bounded = streamModule.buildPrompt(
+    {
+      messages: [
+        { role: "user", content: big },
+        { role: "user", content: big },
+        { role: "user", content: big },
+        { role: "user", content: request },
+      ],
+    },
+    { omitSystemPrompt: true, maxBytes: bigBlock * 2 + bytes(`User:\n${request}`) },
+  );
+  assert.equal(bounded.at(-1).text, `User:\n${request}`, "the request ends the replay");
+  assert.equal(bounded.length, 4, "two whole messages plus the request are kept");
+  assert.equal(bounded[1].text, `User:\n${big}`);
+  assert.equal(bounded[2].text, `User:\n${big}`);
+  const notice = omitted(bounded);
+  assert.equal(notice.length, 1, "the dropped messages are announced once");
+  assert(
+    notice[0].text.startsWith("Earlier transcript omitted: 1 message"),
+    "the notice names how many messages were left out",
+  );
+  assert(notice[0].text.includes(`(${bigBlock}B)`), "the notice says how much was left out");
+  assert(notice[0].text.includes("Antigravity prompt limit"), "the notice names the limit");
+
+  const systemAndBig = streamModule.buildPrompt(
+    {
+      systemPrompt: "Pi's rules",
+      messages: [
+        { role: "assistant", content: big },
+        { role: "assistant", content: big },
+        { role: "user", content: request },
+      ],
+    },
+    { maxBytes: bytes("System instructions:\nPi's rules") + bytes(`User:\n${request}`) + 1 },
+  );
+  assert(
+    systemAndBig[0].text.startsWith("System instructions:\nPi's rules"),
+    "the system prompt is kept even when it leaves no room for history",
+  );
+  assert.equal(systemAndBig.at(-1).text, `User:\n${request}`, "the request survives a tight budget");
+  assert(
+    systemAndBig.some((block) => block.text?.startsWith("Earlier transcript omitted: 2 messages")),
+    "both oversized messages are announced as omitted",
+  );
+
+  const alone = streamModule.buildPrompt(
+    { messages: [{ role: "user", content: big }] },
+    { omitSystemPrompt: true, maxBytes: 16 },
+  );
+  assert.equal(alone.length, 1, "a single over-cap message is still sent");
+  assert.equal(alone[0].text, `User:\n${big}`, "the only message is never dropped for the cap");
+
+  const appended = streamModule.buildPrompt(
+    {
+      systemPrompt: "s".repeat(500),
+      messages: [
+        { role: "user", content: big },
+        { role: "user", content: request },
+      ],
+    },
+    { omitSystemPrompt: true, maxBytes: 500 + bytes(`User:\n${request}`) + 1 },
+  );
+  assert(
+    !appended.some((block) => block.text?.includes("System instructions")),
+    "an appended system prompt stays out of the prompt blocks",
+  );
+  assert.equal(appended.at(-1).text, `User:\n${request}`, "the request still ends an appended replay");
+  assert(
+    appended.some((block) => block.text?.startsWith("Earlier transcript omitted: 1 message")),
+    "the appended system prompt counts against the replay budget",
+  );
+
+  const history = [];
+  for (let index = 0; index < 200; index++) history.push({ role: "user", content: `${index} `.padEnd(1024, "y") });
+  const replay = streamModule.buildPrompt({ messages: history }, { omitSystemPrompt: true });
+  assert.equal(replay.at(-1).text, `User:\n${history.at(-1).content}`, "the default budget keeps the request");
+  const replayBytes = replay.reduce(
+    (total, block) => total + bytes(block.type === "text" ? block.text : block.data),
+    0,
+  );
+  assert(
+    replayBytes <= 160 * 1024 + 200,
+    "the default replay stays under the harness cap (plus its short notice)",
+  );
+}
+
 const MOCK_CONTINUITY_SERVER = String.raw`
 const fs = require("node:fs");
 const readline = require("node:readline");

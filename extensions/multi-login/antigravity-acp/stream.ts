@@ -671,7 +671,22 @@ export type AcpPromptBlock =
 export interface BuildPromptOptions {
 	/** Pi's system prompt already reached the session through its metadata. */
 	omitSystemPrompt?: boolean;
+	/** Bytes the server accepts as one user message; defaults to the harness cap. */
+	maxBytes?: number;
 }
+
+/**
+ * Bytes of replay prompt the Antigravity harness accepts as one user message.
+ *
+ * The server joins every prompt block into a single user input step, and the
+ * harness caps that step by cutting off its end and marking the cut with
+ * `<truncated N bytes>`. A 401 KB replay reached the model as 192,150 bytes
+ * plus that marker, so the request at the end of the transcript never arrived
+ * and the model answered a transcript with no task. Pi keeps its replay under
+ * the observed cap with margin, since the harness counts characters where Pi
+ * counts UTF-8 bytes.
+ */
+const REPLAY_MAX_BYTES = 160 * 1024;
 
 /** Images of a message, in the shape ACP takes; a provider that cannot see them gets none. */
 function messageImages(message: any): Array<{ type: "image"; data: string; mimeType: string }> {
@@ -685,30 +700,85 @@ function messageImages(message: any): Array<{ type: "image"; data: string; mimeT
 	return images;
 }
 
-/** Convert Pi's transcript into ACP prompt blocks. */
-function promptBlocks(messages: any[], instructions: string): AcpPromptBlock[] {
+/** The blocks of one message: its labelled text, then the images it carried. */
+function messageBlocks(message: any): AcpPromptBlock[] {
 	const blocks: AcpPromptBlock[] = [];
-	if (instructions) blocks.push({ type: "text", text: `System instructions:\n${instructions}` });
-	for (const message of messages) {
-		const text = messageText(message);
-		const label =
-			message.role === "user"
-				? "User"
-				: message.role === "assistant"
-					? "Assistant"
-					: message.role === "toolResult"
-						? "Tool result"
-						: String(message.role ?? "Message");
-		if (text) blocks.push({ type: "text", text: `${label}:\n${text}` });
-		blocks.push(...messageImages(message));
+	const text = messageText(message);
+	const label =
+		message.role === "user"
+			? "User"
+			: message.role === "assistant"
+				? "Assistant"
+				: message.role === "toolResult"
+					? "Tool result"
+					: String(message.role ?? "Message");
+	if (text) blocks.push({ type: "text", text: `${label}:\n${text}` });
+	blocks.push(...messageImages(message));
+	return blocks;
+}
+
+function blocksBytes(blocks: AcpPromptBlock[]): number {
+	let bytes = 0;
+	for (const block of blocks) {
+		bytes += Buffer.byteLength(block.type === "text" ? block.text : block.data);
 	}
+	return bytes;
+}
+
+/**
+ * Convert Pi's transcript into ACP prompt blocks. With `maxBytes` the oldest
+ * messages are dropped until the replay fits, so the server never has to cut
+ * the end of the message, where the request is. `reservedBytes` is what the
+ * server adds to the same user message before the transcript, such as the
+ * session's appended system prompt.
+ */
+function promptBlocks(
+	messages: any[],
+	instructions: string,
+	maxBytes?: number,
+	reservedBytes = 0,
+): AcpPromptBlock[] {
+	const blocks: AcpPromptBlock[] = [];
+	let used = reservedBytes;
+	if (instructions) {
+		const system: AcpPromptBlock = { type: "text", text: `System instructions:\n${instructions}` };
+		blocks.push(system);
+		used += blocksBytes([system]);
+	}
+	const kept: AcpPromptBlock[][] = [];
+	let first = messages.length;
+	for (let index = messages.length - 1; index >= 0; index--) {
+		const message = messageBlocks(messages[index]);
+		const bytes = blocksBytes(message);
+		// The newest message is the request itself: it is sent even when it alone is over the cap.
+		if (maxBytes !== undefined && kept.length > 0 && used + bytes > maxBytes) break;
+		kept.unshift(message);
+		used += bytes;
+		first = index;
+	}
+	if (first > 0) {
+		let omitted = 0;
+		for (let index = 0; index < first; index++) omitted += blocksBytes(messageBlocks(messages[index]));
+		blocks.push({
+			type: "text",
+			text: `Earlier transcript omitted: ${first} message${first === 1 ? "" : "s"} (${formatSize(omitted)}) left out to stay under the Antigravity prompt limit (${formatSize(maxBytes ?? 0)}); this replay starts at the most recent messages.`,
+		});
+	}
+	for (const message of kept) blocks.push(...message);
 	if (blocks.length === 0) blocks.push({ type: "text", text: "Continue." });
 	return blocks;
 }
 
 export function buildPrompt(context: any, options: BuildPromptOptions = {}): AcpPromptBlock[] {
 	const messages = Array.isArray(context?.messages) ? context.messages : [];
-	return promptBlocks(messages, options.omitSystemPrompt ? "" : systemText(context?.systemPrompt));
+	const instructions = systemText(context?.systemPrompt);
+	return promptBlocks(
+		messages,
+		options.omitSystemPrompt ? "" : instructions,
+		options.maxBytes ?? REPLAY_MAX_BYTES,
+		// The server prefixes the session's appended system prompt to the same message.
+		options.omitSystemPrompt ? Buffer.byteLength(instructions) : 0,
+	);
 }
 
 function mapStopReason(reason: string): StopReason {
